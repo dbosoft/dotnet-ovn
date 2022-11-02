@@ -1,0 +1,8 @@
+
+<Project>
+  <PropertyGroup>
+    <AssemblyName>Dbosoft.$(MSBuildProjectName)</AssemblyName>
+    <RootNamespace>Dbosoft.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+  </PropertyGroup>
+  
+</Project>
