@@ -15,6 +15,7 @@ public class OVNControllerProcess : DemonProcessBase
     {
         _sysEnv = sysEnv;
         _settings = settings;
+        NoControlFileArgument = true;
     }
 
     protected override string BuildArguments()

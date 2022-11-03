@@ -62,7 +62,7 @@ public class OVSChassisNode : OVSNodeBase
             
             return serviceManager.GetServiceCommand()
                 .Bind(command => Prelude.Cond<string>(c => c != validCommand)
-                    .Then(serviceManager.UpdateService(command, cancellationToken))
+                    .Then(serviceManager.UpdateService(validCommand, cancellationToken))
                     .Else(Unit.Default)
                     (command)
                     .Bind(_ => serviceManager.EnsureServiceStarted(cancellationToken)));
@@ -75,16 +75,17 @@ public class OVSChassisNode : OVSNodeBase
             => UpdateService(GetVSwitchProcess(), _vSwitchDBServiceManager);
         
         
-        return from dbServiceExists in _ovsDBServiceManager.ServiceExists()
+        return from _ in InitDB(cancellationToken) 
+            from dbServiceExists in _ovsDBServiceManager.ServiceExists()
             from udb in Prelude.Cond<bool>(c=>c)
-                .Then(CreateDBService)
-                .Else(UpdateDBService)
+                .Then(UpdateDBService)
+                .Else(CreateDBService)
                 (dbServiceExists)
             
             from switchServiceExists in _vSwitchDBServiceManager.ServiceExists()
             from uSwitch in Prelude.Cond<bool>(c=>c)
-                .Then(CreateVSwitchService)
-                .Else(UpdateVSwitchService)
+                .Then(UpdateVSwitchService)
+                .Else(CreateVSwitchService)
                 (switchServiceExists)
             
             select Unit.Default;

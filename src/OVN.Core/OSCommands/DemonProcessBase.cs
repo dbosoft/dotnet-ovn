@@ -16,7 +16,8 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
     private readonly ISysEnvironment _sysEnv;
     private OVSProcess? _ovsProcess;
-
+    protected bool NoControlFileArgument = false;
+    
     protected DemonProcessBase(
         ISysEnvironment sysEnv, OvsFile exeFile, OvsFile controlFile,
         ILogger logger)
@@ -45,7 +46,14 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
     {
         var controlFileFullPath = _sysEnv.FileSystem.ResolveOvsFilePath(_controlFile);
         var pidFileFullName = Path.ChangeExtension(_sysEnv.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
+        _sysEnv.FileSystem.EnsurePathForFileExists(_controlFile);
+        _sysEnv.FileSystem.EnsurePathForFileExists(pidFileFullName);
+        
+        if (NoControlFileArgument) 
+            return "--pidfile=\"{pidFileFullName}\"";
+        
         return $"--unixctl=\"{controlFileFullPath}\" --pidfile=\"{pidFileFullName}\"";
+
     }
     
     
@@ -83,7 +91,8 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         async Task<Either<Error, Unit>> StartAsync()
         {
             if (_ovsProcess is { IsRunning: true }) return Unit.Default;
-
+            
+            
             if (_sysEnv.FileSystem.FileExists(_controlFile))
             {
                 _logger.LogTrace("Existing control file found. Trying to stop orphaned demon.");

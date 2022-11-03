@@ -33,4 +33,11 @@ public interface IFileSystem
     /// </summary>
     /// <param name="path">path of file</param>
     void EnsurePathForFileExists(string path);
+    
+    /// <summary>
+    /// Ensures that the path (parent directories) exists for the path.
+    /// Will only work for file paths and not for directories.
+    /// </summary>
+    /// <param name="file">OVS file</param>
+    void EnsurePathForFileExists(OvsFile file);
 }

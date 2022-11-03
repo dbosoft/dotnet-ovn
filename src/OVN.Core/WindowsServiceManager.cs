@@ -1,4 +1,5 @@
 using System.Runtime.Versioning;
+using System.Security.AccessControl;
 using System.ServiceProcess;
 using System.Text;
 using LanguageExt;
@@ -23,17 +24,25 @@ internal class WindowsServiceManager : IServiceManager
     {
         return 
             GetServiceController()
-                .Match(l => true, l => false);
+                .Match(l =>
+                {
+                    return Prelude.Try(
+                            () => l.ServiceName == _serviceName)
+                        .Match(Fail: _ => false, Succ: _ => true);
+                }, l => false);
            
     }
 
     public EitherAsync<Error, string> GetServiceCommand()
     {
-        return Prelude.Try<Either<Error,string>>(() =>
+        return  Prelude.Try<Either<Error,string>>(() =>
             {
-                using var key = Registry.LocalMachine.OpenSubKey($@"\SYSTEM\CurrentControlSet\Services\{_serviceName}");
-                return key?.GetValue("ImagePath") 
-                    as string ?? Error.New($"Could not find service {_serviceName}");
+                using var key = Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Services\{_serviceName}");
+                // ReSharper disable once ConvertIfStatementToReturnStatement
+                // if required, otherwise would result in Error response
+                if(key?.GetValue("ImagePath") is not string value)
+                    return Error.New($"Could not find service {_serviceName}");
+                return value;
             }).Map(r => r.ToAsync())
             .ToEitherAsync().Flatten();
     }
@@ -151,7 +160,8 @@ internal class WindowsServiceManager : IServiceManager
     {
         return Prelude.Try<Either<Error, Unit>>(() =>
             {
-                using var key = Registry.LocalMachine.OpenSubKey($@"\SYSTEM\CurrentControlSet\Services\{_serviceName}");
+                using var key = 
+                    Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Services\{_serviceName}",true);
                 if (key == null)
                     return Error.New("Could not find service");
 

@@ -63,6 +63,12 @@ public class DefaultFileSystem : IFileSystem
         if (!directoryInfo.Exists)
             directoryInfo.Create();
     }
+    
+    public void EnsurePathForFileExists(OvsFile file)
+    {
+        var path = ResolveOvsFilePath(file);
+        EnsurePathForFileExists(path);
+    }
 
     private string ConvertPathToPlatform(string inputPath)
     {
@@ -79,8 +85,14 @@ public class DefaultFileSystem : IFileSystem
     protected virtual string FindBasePath(string pathRoot)
     {
         var basePath = "/";
-        if (_platform == OSPlatform.Windows) basePath = "c:/openvswitch/";
+        if (_platform != OSPlatform.Windows) return $"{basePath}{pathRoot}";
 
+        if (pathRoot.StartsWith("usr"))
+            basePath = "c:/openvswitch/";
+        else
+            basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "openvswitch").Replace("\\", "/") + "/";
+        
         return $"{basePath}{pathRoot}";
     }
 }
