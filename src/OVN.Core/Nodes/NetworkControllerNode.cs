@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Dbosoft.OVN.Nodes;
 
-public class NetworkControllerNode : OVNNodeBase
+public class NetworkControllerNode : DemonNodeBase
 {
     private readonly OvsFile _ctlFile = new("var/run/ovn", "ovn_nb.ctl");
     private readonly ILogger _logger;
@@ -50,12 +50,16 @@ public class NetworkControllerNode : OVNNodeBase
     protected override EitherAsync<Error, Unit> OnProcessStarted(DemonProcessBase process,
         CancellationToken cancellationToken)
     {
-        return process == _northDBProcess
-            ? WaitForDbSocket(cancellationToken)
-                .Bind(_ => InitDB(cancellationToken))
-                .Bind(_ => ConfigureController(cancellationToken))
-            : Unit.Default;
-    }
+        if (process != _northDBProcess)
+        {
+            _logger.LogInformation("OVN network controller node - north demon has been started");
+            return Unit.Default;
+        }
+
+        return WaitForDbSocket(cancellationToken)
+            .Bind(_ => InitDB(cancellationToken))
+            .Bind(_ => ConfigureController(cancellationToken));
+}
     
     private EitherAsync<Error, Unit> ConfigureController(CancellationToken cancellationToken)
     {
@@ -69,7 +73,7 @@ public class NetworkControllerNode : OVNNodeBase
 
     private EitherAsync<Error, Unit> InitDB(CancellationToken cancellationToken)
     {
-        var timeout = new CancellationTokenSource(10000);
+        var timeout = new CancellationTokenSource(5000);
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
         var ovnControl = new OVNControlTool(_sysEnv, _ovnSettings.NorthDBConnection);
@@ -78,7 +82,8 @@ public class NetworkControllerNode : OVNNodeBase
 
     private EitherAsync<Error, Unit> WaitForDbSocket(CancellationToken cancellationToken)
     {
-        var timeout = new CancellationTokenSource(5000);
+        
+        var timeout = new CancellationTokenSource(new TimeSpan(0,1,0));
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
         async Task<Either<Error, Unit>> WaitForDbSocketAsync()
@@ -93,7 +98,7 @@ public class NetworkControllerNode : OVNNodeBase
                     _logger.LogWarning(
                         "OVN network controller node - failed to wait for north database before timeout");
                 else
-                    _logger.LogTrace("OVN network controller node - north database has been started.");
+                    _logger.LogInformation("OVN network controller node - north database has been started.");
 
                 return Unit.Default;
             });

@@ -8,8 +8,8 @@ public class OvsDbConnectionTest
     [InlineData(false,"etc", "test.sock", "unix:/etc/test.sock", "LINUX")]
     [InlineData(false,"etc/test", "test.sock", "unix:/etc/test/test.sock", "LINUX")]
     [InlineData(false,"etc/test/", "test.sock", "unix:/etc/test/test.sock", "LINUX")]
-    [InlineData(false,"etc", "test.sock", "unix:c:/openvswitch/etc/test.sock", "WINDOWS")]
-    [InlineData(false,"etc/test", "test.sock", "unix:c:/openvswitch/etc/test/test.sock", "WINDOWS")]
+    [InlineData(false,"etc", "test.sock", "unix:C:/ProgramData/openvswitch/etc/test.sock", "WINDOWS")]
+    [InlineData(false,"etc/test", "test.sock", "unix:C:/ProgramData/openvswitch/etc/test/test.sock", "WINDOWS")]
     
     [InlineData(true,"etc", "test.sock", "punix:/etc/test.sock", "LINUX")]
     public void Pipe_command_string_has_expected_format(bool passive, string path, string name, string expectedString, string platform)

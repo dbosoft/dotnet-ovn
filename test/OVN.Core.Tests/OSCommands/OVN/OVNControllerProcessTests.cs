@@ -22,7 +22,7 @@ public class OVNControllerProcessTests
 
         await ovnController.Start();
         // ReSharper disable once StringLiteralTypo
-        Assert.Equal(@"--unixctl=""/var/run/ovn/ovn-controller.ctl"" --pidfile=""/var/run/ovn/ovn-controller.pid"" ""unix:/var/run/ovn/ovnsb_db.sock""", processStartInfo.Arguments);
+        Assert.Equal(@"--pidfile=""/var/run/ovn/ovn-controller.pid"" ""unix:/var/run/ovn/ovnsb_db.sock""", processStartInfo.Arguments);
         
     }
 }

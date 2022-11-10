@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Dbosoft.OVN.Nodes;
 
-public class OVNDatabaseNode : OVNNodeBase
+public class OVNDatabaseNode : DemonNodeBase
 {
     private readonly ILoggerFactory _loggerFactory;
 

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Dbosoft.OVN.Nodes;
 
-public class OVNChassisNode : OVNNodeBase
+public class OVNChassisNode : DemonNodeBase
 {
     private static readonly OvsDbConnection LocalOVSConnection
         = new(new OvsFile("/var/run/openvswitch", "db.sock"));
@@ -21,6 +21,7 @@ public class OVNChassisNode : OVNNodeBase
 
     private readonly ISysEnvironment _sysEnv;
     private OVSDBProcess? _ovsdbProcess;
+    private VSwitchDProcess? _vSwitchDProcess;
 
     public OVNChassisNode(ISysEnvironment sysEnv,
         IOVNSettings ovnSettings,
@@ -34,6 +35,24 @@ public class OVNChassisNode : OVNNodeBase
 
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
+        _ovsdbProcess = new OVSDBProcess(_sysEnv,
+            new OVSDbSettings(
+                LocalOVSConnection,
+                new OvsFile("etc/openvswitch", "ovs.db"),
+                // ReSharper disable StringLiteralTypo
+                new OvsFile("usr/share/openvswitch", "vswitch.ovsschema"),
+                // ReSharper restore StringLiteralTypo
+                new OvsFile("var/run/openvswitch", "ovs-db.ctl")),
+            _loggerFactory.CreateLogger<OVSDBProcess>());
+
+        yield return _ovsdbProcess;
+        
+        _vSwitchDProcess = new VSwitchDProcess(_sysEnv,
+            new VSwitchDSettings(LocalOVSConnection),
+            _loggerFactory.CreateLogger<VSwitchDProcess>());
+
+        yield return _vSwitchDProcess;
+        
         yield return new OVNControllerProcess(_sysEnv,
             new OVNControllerSettings(LocalOVSConnection),
             _loggerFactory.CreateLogger<OVNControllerProcess>());
@@ -43,34 +62,33 @@ public class OVNChassisNode : OVNNodeBase
     protected override EitherAsync<Error, Unit> OnProcessStarted(DemonProcessBase process,
         CancellationToken cancellationToken)
     {
-        if (process != _ovsdbProcess)
-            return Unit.Default;
-        return WaitForDbSocket(cancellationToken)
-            .Bind(_ => ConfigureController(cancellationToken));
+        if (process == _ovsdbProcess)
+            return WaitForDbSocket(cancellationToken)
+                .Bind(_ => InitDB(cancellationToken));
+
+        // no need to wait with vswitchd for ovn controller, but when it is running configure
+        // ovn settings
+        if (process != _vSwitchDProcess) return Unit.Default;
+        
+        _logger.LogInformation("OVN chassis node - vswitch demon has been started");
+        return ConfigureController(cancellationToken);
+
     }
 
     private EitherAsync<Error, Unit> ConfigureController(CancellationToken cancellationToken)
     {
-        var timeout = new CancellationTokenSource(10000);
+        // when init is still running this could take a while...
+        var timeout = new CancellationTokenSource(new TimeSpan(0,5,0));
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
         var ovsControl = new OVSControlTool(_sysEnv, LocalOVSConnection);
         return ovsControl.ConfigureOVN(_ovnSettings.SouthDBConnection, "local",
             cancellationToken: cts.Token);
     }
-
-    private EitherAsync<Error, Unit> InitDB(CancellationToken cancellationToken)
-    {
-        var timeout = new CancellationTokenSource(10000);
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-
-        var ovsControl = new OVSControlTool(_sysEnv, LocalOVSConnection);
-        return ovsControl.InitDb(cts.Token);
-    }
-
+    
     private EitherAsync<Error, Unit> WaitForDbSocket(CancellationToken cancellationToken)
     {
-        var timeout = new CancellationTokenSource(5000);
+        var timeout = new CancellationTokenSource(new TimeSpan(0,1,0));
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
         async Task<Either<Error, Unit>> WaitForDbSocketAsync()
@@ -84,12 +102,21 @@ public class OVNChassisNode : OVNNodeBase
                 if (!r)
                     _logger.LogWarning("OVN chassis node - failed to wait for ovs connection before timeout");
                 else
-                    _logger.LogTrace("OVN chassis node - ovs database has been started.");
+                    _logger.LogInformation("OVN chassis node - ovs database has been started.");
 
                 return Unit.Default;
             });
         }
 
         return WaitForDbSocketAsync().ToAsync();
+    }
+    
+    private EitherAsync<Error, Unit> InitDB(CancellationToken cancellationToken)
+    {
+         var timeout = new CancellationTokenSource(5000);
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+
+        var ovsControl = new OVSControlTool(_sysEnv, LocalOVSConnection);
+        return ovsControl.InitDb(cts.Token);
     }
 }

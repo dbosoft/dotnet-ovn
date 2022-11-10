@@ -50,7 +50,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         _sysEnv.FileSystem.EnsurePathForFileExists(pidFileFullName);
         
         if (NoControlFileArgument) 
-            return "--pidfile=\"{pidFileFullName}\"";
+            return $"--pidfile=\"{pidFileFullName}\"";
         
         return $"--unixctl=\"{controlFileFullPath}\" --pidfile=\"{pidFileFullName}\"";
 

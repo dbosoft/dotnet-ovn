@@ -30,7 +30,7 @@ public class OVNControlTool : OVSTool
     
     public EitherAsync<Error, Unit> InitDb(CancellationToken cancellationToken = default)
     {
-        return RunCommand("init", cancellationToken).Map(_ => Unit.Default);
+        return RunCommand(" --no-wait init", cancellationToken).Map(_ => Unit.Default);
     }
     
     public EitherAsync<Error, Unit> EnsureChassisInGroup(

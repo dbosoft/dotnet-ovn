@@ -6,7 +6,7 @@ using LanguageExt.Common;
 namespace Dbosoft.OVN.Nodes;
 
 [PublicAPI]
-public abstract class OVNNodeBase : OVSNodeBase
+public abstract class DemonNodeBase : OVSNodeBase
 {
     private Arr<DemonProcessBase> _demons;
 
