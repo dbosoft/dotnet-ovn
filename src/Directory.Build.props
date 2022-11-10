@@ -9,7 +9,7 @@
     <PackageTags>OpenVSwitch;OVN</PackageTags>
     <Authors>dbosoft</Authors>
     <Company>dbosoft GmbH</Company>
-    <Product>dbosoft IdentityServer</Product>
+    <Product>dbosoft Open VSwitch</Product>
     <RepositoryUrl>https://github.com/dbosoft/dotnet-ovn</RepositoryUrl>
     <AssemblyName>Dbosoft.$(MSBuildProjectName)</AssemblyName>
     <RootNamespace>Dbosoft.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
