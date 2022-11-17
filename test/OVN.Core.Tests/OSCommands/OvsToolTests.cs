@@ -366,7 +366,7 @@ public class OvsToolTests
 
        public EitherAsync<Error, string> RunAnyCommand(string command)
        {
-          return RunCommand(command);
+          return RunCommandWithResponse(command);
        }
     }
 }

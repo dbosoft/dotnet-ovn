@@ -88,6 +88,9 @@ public abstract class DemonNodeBase : OVSNodeBase
 
     public override EitherAsync<Error, Unit> EnsureAlive(bool checkResponse, CancellationToken cancellationToken = default)
     {
+        if (Status is NodeStatus.Starting or NodeStatus.Stopping)
+            return Unit.Default;
+
         return RunDemonsOp(_demons, d => d.CheckAlive(
                 checkResponse, cancellationToken: cancellationToken))
             .Map(_ => Unit.Default);

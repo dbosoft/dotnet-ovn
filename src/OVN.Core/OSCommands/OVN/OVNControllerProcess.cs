@@ -11,7 +11,7 @@ public class OVNControllerProcess : DemonProcessBase
     public OVNControllerProcess(ISysEnvironment sysEnv, OVNControllerSettings settings, ILogger logger)
         : base(sysEnv,
             OVNCommands.OVNController,
-            new OvsFile("/var/run/ovn", "ovn-controller.ctl"), logger)
+            new OvsFile("/var/run/ovn", "ovn-controller.ctl"), true, logger)
     {
         _sysEnv = sysEnv;
         _settings = settings;

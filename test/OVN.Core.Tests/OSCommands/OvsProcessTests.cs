@@ -80,7 +80,7 @@ public class OvsProcessTests
             new OvsFile("bin", "test", true));
 
         Assert.ThrowsAsync<IOException>(async () =>
-            await ovsProcess.WaitForExit(CancellationToken.None));
+            await ovsProcess.WaitForExit(false,CancellationToken.None));
     }
     
     [Fact]
@@ -99,6 +99,6 @@ public class OvsProcessTests
         var cts = new CancellationTokenSource();
         cts.Cancel();
         Assert.ThrowsAsync<IOException>(async () =>
-            await ovsProcess.WaitForExit(cts.Token));
+            await ovsProcess.WaitForExit(false, cts.Token));
     }
 }

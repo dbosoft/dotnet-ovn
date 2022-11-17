@@ -60,7 +60,48 @@ public class OVSProcess : IDisposable
         });
     }
 
-    public TryAsync<string> WaitForExit(CancellationToken cancellationToken)
+    public TryAsync<int> WaitForExit(bool softWait, CancellationToken cancellationToken)
+    {
+        return Prelude.TryAsync(async () =>
+        {
+            if (_startedProcess == null)
+                throw new IOException("Process not started");
+
+            var internalTokenSource =
+                new CancellationTokenSource(Timeout.Infinite);
+            if (softWait)
+            {
+                internalTokenSource = new CancellationTokenSource(5000);
+            }
+            
+            var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
+                internalTokenSource.Token,
+                cancellationToken
+            );
+            
+            try
+            {
+                // ReSharper disable once MethodSupportsCancellation
+                await _startedProcess.WaitForExit().WaitAsync(cancelSource.Token);
+            }
+            catch (Exception ex)
+            {
+                if (!_startedProcess.HasExited)
+                {
+                    if (softWait)
+                        return 0;
+                        
+                    _startedProcess.Kill();
+                    throw new TimeoutException(
+                        $"Process {_exeFile.Name} has not exited before timeout.", ex);
+                }
+            }
+
+            return _startedProcess.ExitCode;
+        });
+    }
+
+    public TryAsync<string> WaitForExitWithResponse(CancellationToken cancellationToken)
     {
         return Prelude.TryAsync(async () =>
         {
@@ -70,22 +111,11 @@ public class OVSProcess : IDisposable
             var outputBuilder = new StringBuilder();
             _startedProcess.OutputDataReceived += (_, o) => { outputBuilder.Append(o.Data); };
             _startedProcess.ErrorDataReceived += (_, o) => { outputBuilder.Append(o.Data); };
-
-            try
-            {
-                await _startedProcess.WaitForExit(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _startedProcess.Kill();
-                throw new TimeoutException(
-                    $"Process {_exeFile.Name} has not exited before timeout. \nOutput: {outputBuilder}", ex);
-            }
-
+            
             // ReSharper disable once MethodSupportsCancellation
             //this is required here to force output to be read until end
-            await _startedProcess.WaitForExit();
-
+            await _startedProcess.WaitForExit().WaitAsync(cancellationToken);
+            
             var output = outputBuilder.ToString();
 
             if (_startedProcess.ExitCode != 0)

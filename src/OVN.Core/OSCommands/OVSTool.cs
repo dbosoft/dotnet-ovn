@@ -4,12 +4,12 @@ using System.Text.Json.Serialization;
 using Dbosoft.OVN.Model;
 using LanguageExt;
 using LanguageExt.Common;
+using Microsoft.Extensions.Logging;
 
 namespace Dbosoft.OVN.OSCommands;
 
 public class OVSTool: IOVSDBTool
 {
-    private const int MaxRetry = 5;
 
     private static readonly Random Random = new();
     private readonly ISysEnvironment _sysEnv;
@@ -26,37 +26,22 @@ public class OVSTool: IOVSDBTool
         return command;
     }
 
-    protected EitherAsync<Error, string> RunCommand(string command, CancellationToken cancellationToken = default)
+    protected EitherAsync<Error, string> RunCommandWithResponse(string command, CancellationToken cancellationToken = default)
     {
         var ovsProcess = new OVSProcess(_sysEnv, _toolFile, BuildArguments(command));
-
-        async Task<Either<Error, string>> RunAsync()
-        {
-            var tryCount = 1;
-
-            while (!cancellationToken.IsCancellationRequested && tryCount < MaxRetry)
-            {
-                var either = await ovsProcess.Start().ToAsync()
-                    .Bind(p =>
-                        p.WaitForExit(cancellationToken)).ToEither(l => Error.New(l));
-
-                if (either.IsRight)
-                    return either;
-
-                if (either.Match(
-                        _ => false,
-                        l => tryCount++ >= MaxRetry ||
-                             !l.Message.Contains("stream_windows|ERR|")))
-                    return either;
-
-
-                await Task.Delay(Random.Next(10) * 200, cancellationToken);
-            }
-
-            return Error.New("command was cancelled");
-        }
-
-        return RunAsync().ToAsync();
+        
+        return ovsProcess.Start().ToAsync()
+            .Bind(p =>
+                p.WaitForExitWithResponse(cancellationToken)).ToEither(l => Error.New(l));
+    }
+    
+    protected EitherAsync<Error, int> RunCommand(string command, bool softWait = false, CancellationToken cancellationToken = default)
+    {
+        var ovsProcess = new OVSProcess(_sysEnv, _toolFile, BuildArguments(command));
+        
+        return ovsProcess.Start().ToAsync()
+            .Bind(p =>
+                p.WaitForExit(softWait,cancellationToken)).ToEither(l => Error.New(l));
     }
 
     private static string ColumnsValuesToCommandString(Map<string, IOVSField> columns, bool setMode)
@@ -102,7 +87,7 @@ public class OVSTool: IOVSDBTool
         if (reference.HasValue)
             sb.Append($" -- add {reference.Value.TableName} {reference.Value.RowId} {reference.Value.RefColumn} @ref");
 
-        return RunCommand(sb.ToString(), cancellationToken);
+        return RunCommandWithResponse(sb.ToString(), cancellationToken);
     }
 
     /// <inheritdoc />
@@ -128,7 +113,7 @@ public class OVSTool: IOVSDBTool
             sb.Append($" -- clear {tableName} {rowId} {ColumnsListToCommandString(toClear).Replace(',', ' ')}");
 
 
-        return RunCommand(sb.ToString(), cancellationToken).Map(_ => Unit.Default);
+        return RunCommand(sb.ToString(), false, cancellationToken).Map(_ => Unit.Default);
     }
 
     /// <inheritdoc />
@@ -147,7 +132,7 @@ public class OVSTool: IOVSDBTool
 
         sb.Append($" list {tableName} {rowId}");
 
-        return RunCommand(sb.ToString(), cancellationToken)
+        return RunCommandWithResponse(sb.ToString(), cancellationToken)
             .Bind(r => MapResponse<T>(r, additionalFields))
             .Bind(e =>
                 e.HeadOrLeft(Error.New(Errors.SequenceEmpty)).ToAsync());
@@ -162,7 +147,7 @@ public class OVSTool: IOVSDBTool
         var sb = new StringBuilder();
         sb.Append($"destroy {tableName} {rowId}");
 
-        return RunCommand(sb.ToString(), cancellationToken)
+        return RunCommand(sb.ToString(), false, cancellationToken)
             .Map(_ => Unit.Default);
     }
 
@@ -177,7 +162,7 @@ public class OVSTool: IOVSDBTool
         var sb = new StringBuilder();
         sb.Append($"remove {tableName} {rowId} {column} {value}");
 
-        return RunCommand(sb.ToString(), cancellationToken)
+        return RunCommand(sb.ToString(),false, cancellationToken)
             .Map(_ => Unit.Default);
     }
 
@@ -215,7 +200,7 @@ public class OVSTool: IOVSDBTool
         sb.Append($" find {tableName} ");
         sb.Append(QueryCommandString(query));
 
-        return RunCommand(sb.ToString(), cancellationToken)
+        return RunCommandWithResponse(sb.ToString(), cancellationToken)
             .Bind(r => MapResponse<T>(r, additionalFields));
     }
 

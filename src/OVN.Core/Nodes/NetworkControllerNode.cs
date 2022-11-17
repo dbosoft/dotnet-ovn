@@ -73,7 +73,7 @@ public class NetworkControllerNode : DemonNodeBase
 
     private EitherAsync<Error, Unit> InitDB(CancellationToken cancellationToken)
     {
-        var timeout = new CancellationTokenSource(5000);
+        var timeout = new CancellationTokenSource(new TimeSpan(0,1,0));
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
         var ovnControl = new OVNControlTool(_sysEnv, _ovnSettings.NorthDBConnection);

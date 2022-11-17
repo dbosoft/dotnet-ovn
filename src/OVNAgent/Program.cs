@@ -58,6 +58,7 @@ static Task RunCommand(LogLevel logLevel, NodeType nodeType)
 {
     
     var host = Host.CreateDefaultBuilder()
+        .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = TimeSpan.FromSeconds(15))
         .UseWindowsService(cfg => cfg.ServiceName = BuildServiceName(nodeType))
         .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
          .ConfigureServices(services =>
@@ -98,11 +99,12 @@ static async Task ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
     using var yamlReader = netplanFile.OpenText();
     var networkPlanValues = serializer.Deserialize<IDictionary<object,object>>(yamlReader);
     var netplan = NetworkPlanParser.ParseYaml(networkPlanValues);
-    
+
     var host = Host.CreateDefaultBuilder()
         .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
         .ConfigureServices(services =>
         {
+    
             AddOVNCore(services);
             services.AddSingleton(
                 sp => new NetworkPlanRealizer(

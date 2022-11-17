@@ -11,20 +11,24 @@ namespace Dbosoft.OVN.OSCommands;
 public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 {
     private readonly OvsFile _controlFile;
+    private readonly bool _isOvn;
     private readonly OvsFile _exeFile;
     private readonly ILogger _logger;
 
     private readonly ISysEnvironment _sysEnv;
     private OVSProcess? _ovsProcess;
     protected bool NoControlFileArgument = false;
+    private bool _isStopping = false;
     
     protected DemonProcessBase(
         ISysEnvironment sysEnv, OvsFile exeFile, OvsFile controlFile,
+        bool isOvn,
         ILogger logger)
     {
         _sysEnv = sysEnv;
         _exeFile = exeFile;
         _controlFile = controlFile;
+        _isOvn = isOvn;
         _logger = logger;
     }
 
@@ -48,11 +52,18 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         var pidFileFullName = Path.ChangeExtension(_sysEnv.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
         _sysEnv.FileSystem.EnsurePathForFileExists(_controlFile);
         _sysEnv.FileSystem.EnsurePathForFileExists(pidFileFullName);
+
+        var sb = new StringBuilder();
+        if (_logger.IsEnabled(LogLevel.Trace))
+            sb.Append("-v ");
         
-        if (NoControlFileArgument) 
-            return $"--pidfile=\"{pidFileFullName}\"";
-        
-        return $"--unixctl=\"{controlFileFullPath}\" --pidfile=\"{pidFileFullName}\"";
+  
+        if (!NoControlFileArgument) 
+            sb.Append($"--unixctl=\"{controlFileFullPath}\" ");
+
+        sb.Append($"--pidfile=\"{pidFileFullName}\"");
+  
+        return sb.ToString();
 
     }
     
@@ -135,26 +146,41 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
             return Unit.Default;
         }
 
-        var appCtrl = new OVSAppControl(_sysEnv, _controlFile);
+        _isStopping = true;
+        try
+        {
+            IAppControl appCtrl = _isOvn
+                ? new OVNAppControl(_sysEnv, _controlFile)
+                : new OVSAppControl(_sysEnv, _controlFile);
 
-        return appCtrl.StopApp(cancellationToken)
-            .Bind(_ => _ovsProcess.WaitForExit(cancellationToken).ToEither(l => Error.New(l))
-                .Map(_ =>
+            return appCtrl.StopApp(cancellationToken)
+                .Bind(_ => _ovsProcess.WaitForExit(true, cancellationToken).ToEither(l => Error.New(l))
+                    .Map(_ =>
+                    {
+                        _logger.LogDebug("Demon {ovsFile}:{controlFile} stopped", _exeFile.Name, _controlFile.Name);
+                        _ovsProcess?.Dispose();
+                        _ovsProcess = null;
+                        return Unit.Default;
+                    }))
+                .MapLeft(l =>
                 {
-                    _logger.LogDebug("Demon {ovsFile}:{controlFile} stopped", _exeFile.Name, _controlFile.Name);
+                    if (_ovsProcess.IsRunning)
+                    {
+                        _logger.LogInformation(
+                            "Demon {ovsFile}:{controlFile}: graceful stop failed - process will be killed",
+                            _exeFile.Name, _controlFile.Name);
+                        _ovsProcess?.Kill();
+                    }
+
                     _ovsProcess?.Dispose();
                     _ovsProcess = null;
-                    return Unit.Default;
-                }))
-            .MapLeft(l =>
-            {
-                _logger.LogInformation("Demon {ovsFile}:{controlFile}: graceful stop failed - process will be killed",
-                    _exeFile.Name, _controlFile.Name);
-                _ovsProcess?.Kill();
-                _ovsProcess?.Dispose();
-                _ovsProcess = null;
-                return l;
-            });
+                    return l;
+                });
+        }
+        finally
+        {
+            _isStopping = false;
+        }
     }
 
 
@@ -165,6 +191,9 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
     {
         async Task<Either<Error, bool>> CheckAliveAsync()
         {
+            if (_isStopping)
+                return true;
+            
             if (_ovsProcess is not { IsRunning: true })
             {
                 _logger.LogTrace("Demon {ovsFile}:{controlFile}: check alive detected stopped process.",
@@ -175,7 +204,10 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
             if (!checkResponse)
                 return true;
 
-            var appControl = new OVSAppControl(_sysEnv, _controlFile);
+            IAppControl appControl = _isOvn 
+                ? new OVNAppControl(_sysEnv, _controlFile) 
+                : new OVSAppControl(_sysEnv, _controlFile);
+            
             var version = await appControl.GetVersion(cancellationToken)
                 .Match(r => r, l =>
                 {

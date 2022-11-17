@@ -14,7 +14,7 @@ public class OVSDBProcess : DemonProcessBase
     private readonly ISysEnvironment _sysEnv;
 
     public OVSDBProcess(ISysEnvironment sysEnv, OVSDbSettings dbSettings, ILogger logger) :
-        base(sysEnv, OVSCommands.DBServer, dbSettings.ControlFile, logger)
+        base(sysEnv, OVSCommands.DBServer, dbSettings.ControlFile, false, logger)
     {
         _sysEnv = sysEnv;
         _dbSettings = dbSettings;

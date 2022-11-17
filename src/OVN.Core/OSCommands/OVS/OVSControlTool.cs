@@ -29,7 +29,7 @@ public class OVSControlTool : OVSTool
 
     public EitherAsync<Error, Unit> InitDb(CancellationToken cancellationToken = default)
     {
-        return RunCommand(" --no-wait init", cancellationToken).Map(_ => Unit.Default);
+        return RunCommand(" --no-wait init", true, cancellationToken).Map(_ => Unit.Default);
     }
 
     public EitherAsync<Error, Unit> ConfigureOVN(
@@ -46,6 +46,6 @@ public class OVSControlTool : OVSTool
         sb.Append($"-- set open . external-ids:ovn-encap-ip={encapIp ?? IPAddress.Loopback} ");
         sb.Append($"-- set open . external-ids:system-id={chassisName} ");
 
-        return RunCommand(sb.ToString(), cancellationToken).Map(_ => Unit.Default);
+        return RunCommand(sb.ToString(), true, cancellationToken).Map(_ => Unit.Default);
     }
 }

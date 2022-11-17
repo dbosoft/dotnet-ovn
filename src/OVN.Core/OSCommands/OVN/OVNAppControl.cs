@@ -1,14 +1,15 @@
+using Dbosoft.OVN.OSCommands.OVN;
 using LanguageExt;
 using LanguageExt.Common;
 
 namespace Dbosoft.OVN.OSCommands.OVS;
 
-public class OVSAppControl : OVSTool, IAppControl
+public class OVNAppControl : OVSTool, IAppControl
 {
     private readonly OvsFile _controlFile;
     private readonly ISysEnvironment _sysEnv;
 
-    public OVSAppControl(ISysEnvironment sysEnv, OvsFile controlFile) : base(sysEnv, OVSCommands.AppControl)
+    public OVNAppControl(ISysEnvironment sysEnv, OvsFile controlFile) : base(sysEnv, OVNCommands.AppControl)
     {
         _sysEnv = sysEnv;
         _controlFile = controlFile;
