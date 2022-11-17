@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Dbosoft.OVN.Nodes;
@@ -7,11 +6,11 @@ namespace Dbosoft.OVN.Nodes;
 /// Hosted service implementation for a OVS Node. 
 /// </summary>
 /// <typeparam name="TNode"></typeparam>
-public class OVSNodeService<TNode> : IHostedService, IDisposable, IAsyncDisposable
-    where TNode : OVSNodeBase
+public class OVSNodeService<TNode> : IOVSService<TNode>, IDisposable, IAsyncDisposable
+    where TNode : IOVSNode
 {
     private readonly ILogger<OVSNodeService<TNode>> _logger;
-    private readonly OVSNodeBase _ovsNode;
+    private readonly IOVSNode _ovsNode;
     private Task? _executingTask;
     private DateTime _lastResponseCheck = DateTime.MinValue;
     private CancellationTokenSource? _stoppingCts;
@@ -49,7 +48,6 @@ public class OVSNodeService<TNode> : IHostedService, IDisposable, IAsyncDisposab
     }
 
 
-    /// <inheritdoc />
     public async Task StartAsync(CancellationToken stoppingToken)
     {
         _stoppingCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
@@ -60,7 +58,6 @@ public class OVSNodeService<TNode> : IHostedService, IDisposable, IAsyncDisposab
             TimeSpan.FromSeconds(5));
     }
 
-    /// <inheritdoc />
     public async Task StopAsync(CancellationToken stoppingToken)
     {
         _timer?.Change(Timeout.Infinite, 0);

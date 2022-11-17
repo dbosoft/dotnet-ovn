@@ -5,7 +5,7 @@ using LanguageExt.Common;
 namespace Dbosoft.OVN.Nodes;
 
 [PublicAPI]
-public abstract class OVSNodeBase : IDisposable, IAsyncDisposable
+public abstract class OVSNodeBase : IOVSNode
 {
    
     public async ValueTask DisposeAsync()

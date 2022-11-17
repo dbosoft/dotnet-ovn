@@ -51,38 +51,5 @@ public class OVSDBProcess : DemonProcessBase
         return dbTool.CreateDBFile(_dbSettings.DBFile, _dbSettings.SchemaFile)
             .Map(_ => true);
     }
-
-    public async Task<Either<Error, bool>> WaitForDbSocket(CancellationToken cancellationToken)
-    {
-        return await Prelude.TryAsync(async () =>
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                if (_dbSettings.Connection.PipeFile != null)
-                {
-                    if (_sysEnv.FileSystem.FileExists(_dbSettings.Connection.PipeFile))
-                        return true;
-                }
-                else
-                {
-                    using var tcpClient = new TcpClient();
-                    try
-                    {
-                        await tcpClient.ConnectAsync(
-                            _dbSettings.Connection.Address ?? "127.0.0.1",
-                            _dbSettings.Connection.Port, cancellationToken);
-                        return true;
-                    }
-                    catch (Exception)
-                    {
-                        // ignored, port closed
-                    }
-                }
-
-                await Task.Delay(500, cancellationToken);
-            }
-
-            return false;
-        }).ToEither(l => Error.New(l)).Map(_ => true);
-    }
+    
 }

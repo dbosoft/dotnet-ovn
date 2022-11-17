@@ -11,9 +11,7 @@ public abstract class DemonNodeBase : OVSNodeBase
     private Arr<DemonProcessBase> _demons;
 
     public NodeStatus Status { get; private set; } = NodeStatus.Stopped;
-
-
-
+    
     protected abstract IEnumerable<DemonProcessBase> SetupDemons();
 
     protected virtual EitherAsync<Error, Unit> BeforeProcessStarted(DemonProcessBase process,

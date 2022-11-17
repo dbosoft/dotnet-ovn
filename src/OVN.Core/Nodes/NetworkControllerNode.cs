@@ -89,10 +89,8 @@ public class NetworkControllerNode : DemonNodeBase
         async Task<Either<Error, Unit>> WaitForDbSocketAsync()
         {
             _logger.LogTrace("OVN network controller node - waiting for north database to be started.");
-            if (_northDBProcess == null)
-                return Error.New("OVN chassis node not started");
 
-            return await _northDBProcess.WaitForDbSocket(cts.Token).MapAsync(r =>
+            return await _ovnSettings.NorthDBConnection.WaitForDbSocket(_sysEnv,cts.Token).MapAsync(r =>
             {
                 if (!r)
                     _logger.LogWarning(

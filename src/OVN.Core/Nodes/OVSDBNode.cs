@@ -7,56 +7,50 @@ using Microsoft.Extensions.Logging;
 
 namespace Dbosoft.OVN.Nodes;
 
-public class OVNChassisNode : DemonNodeBase
+public class OVSDbNode : DemonNodeBase
 {
     private static readonly OvsDbConnection LocalOVSConnection
         = new(new OvsFile("/var/run/openvswitch", "db.sock"));
 
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
-
-    private readonly IOVNSettings _ovnSettings;
+    
     // runs: OVSDB, VSwitchD, OVNController
     // connects to OVNDatabaseNode
 
     private readonly ISysEnvironment _sysEnv;
+    private OVSDBProcess? _ovsdbProcess;
 
-    public OVNChassisNode(ISysEnvironment sysEnv,
-        IOVNSettings ovnSettings,
+    public OVSDbNode(ISysEnvironment sysEnv,
         ILoggerFactory loggerFactory)
     {
         _sysEnv = sysEnv;
-        _ovnSettings = ovnSettings;
         _loggerFactory = loggerFactory;
-        _logger = loggerFactory.CreateLogger<OVNChassisNode>();
+        _logger = loggerFactory.CreateLogger<OVSDbNode>();
     }
 
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
+        _ovsdbProcess = new OVSDBProcess(_sysEnv,
+            new OVSDbSettings(
+                LocalOVSConnection,
+                new OvsFile("etc/openvswitch", "ovs.db"),
+                // ReSharper disable StringLiteralTypo
+                new OvsFile("usr/share/openvswitch", "vswitch.ovsschema"),
+                // ReSharper restore StringLiteralTypo
+                new OvsFile("var/run/openvswitch", "ovs-db.ctl")),
+            _loggerFactory.CreateLogger<OVSDBProcess>());
+
+        yield return _ovsdbProcess;
         
-        yield return new OVNControllerProcess(_sysEnv,
-            new OVNControllerSettings(LocalOVSConnection),
-            _loggerFactory.CreateLogger<OVNControllerProcess>());
     }
 
 
     protected override EitherAsync<Error, Unit> OnProcessStarted(DemonProcessBase process,
         CancellationToken cancellationToken)
     {
-        return WaitForDbSocket(cancellationToken)
-            .Bind(_ => ConfigureController(cancellationToken));
-
-    }
-
-    private EitherAsync<Error, Unit> ConfigureController(CancellationToken cancellationToken)
-    {
-        // when init is still running this could take a while...
-        var timeout = new CancellationTokenSource(new TimeSpan(0,5,0));
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-
-        var ovsControl = new OVSControlTool(_sysEnv, LocalOVSConnection);
-        return ovsControl.ConfigureOVN(_ovnSettings.SouthDBConnection, "local",
-            cancellationToken: cts.Token);
+            return WaitForDbSocket(cancellationToken)
+                .Bind(_ => InitDB(cancellationToken));
     }
     
     private EitherAsync<Error, Unit> WaitForDbSocket(CancellationToken cancellationToken)
@@ -66,14 +60,14 @@ public class OVNChassisNode : DemonNodeBase
 
         async Task<Either<Error, Unit>> WaitForDbSocketAsync()
         {
-            _logger.LogTrace("OVN chassis node - waiting for ovs database to be started.");
+            _logger.LogTrace("OVS db node - waiting for ovs database to be started.");
 
             return await LocalOVSConnection.WaitForDbSocket(_sysEnv,cts.Token).MapAsync(r =>
             {
                 if (!r)
-                    _logger.LogWarning("OVN chassis node - failed to wait for ovs connection before timeout");
+                    _logger.LogWarning("OVS db node - failed to wait for ovs connection before timeout");
                 else
-                    _logger.LogInformation("OVN chassis node - ovs database has been started.");
+                    _logger.LogInformation("OVS db node - ovs database has been started.");
 
                 return Unit.Default;
             });
@@ -82,4 +76,12 @@ public class OVNChassisNode : DemonNodeBase
         return WaitForDbSocketAsync().ToAsync();
     }
     
+    private EitherAsync<Error, Unit> InitDB(CancellationToken cancellationToken)
+    {
+         var timeout = new CancellationTokenSource(5000);
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+
+        var ovsControl = new OVSControlTool(_sysEnv, LocalOVSConnection);
+        return ovsControl.InitDb(cts.Token);
+    }
 }
