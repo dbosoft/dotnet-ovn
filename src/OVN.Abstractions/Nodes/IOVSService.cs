@@ -15,5 +15,5 @@ public interface IOVSService<TNode> where TNode: IOVSNode
     /// Stop the service
     /// </summary>
     /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
-    Task StopAsync(CancellationToken cancellationToken);
+    Task StopAsync(bool ensureNodeStopped, CancellationToken cancellationToken);
 }

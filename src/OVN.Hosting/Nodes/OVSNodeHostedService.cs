@@ -33,7 +33,7 @@ public class OVSNodeHostedService<TNode> : IHostedService
     /// <inheritdoc />
     public Task StopAsync(CancellationToken stoppingToken)
     {
-        return _ovsNodeService.StopAsync(stoppingToken);
+        return _ovsNodeService.StopAsync(false,stoppingToken);
     }
 
    

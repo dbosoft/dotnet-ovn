@@ -36,7 +36,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
     {
         GC.SuppressFinalize(this);
         var cts = new CancellationTokenSource(5000);
-        await Stop(cts.Token);
+        await Stop(false,cts.Token);
         Dispose();
     }
 
@@ -137,7 +137,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         return StartAsync().ToAsync();
     }
 
-    public virtual EitherAsync<Error, Unit> Stop(CancellationToken cancellationToken)
+    public virtual EitherAsync<Error, Unit> Stop(bool ensureNodeStopped, CancellationToken cancellationToken)
     {
         if (_ovsProcess is not { IsRunning: true })
         {
@@ -154,7 +154,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                 : new OVSAppControl(_sysEnv, _controlFile);
 
             return appCtrl.StopApp(cancellationToken)
-                .Bind(_ => _ovsProcess.WaitForExit(true, cancellationToken).ToEither(l => Error.New(l))
+                .Bind(_ => _ovsProcess.WaitForExit(!ensureNodeStopped, cancellationToken).ToEither(l => Error.New(l))
                     .Map(_ =>
                     {
                         _logger.LogDebug("Demon {ovsFile}:{controlFile} stopped", _exeFile.Name, _controlFile.Name);

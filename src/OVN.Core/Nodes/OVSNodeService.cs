@@ -58,7 +58,7 @@ public class OVSNodeService<TNode> : IOVSService<TNode>, IDisposable, IAsyncDisp
             TimeSpan.FromSeconds(5));
     }
 
-    public async Task StopAsync(CancellationToken stoppingToken)
+    public async Task StopAsync(bool ensureNodeStopped, CancellationToken stoppingToken)
     {
         _timer?.Change(Timeout.Infinite, 0);
 
@@ -76,7 +76,7 @@ public class OVSNodeService<TNode> : IOVSService<TNode>, IDisposable, IAsyncDisp
         }
         finally
         {
-            await _ovsNode.Stop(stoppingToken).IfLeft(
+            await _ovsNode.Stop(ensureNodeStopped,stoppingToken).IfLeft(
                 l => _logger.LogDebug("Node service {nodeName}: Error in node stop: {error}", typeof(TNode), l));
         }
     }

@@ -12,7 +12,7 @@ public abstract class OVSNodeBase : IOVSNode
     {
         GC.SuppressFinalize(this);
         var cts = new CancellationTokenSource(5000);
-        await Stop(cts.Token);
+        await Stop(false,cts.Token);
 
         Dispose();
     }
@@ -24,7 +24,7 @@ public abstract class OVSNodeBase : IOVSNode
     }
 
     public abstract EitherAsync<Error, Unit> Start(CancellationToken cancellationToken = default);
-    public abstract EitherAsync<Error, Unit> Stop(CancellationToken cancellationToken = default);
+    public abstract EitherAsync<Error, Unit> Stop(bool ensureNodeStopped, CancellationToken cancellationToken = default);
 
 
     protected virtual void Dispose(bool disposing)
