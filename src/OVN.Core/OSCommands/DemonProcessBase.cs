@@ -136,6 +136,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         }
 
         var appCtrl = new OVSAppControl(_sysEnv, _controlFile);
+
         return appCtrl.StopApp(cancellationToken)
             .Bind(_ => _ovsProcess.WaitForExit(cancellationToken).ToEither(l => Error.New(l))
                 .Map(_ =>
@@ -144,7 +145,16 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     _ovsProcess?.Dispose();
                     _ovsProcess = null;
                     return Unit.Default;
-                }));
+                }))
+            .MapLeft(l =>
+            {
+                _logger.LogInformation("Demon {ovsFile}:{controlFile}: graceful stop failed - process will be killed",
+                    _exeFile.Name, _controlFile.Name);
+                _ovsProcess?.Kill();
+                _ovsProcess?.Dispose();
+                _ovsProcess = null;
+                return l;
+            });
     }
 
 

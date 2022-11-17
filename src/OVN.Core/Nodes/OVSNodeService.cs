@@ -52,7 +52,7 @@ public class OVSNodeService<TNode> : IOVSService<TNode>, IDisposable, IAsyncDisp
     {
         _stoppingCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         await _ovsNode.Start(stoppingToken).IfLeft(
-            l => _logger.LogError("{error}", l));
+            l => _logger.LogError("Node service {nodeName}: Error in node startup. {error}", typeof(TNode), l));
 
         _timer = new Timer(FireTask, null, TimeSpan.FromSeconds(5),
             TimeSpan.FromSeconds(5));
@@ -62,18 +62,23 @@ public class OVSNodeService<TNode> : IOVSService<TNode>, IDisposable, IAsyncDisp
     {
         _timer?.Change(Timeout.Infinite, 0);
 
-        if (_executingTask is { IsCompleted: false })
-            try
-            {
-                _stoppingCts?.Cancel();
-            }
-            finally
-            {
-                await Task.WhenAny(_executingTask, Task.Delay(Timeout.Infinite, stoppingToken));
-            }
-
-        await _ovsNode.Stop(stoppingToken).IfLeft(
-            l => _logger.LogError("{error}", l));
+        try
+        {
+            if (_executingTask is { IsCompleted: false })
+                try
+                {
+                    _stoppingCts?.Cancel();
+                }
+                finally
+                {
+                    await Task.WhenAny(_executingTask, Task.Delay(Timeout.Infinite, stoppingToken));
+                }
+        }
+        finally
+        {
+            await _ovsNode.Stop(stoppingToken).IfLeft(
+                l => _logger.LogDebug("Node service {nodeName}: Error in node stop: {error}", typeof(TNode), l));
+        }
     }
 
     private void FireTask(object? state)
@@ -103,6 +108,6 @@ public class OVSNodeService<TNode> : IOVSService<TNode>, IDisposable, IAsyncDisp
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeOutCts.Token);
 
         await _ovsNode.EnsureAlive(responseCheck, cts.Token).IfLeft(
-            l => _logger.LogError("{error}", l));
+            l => _logger.LogDebug("Node service {nodeName}: Error in check alive: {error}", typeof(TNode), l));
     }
 }
