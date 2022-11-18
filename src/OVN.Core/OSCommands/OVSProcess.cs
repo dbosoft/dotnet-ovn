@@ -165,7 +165,6 @@ public class OVSProcess : IDisposable
     protected void Dispose(bool disposing)
     {
         if (!disposing) return;
-        _startedProcess?.Kill();
         _startedProcess?.Dispose();
     }
 

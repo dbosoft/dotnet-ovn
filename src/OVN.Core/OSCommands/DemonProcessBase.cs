@@ -73,15 +73,6 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
     private void Dispose(bool disposing)
     {
         if (!disposing) return;
-
-        if (_ovsProcess is { IsRunning: true })
-        {
-            _logger.LogWarning(
-                "Demon {ovsFile}:{controlFile}: Demon is disposing, but process is still running. Killing process.",
-                _exeFile.Name, _controlFile.Name);
-            _ovsProcess?.Kill();
-        }
-
         _ovsProcess?.Dispose();
         _ovsProcess = null;
     }
@@ -206,7 +197,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     }))
                 .MapLeft(l =>
                 {
-                    if (_ovsProcess.IsRunning)
+                    if (_ovsProcess.IsRunning && ensureNodeStopped)
                     {
                         _logger.LogInformation(
                             "Demon {ovsFile}:{controlFile}: graceful stop failed - process will be killed",
