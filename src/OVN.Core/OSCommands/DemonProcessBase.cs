@@ -100,7 +100,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
             OVSProcess? orphanedDemon = default;
             if (_sysEnv.FileSystem.FileExists(pidFileFullName))
             {
-                _logger.LogTrace("Existing pid file found. Trying to take control of orphaned demon");
+                _logger.LogDebug("Existing pid file found. Trying to take control of orphaned demon");
 
                 try
                 {
@@ -110,34 +110,37 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     if (!orphanedDemon.IsRunning)
                         orphanedDemon = null;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     orphanedDemon = null;
                 }
             }
             
+            var internalTokenSource =
+                new CancellationTokenSource(5000);
+            var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
+                internalTokenSource.Token,
+                cancellationToken
+            );
+            
             if (_sysEnv.FileSystem.FileExists(_controlFile))
             {
-                _logger.LogTrace("Existing control file found. Trying to stop orphaned demon.");
-
+                _logger.LogDebug("Existing control file found. Trying to stop orphaned demon.");
+                
                 var appControl = new OVSAppControl(_sysEnv, _controlFile);
-                await appControl.StopApp(cancellationToken).IfLeft(l =>
+                await appControl.StopApp(cancelSource.Token).IfLeft(l =>
                 {
                     _logger.LogDebug(
                         "Demon {ovsFile}:{controlFile}: Response from ovs-appctl, while trying to stop orphaned process: {error}",
                         _exeFile.Name, _controlFile.Name, l);
                 });
-
+                
+                internalTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
+                
                 //try to wait for stop, kill it if not reacting to stop
                 if (orphanedDemon != null)
                 {
                     _logger.LogTrace("Demon {ovsFile}:{controlFile}: Wait for orphaned demon to be stopped.", _exeFile.Name, _controlFile.Name);
-                    var internalTokenSource =
-                        new CancellationTokenSource(10000);
-                    var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
-                        internalTokenSource.Token,
-                        cancellationToken
-                    );
                     var waitResult = await orphanedDemon.WaitForExit(false, cancelSource.Token)();
                     if (waitResult.IsFaulted)
                     {
@@ -186,15 +189,25 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                 ? new OVNAppControl(_sysEnv, _controlFile)
                 : new OVSAppControl(_sysEnv, _controlFile);
 
-            return appCtrl.StopApp(cancellationToken)
-                .Bind(_ => _ovsProcess.WaitForExit(!ensureNodeStopped, cancellationToken).ToEither(l => Error.New(l))
-                    .Map(_ =>
-                    {
-                        _logger.LogDebug("Demon {ovsFile}:{controlFile} stopped", _exeFile.Name, _controlFile.Name);
-                        _ovsProcess?.Dispose();
-                        _ovsProcess = null;
-                        return Unit.Default;
-                    }))
+            var internalTokenSource =
+                new CancellationTokenSource(2000);
+            var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
+                internalTokenSource.Token,
+                cancellationToken);            
+            
+            return appCtrl.StopApp(cancelSource.Token)
+                .Bind(_ =>
+                {
+                    internalTokenSource.CancelAfter(new TimeSpan(0,0,5));
+                    return _ovsProcess.WaitForExit(!ensureNodeStopped, cancelSource.Token).ToEither(l => Error.New(l))
+                        .Map(_ =>
+                        {
+                            _logger.LogDebug("Demon {ovsFile}:{controlFile} stopped", _exeFile.Name, _controlFile.Name);
+                            _ovsProcess?.Dispose();
+                            _ovsProcess = null;
+                            return Unit.Default;
+                        });
+                })
                 .MapLeft(l =>
                 {
                     if (_ovsProcess.IsRunning && ensureNodeStopped)
