@@ -28,7 +28,7 @@ public static class OvsMocks
         var errorStreamReader = new StreamReader(
             new MemoryStream(Encoding.UTF8.GetBytes(errorString)));
         
-        mockEnv.Setup(x => x.CreateProcess()).Returns(processMock.Object);
+        mockEnv.Setup(x => x.CreateProcess(0)).Returns(processMock.Object);
         mockEnv.Setup(x => x.FileSystem).Returns(
             new DefaultFileSystem(OSPlatform.Create("LINUX")));
         processMock.Setup(x => x.StartInfo).Returns(startInfo);

@@ -26,10 +26,16 @@ public class SystemEnvironment : ISysEnvironment
         _loggerFactory = loggerFactory;
     }
 
+    /// <param name="processId"></param>
     /// <inheritdoc />
-    public virtual IProcess CreateProcess()
+    public virtual IProcess CreateProcess(int processId=0)
     {
-        return new ProcessWrapper(new Process(), _loggerFactory.CreateLogger<ProcessWrapper>());
+        if(processId == 0)
+            return new ProcessWrapper(new Process(), _loggerFactory.CreateLogger<ProcessWrapper>());
+
+        var process = Process.GetProcessById(processId);
+        return new ProcessWrapper(process, _loggerFactory.CreateLogger<ProcessWrapper>());
+
     }
 
     public IServiceManager GetServiceManager(string serviceName)

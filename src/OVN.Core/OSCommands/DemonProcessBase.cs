@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using Dbosoft.OVN.OSCommands.OVS;
 using JetBrains.Annotations;
@@ -103,6 +104,26 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         {
             if (_ovsProcess is { IsRunning: true }) return Unit.Default;
             
+            var pidFileFullName = Path.ChangeExtension(_sysEnv.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
+
+            OVSProcess? orphanedDemon = default;
+            if (_sysEnv.FileSystem.FileExists(pidFileFullName))
+            {
+                _logger.LogTrace("Existing pid file found. Trying to take control of orphaned demon");
+
+                try
+                {
+                    var pidString = _sysEnv.FileSystem.ReadFileAsString(pidFileFullName);
+                    var pid = Convert.ToInt32(pidString);
+                    orphanedDemon = new OVSProcess(_sysEnv, _exeFile, pid);
+                    if (!orphanedDemon.IsRunning)
+                        orphanedDemon = null;
+                }
+                catch (Exception ex)
+                {
+                    orphanedDemon = null;
+                }
+            }
             
             if (_sysEnv.FileSystem.FileExists(_controlFile))
             {
@@ -115,6 +136,27 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                         "Demon {ovsFile}:{controlFile}: Response from ovs-appctl, while trying to stop orphaned process: {error}",
                         _exeFile.Name, _controlFile.Name, l);
                 });
+
+                //try to wait for stop, kill it if not reacting to stop
+                if (orphanedDemon != null)
+                {
+                    _logger.LogTrace("Demon {ovsFile}:{controlFile}: Wait for orphaned demon to be stopped.", _exeFile.Name, _controlFile.Name);
+                    var internalTokenSource =
+                        new CancellationTokenSource(10000);
+                    var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
+                        internalTokenSource.Token,
+                        cancellationToken
+                    );
+                    var waitResult = await orphanedDemon.WaitForExit(false, cancelSource.Token)();
+                    if (waitResult.IsFaulted)
+                    {
+                        _logger.LogWarning("Demon {ovsFile}:{controlFile}: Failed to stop a orphaned demon on same pid file. Killing orphaned demon.", _exeFile.Name, _controlFile.Name);
+                        orphanedDemon.Kill().IfFail(_ =>
+                        {
+                            _logger.LogError("Demon {ovsFile}:{controlFile}: Failed to kill a orphaned demon on same pid file.", _exeFile.Name, _controlFile.Name);
+                        });
+                    }
+                }
             }
 
             var arguments = BuildArguments();

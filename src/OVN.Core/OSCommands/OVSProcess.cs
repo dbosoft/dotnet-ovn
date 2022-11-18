@@ -13,12 +13,24 @@ public class OVSProcess : IDisposable
     private readonly List<Action<string?>> _messageHandlers = new();
     private readonly ISysEnvironment _syEnv;
     private IProcess? _startedProcess;
-
+    private bool _canBeStarted = true;
+    
     public OVSProcess(ISysEnvironment syEnv, OvsFile exeFile, string arguments = "")
     {
         _syEnv = syEnv;
         _exeFile = exeFile;
         _arguments = arguments;
+    }
+    
+    public OVSProcess(ISysEnvironment syEnv,  OvsFile exeFile, int processId)
+    {
+        _syEnv = syEnv;
+        _startedProcess = _syEnv.CreateProcess(processId);
+        _canBeStarted = false;
+        _exeFile = exeFile;
+
+        if (_startedProcess.ProcessName != exeFile.Name)
+            throw new InvalidOperationException($"Process {_startedProcess.ProcessName} is not same as {exeFile.Name}");
     }
 
     public bool IsRunning => _startedProcess is { HasExited: false };
@@ -28,9 +40,13 @@ public class OVSProcess : IDisposable
         Dispose(true);
         GC.SuppressFinalize(this);
     }
+    
 
     public Try<OVSProcess> Start()
     {
+        if (!_canBeStarted)
+            throw new InvalidOperationException("This process was already started.");
+        
         _startedProcess = _syEnv.CreateProcess();
         //build.StartInfo.WorkingDirectory = "";
         _startedProcess.StartInfo.Arguments = _arguments;
@@ -47,7 +63,7 @@ public class OVSProcess : IDisposable
             _startedProcess.OutputDataReceived += (_, _) => { };
             _startedProcess.ErrorDataReceived += (_, args) =>
             {
-                foreach (var messageHandler in _messageHandlers) messageHandler(args.Data);
+                ProcessMessageAsync(args.Data);
             };
         }
 
@@ -60,6 +76,16 @@ public class OVSProcess : IDisposable
         });
     }
 
+    private async void ProcessMessageAsync(string? data)
+    {
+        await Task.Factory.StartNew(() =>
+        {
+            foreach (var messageHandler in _messageHandlers) messageHandler(data);
+
+        });
+
+    }
+
     public TryAsync<int> WaitForExit(bool softWait, CancellationToken cancellationToken)
     {
         return Prelude.TryAsync(async () =>
@@ -67,6 +93,7 @@ public class OVSProcess : IDisposable
             if (_startedProcess == null)
                 throw new IOException("Process not started");
 
+           
             var internalTokenSource =
                 new CancellationTokenSource(Timeout.Infinite);
             if (softWait)
@@ -78,6 +105,8 @@ public class OVSProcess : IDisposable
                 internalTokenSource.Token,
                 cancellationToken
             );
+
+            if (_startedProcess.HasExited) return _startedProcess.ExitCode;
             
             try
             {
@@ -90,7 +119,7 @@ public class OVSProcess : IDisposable
                 {
                     if (softWait)
                         return 0;
-                        
+
                     _startedProcess.Kill();
                     throw new TimeoutException(
                         $"Process {_exeFile.Name} has not exited before timeout.", ex);
@@ -146,12 +175,11 @@ public class OVSProcess : IDisposable
         Dispose(false);
     }
 
-    public Try<Unit> Kill()
-    {
-        return Prelude.Try(() =>
+    public Try<Unit> Kill => 
+        Prelude.Try(() =>
         {
             _startedProcess?.Kill();
             return Unit.Default;
         });
-    }
+    
 }

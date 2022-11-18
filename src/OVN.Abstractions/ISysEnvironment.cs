@@ -13,12 +13,13 @@ public interface ISysEnvironment
     /// File system
     /// </summary>
     IFileSystem FileSystem { get; }
-    
+
     /// <summary>
     /// creates a new process
     /// </summary>
+    /// <param name="processId"></param>
     /// <returns></returns>
-    IProcess CreateProcess();
+    IProcess CreateProcess(int processId = 0);
 
     /// <summary>
     /// Gets a service manager for the service name

@@ -40,4 +40,11 @@ public interface IFileSystem
     /// </summary>
     /// <param name="file">OVS file</param>
     void EnsurePathForFileExists(OvsFile file);
+
+    /// <summary>
+    /// read the content of file as string
+    /// </summary>
+    /// <param name="path"></param>
+    /// <returns></returns>
+    string ReadFileAsString(string path);
 }

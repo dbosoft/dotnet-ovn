@@ -64,14 +64,6 @@ static Task RunCommand(LogLevel logLevel, NodeType nodeType)
          .ConfigureServices(services =>
         {
             AddOVNCore(services);
-
-            if (nodeType is NodeType.AllInOne or NodeType.Chassis)
-            { 
-                services.AddHostedNode<OVSDbNode>();
-                services.AddHostedNode<OVSSwitchNode>();
-                services.AddHostedNode<OVNChassisNode>();
-                
-            }
             
             if (nodeType is NodeType.AllInOne or NodeType.OVNCentral or NodeType.OVNDB)
             {
@@ -81,6 +73,15 @@ static Task RunCommand(LogLevel logLevel, NodeType nodeType)
             if (nodeType is not (NodeType.AllInOne or NodeType.OVNCentral or NodeType.OVNController)) return;
             
             services.AddHostedNode<NetworkControllerNode>();
+            
+            
+            if (nodeType is NodeType.AllInOne or NodeType.Chassis)
+            { 
+                services.AddHostedNode<OVSDbNode>();
+                services.AddHostedNode<OVSSwitchNode>();
+                services.AddHostedNode<OVNChassisNode>();
+                
+            }
 
 
         })

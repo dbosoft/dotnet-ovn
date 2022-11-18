@@ -65,7 +65,7 @@ public class OvsProcessTests
             new OvsFile("bin", "test", true),
             "testarg1 testarg2");
         // ReSharper disable once AccessToDisposedClosure
-        ovsProcess.Start().Bind(_ => ovsProcess.Kill()).Match(
+        ovsProcess.Start().Bind(_ => ovsProcess.Kill).Match(
             _ => { mockProcess.Verify(); },
             f => throw f
         );

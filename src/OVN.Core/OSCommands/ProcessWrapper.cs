@@ -47,7 +47,21 @@ public class ProcessWrapper : IProcess
     public string ProcessName => _process.ProcessName;
 
     /// <inheritdoc />
-    public int ExitCode => _process.ExitCode;
+    public int ExitCode
+    {
+        get
+        {
+            try
+            {
+                return _process.ExitCode;
+            }
+            catch (Exception)
+            {
+                return int.MinValue;
+            }
+            
+        }
+    }
 
     /// <inheritdoc />
     public event DataReceivedEventHandler? OutputDataReceived;

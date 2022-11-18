@@ -69,6 +69,13 @@ public class DefaultFileSystem : IFileSystem
         var path = ResolveOvsFilePath(file);
         EnsurePathForFileExists(path);
     }
+    
+    public string ReadFileAsString(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var sr = new StreamReader(stream);
+        return sr.ReadToEnd();
+    }
 
     private string ConvertPathToPlatform(string inputPath)
     {
