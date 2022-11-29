@@ -63,6 +63,7 @@ public class OVSProcess : IDisposable
             _startedProcess.OutputDataReceived += (_, _) => { };
             _startedProcess.ErrorDataReceived += (_, args) =>
             {
+                if (args.Data == null) return;
                 ProcessMessageAsync(args.Data);
             };
         }
@@ -110,8 +111,8 @@ public class OVSProcess : IDisposable
             
             try
             {
-                // ReSharper disable once MethodSupportsCancellation
-                await _startedProcess.WaitForExit().WaitAsync(cancelSource.Token);
+                 await _startedProcess.WaitForExit(cancelSource.Token)
+                    .ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -137,14 +138,46 @@ public class OVSProcess : IDisposable
             if (_startedProcess == null)
                 throw new IOException("Process not started");
 
+            var outputCloseEvent = new TaskCompletionSource<bool>();
+            bool signaled = false;
             var outputBuilder = new StringBuilder();
-            _startedProcess.OutputDataReceived += (_, o) => { outputBuilder.Append(o.Data); };
-            _startedProcess.ErrorDataReceived += (_, o) => { outputBuilder.Append(o.Data); };
-            
+            _startedProcess.OutputDataReceived += (_, o) =>
+            {
+                if (o.Data == null)
+                {
+                    if (signaled) return;
+                    outputCloseEvent.SetResult(true);
+                    signaled = true;
+                }
+                else
+                    outputBuilder.Append(o.Data);
+            };
+            _startedProcess.ErrorDataReceived += (_, o) =>
+            {
+                if(o.Data==null)
+                {
+                    if (signaled) return;
+                    outputCloseEvent.SetResult(true);
+                    signaled = true;
+                }
+                else
+                    outputBuilder.Append(o.Data);
+            };
+
             // ReSharper disable once MethodSupportsCancellation
-            //this is required here to force output to be read until end
-            await _startedProcess.WaitForExit().WaitAsync(cancellationToken);
+            var waitForExit = _startedProcess.WaitForExit();
+            var processTask = Task.WhenAll(waitForExit, outputCloseEvent.Task);
+
+            await Task.WhenAny(WaitForCancellation(cancellationToken), processTask)
+                .ConfigureAwait(false);
             
+            if (!_startedProcess.HasExited)
+            {
+               _startedProcess.Kill();
+                throw new TimeoutException(
+                    $"Process {_exeFile.Name} has not exited before timeout.");
+            }
+
             var output = outputBuilder.ToString();
 
             if (_startedProcess.ExitCode != 0)
@@ -155,6 +188,17 @@ public class OVSProcess : IDisposable
         });
     }
 
+    private async Task WaitForCancellation(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            //
+        }
+    }
 
     public void AddMessageHandler(Action<string?> messageHandler)
     {
