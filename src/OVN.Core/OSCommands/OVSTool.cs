@@ -28,21 +28,20 @@ public class OVSTool: IOVSDBTool
 
     protected EitherAsync<Error, string> RunCommandWithResponse(string command, CancellationToken cancellationToken = default)
     {
-        using var ovsProcess = new OVSProcess(_sysEnv, _toolFile, BuildArguments(command));
-        
-        return ovsProcess.Start().ToAsync()
+        return Prelude.use(new OVSProcess(_sysEnv, _toolFile, BuildArguments(command)), 
+            ovsProcess =>  ovsProcess.Start().ToAsync()
             .Bind(p =>
-                p.WaitForExitWithResponse(cancellationToken)).ToEither(l => Error.New(l));
+                p.WaitForExitWithResponse(cancellationToken)).ToEither(l => Error.New(l)));
     }
     
     protected EitherAsync<Error, int> RunCommand(string command, bool softWait = false, CancellationToken cancellationToken = default)
     {
-        using var ovsProcess = new OVSProcess(_sysEnv, _toolFile, BuildArguments(command));
-        
-        return ovsProcess.Start().ToAsync()
-            .Bind(p =>
-                p.WaitForExit(softWait,cancellationToken)).ToEither(l => Error.New(l));
-    }
+         return Prelude.use(new OVSProcess(_sysEnv, _toolFile, BuildArguments(command)), 
+            ovsProcess => 
+                ovsProcess.Start().ToAsync()
+                .Bind(p =>
+                    p.WaitForExit(softWait,cancellationToken)).ToEither(l => Error.New(l)));
+}
 
     private static string ColumnsValuesToCommandString(Map<string, IOVSField> columns, bool setMode)
     {
