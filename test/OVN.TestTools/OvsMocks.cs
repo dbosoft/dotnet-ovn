@@ -38,6 +38,9 @@ public static class OvsMocks
                 processMock.Raise(p => p.OutputDataReceived += null, new DataReceivedEventArgs(outputString));
             if(!string.IsNullOrWhiteSpace(errorString))
                 processMock.Raise(p => p.ErrorDataReceived += null, new DataReceivedEventArgs(errorString));
+            processMock.Raise(p => p.OutputDataReceived += null, new DataReceivedEventArgs(null));
+            processMock.Raise(p => p.ErrorDataReceived += null, new DataReceivedEventArgs(null));
+
         });
        
         processMock.Setup(x => x.HasExited).Returns(true);
