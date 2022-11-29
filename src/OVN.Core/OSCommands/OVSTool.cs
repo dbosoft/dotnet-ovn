@@ -28,7 +28,7 @@ public class OVSTool: IOVSDBTool
 
     protected EitherAsync<Error, string> RunCommandWithResponse(string command, CancellationToken cancellationToken = default)
     {
-        var ovsProcess = new OVSProcess(_sysEnv, _toolFile, BuildArguments(command));
+        using var ovsProcess = new OVSProcess(_sysEnv, _toolFile, BuildArguments(command));
         
         return ovsProcess.Start().ToAsync()
             .Bind(p =>
@@ -37,7 +37,7 @@ public class OVSTool: IOVSDBTool
     
     protected EitherAsync<Error, int> RunCommand(string command, bool softWait = false, CancellationToken cancellationToken = default)
     {
-        var ovsProcess = new OVSProcess(_sysEnv, _toolFile, BuildArguments(command));
+        using var ovsProcess = new OVSProcess(_sysEnv, _toolFile, BuildArguments(command));
         
         return ovsProcess.Start().ToAsync()
             .Bind(p =>
