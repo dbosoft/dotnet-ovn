@@ -131,11 +131,12 @@ public class ProcessWrapper : IProcess
     /// <inheritdoc />
     public void Kill()
     {
-        if (_process.HasExited)
-            return;
-
+  
         try
         {
+            if (_process.HasExited)
+                return;
+
             _process.Kill();
         }
         catch

@@ -31,7 +31,8 @@ public class OVSTool: IOVSDBTool
         return Prelude.use(new OVSProcess(_sysEnv, _toolFile, BuildArguments(command)), 
             ovsProcess =>  ovsProcess.Start().ToAsync()
             .Bind(p =>
-                p.WaitForExitWithResponse(cancellationToken)).ToEither(l => Error.New(l)));
+                p.WaitForExitWithResponse(cancellationToken)).ToEither(l => Error.New(l))
+            .ToEither()).ToAsync();
     }
     
     protected EitherAsync<Error, int> RunCommand(string command, bool softWait = false, CancellationToken cancellationToken = default)
@@ -40,7 +41,8 @@ public class OVSTool: IOVSDBTool
             ovsProcess => 
                 ovsProcess.Start().ToAsync()
                 .Bind(p =>
-                    p.WaitForExit(softWait,cancellationToken)).ToEither(l => Error.New(l)));
+                    p.WaitForExit(softWait,cancellationToken))
+                .ToEither(l => Error.New(l)).ToEither()).ToAsync();
 }
 
     private static string ColumnsValuesToCommandString(Map<string, IOVSField> columns, bool setMode)
