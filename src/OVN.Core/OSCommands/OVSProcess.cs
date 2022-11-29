@@ -138,37 +138,22 @@ public class OVSProcess : IDisposable
             if (_startedProcess == null)
                 throw new IOException("Process not started");
 
-            var outputCloseEvent = new TaskCompletionSource<bool>();
-            bool signaled = false;
             var outputBuilder = new StringBuilder();
             _startedProcess.OutputDataReceived += (_, o) =>
             {
-                if (o.Data == null)
-                {
-                    if (signaled) return;
-                    outputCloseEvent.SetResult(true);
-                    signaled = true;
-                }
-                else
+                if (o.Data != null)
                     outputBuilder.Append(o.Data);
             };
             _startedProcess.ErrorDataReceived += (_, o) =>
             {
-                if(o.Data==null)
-                {
-                    if (signaled) return;
-                    outputCloseEvent.SetResult(true);
-                    signaled = true;
-                }
-                else
+                if(o.Data!=null)
                     outputBuilder.Append(o.Data);
             };
 
             // ReSharper disable once MethodSupportsCancellation
             var waitForExit = _startedProcess.WaitForExit();
-            var processTask = Task.WhenAll(waitForExit, outputCloseEvent.Task);
-
-            await Task.WhenAny(WaitForCancellation(cancellationToken), processTask)
+ 
+            await Task.WhenAny(WaitForCancellation(cancellationToken), waitForExit)
                 .ConfigureAwait(false);
             
             if (!_startedProcess.HasExited)
