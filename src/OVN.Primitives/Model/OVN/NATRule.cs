@@ -11,13 +11,15 @@ public record NATRule : OVSTableRecord, IOVSEntityWithName, IHasParentReference
             { "type", OVSValue<string>.Metadata() },
             { "external_ip", OVSValue<string>.Metadata() },
             { "external_mac", OVSValue<string>.Metadata() },
-            { "logical_ip", OVSValue<string>.Metadata() }
+            { "logical_ip", OVSValue<string>.Metadata() },
+            { "logical_port", OVSValue<string>.Metadata() }
         };
 
     public string? Type => GetValue<string>("type");
     public string? ExternalIP => GetValue<string>("external_ip");
     public string? ExternalMAC => GetValue<string>("external_mac");
     public string? LogicalIP => GetValue<string>("logical_ip");
+    public string? LogicalPort => GetValue<string>("logical_port");
 
     private Guid? ParentId => GetValue<Guid>("__parentId");
 
@@ -32,5 +34,5 @@ public record NATRule : OVSTableRecord, IOVSEntityWithName, IHasParentReference
     }
 
     public string Name =>
-        $"router:{RouterName}, type:{Type}, externalIP:{ExternalIP}, externalMac: {ExternalMAC}, logicalIP: {LogicalIP}";
+        $"router:{RouterName}, type:{Type}, externalIP:{ExternalIP}, externalMac: {ExternalMAC}, logicalIP: {LogicalIP}, logicalPort: {LogicalPort}";
 }
