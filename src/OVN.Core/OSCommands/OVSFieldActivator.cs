@@ -51,10 +51,20 @@ internal static class OVSFieldActivator
                 value = converter.DeserializeMap(valueField);
                 break;
             case "set":
-                if (ovsFieldType != OVSFieldType.Set)
-                    throw new InvalidOperationException(
-                        $"{context}: cannot convert a set to ovs type {ovsFieldType} ");
-                value = converter.DeserializeSet(valueField, typeField);
+                switch (ovsFieldType)
+                {
+                    case OVSFieldType.Value:
+                        value = converter.DeserializeValue(valueField, typeField);
+                        break;
+                    case OVSFieldType.Set:
+                        value = converter.DeserializeSet(valueField, typeField);
+                        break;
+                    case OVSFieldType.Map:
+                    default:
+                        throw new InvalidOperationException(
+                            $"{context}: cannot convert a set to ovs type {ovsFieldType} ");
+                
+                }
                 break;
             default:
                 // ReSharper disable once SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault
@@ -110,48 +120,60 @@ internal static class OVSFieldActivator
 
         public IOVSField? DeserializeValue(JsonElement element, string typeName)
         {
-
-            object? objectValue = null;
-            switch (element.ValueKind)
+            while (true) // will only loop in case a array is found
             {
-                case JsonValueKind.Undefined: goto default;
-                case JsonValueKind.Object: goto default;
-                case JsonValueKind.Array: goto default;
-                case JsonValueKind.String:
-                    var jsonStringValue = element.Deserialize<string>();
-                    if (jsonStringValue != null)
+                object? objectValue = null;
+                switch (element.ValueKind)
+                {
+                    case JsonValueKind.Undefined:
+                        goto default;
+                    case JsonValueKind.Object:
+                        goto default;
+                    case JsonValueKind.Array:
                     {
-                        objectValue = TypeDescriptor.GetConverter(typeof(T))
-                            .ConvertFromInvariantString(jsonStringValue);
-                        
+                        // a optional value may be send as array
+                        var setRows = element.Deserialize<IEnumerable<JsonElement>>()
+                            ?.ToArray();
+
+                        if (setRows == null || setRows.Length == 0) return null;
+                        element = setRows[0];
+                        continue;
                     }
+                    case JsonValueKind.String:
+                        var jsonStringValue = element.Deserialize<string>();
+                        if (jsonStringValue != null)
+                        {
+                            objectValue = TypeDescriptor.GetConverter(typeof(T))
+                                .ConvertFromInvariantString(jsonStringValue);
+                        }
 
-                    break;
-                case JsonValueKind.Number:
-                    var jsonDoubleValue = element.Deserialize<double>();
-                    objectValue = TypeDescriptor.GetConverter(typeof(T))
-                        .ConvertFrom(jsonDoubleValue);
+                        break;
+                    case JsonValueKind.Number:
+                        var jsonDoubleValue = element.Deserialize<double>();
+                        objectValue = TypeDescriptor.GetConverter(typeof(T))
+                            .ConvertFrom(jsonDoubleValue);
 
-                    break;
-                case JsonValueKind.True:
-                    var jsonTrueValue = element.Deserialize<bool>();
-                    objectValue = TypeDescriptor.GetConverter(typeof(T))
-                        .ConvertFrom(jsonTrueValue);
-                    break;
-                case JsonValueKind.False:
-                    var jsonFalseValue = element.Deserialize<bool>();
-                    objectValue = TypeDescriptor.GetConverter(typeof(T))
-                        .ConvertFrom(jsonFalseValue);
-                    break;
-                case JsonValueKind.Null:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(element));
+                        break;
+                    case JsonValueKind.True:
+                        var jsonTrueValue = element.Deserialize<bool>();
+                        objectValue = TypeDescriptor.GetConverter(typeof(T))
+                            .ConvertFrom(jsonTrueValue);
+                        break;
+                    case JsonValueKind.False:
+                        var jsonFalseValue = element.Deserialize<bool>();
+                        objectValue = TypeDescriptor.GetConverter(typeof(T))
+                            .ConvertFrom(jsonFalseValue);
+                        break;
+                    case JsonValueKind.Null:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(element));
+                }
+
+                return objectValue == null
+                    ? null
+                    : OVSValue<T>.New((T)objectValue);
             }
-            
-            return objectValue == null
-                ? null
-                : OVSValue<T>.New( (T) objectValue);
         }
 
         public IOVSField? DeserializeMap(JsonElement mapElement)
@@ -199,6 +221,8 @@ internal static class OVSFieldActivator
                     
                     if (targetValue == null)
                         return null;
+                    
+                    
                     
                     return OVSSet<T>.New(new[] { (T) targetValue }.ToSeq());
 

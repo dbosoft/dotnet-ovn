@@ -216,6 +216,7 @@ public static class NetworkPlanParser
             var externalIPString = "";
             var logicalIP = "";
             var externalMac = "";
+            var logicalPort = "";
             if (natValues.ContainsKey("snat"))
             {
                 natType = "snat";
@@ -230,16 +231,39 @@ public static class NetworkPlanParser
                         logicalIP = addressString;
                 }
             }
+            
+            if (natValues.ContainsKey("dnat_and_snat") || natValues.ContainsKey("dnat") )
+            {
+                natType = natValues.ContainsKey("dnat_and_snat") ? "dnat_and_snat" : "dnat";
+                if (natValues[natType] is IDictionary<object, object> dnatValues)
+                {
+                    if(dnatValues.ContainsKey("external_address") &&
+                       dnatValues["external_address"] is string externalAddressString)
+                        externalIPString = externalAddressString;
+                    
+                    if(dnatValues.ContainsKey("mac") &&
+                       dnatValues["mac"] is string macString)
+                        externalMac = macString;
+                    
+                    if(dnatValues.ContainsKey("address") &&
+                       dnatValues["address"] is string addressString)
+                        logicalIP = addressString;
+                    
+                    if(dnatValues.ContainsKey("port") &&
+                       dnatValues["port"] is string portNameString)
+                        logicalPort = portNameString;
+                }
+            }
 
             if (string.IsNullOrWhiteSpace(natType))
                 throw new InvalidDataException($"invalid nat rule for router {routerName}. " +
-                                               "Supported rules: snat, dnat");
+                                               "Supported rules: snat, dnat, dnat_and_snat");
             
             if(!IPAddress.TryParse(externalIPString, out var ipAddress))
                 throw new InvalidDataException(
                     $"ip address {externalIPString} is invalid for router nat (router: {routerName}).");
             
-            return networkPlan.AddNATRule(routerName, natType, ipAddress, externalMac, logicalIP);
+            return networkPlan.AddNATRule(routerName, natType, ipAddress, externalMac, logicalIP, logicalPort);
         }
         
         NetworkPlan ParseRouterRoutes(NetworkPlan networkPlan, 
