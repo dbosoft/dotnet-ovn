@@ -107,7 +107,7 @@ public static class NetworkPlanConfigurationExtensions
     }
 
     public static NetworkPlan AddNATRule(this NetworkPlan plan, string routerName, string type, IPAddress externalIP, string externalMAC,
-        string logicalIP)
+        string logicalIP, string logicalPort = "")
     {
         var natRule = new PlannedNATRule(routerName)
         {
@@ -115,6 +115,7 @@ public static class NetworkPlanConfigurationExtensions
             ExternalIP = externalIP.ToString(),
             ExternalMAC = externalMAC,
             LogicalIP = logicalIP,
+            LogicalPort = logicalPort,
             ExternalIds = new Dictionary<string, string>
             {
                 { "network_plan", plan.Id },

@@ -10,7 +10,8 @@ public record PlannedNATRule(string RouterName) : OVSTableRecord, IHasParentRefe
             { "type", OVSValue<string>.Metadata() },
             { "external_ip", OVSValue<string>.Metadata() },
             { "external_mac", OVSValue<string>.Metadata() },
-            { "logical_ip", OVSValue<string>.Metadata() }
+            { "logical_ip", OVSValue<string>.Metadata() },
+            { "logical_port", OVSValue<string>.Metadata() }
         };
 
     public string? Type
@@ -36,6 +37,12 @@ public record PlannedNATRule(string RouterName) : OVSTableRecord, IHasParentRefe
         get => GetValue<string>("logical_ip");
         init => SetValue("logical_ip", value);
     }
+    
+    public string? LogicalPort
+    {
+        get => GetValue<string>("logical_port");
+        init => SetValue("logical_port", value);
+    }
 
     public OVSParentReference? GetParentReference()
     {
@@ -45,5 +52,5 @@ public record PlannedNATRule(string RouterName) : OVSTableRecord, IHasParentRefe
 
 
     public string Name =>
-        $"router:{RouterName}, type:{Type}, externalIP:{ExternalIP}, externalMac: {ExternalMAC}, logicalIP: {LogicalIP}";
+        $"router:{RouterName}, type:{Type}, externalIP:{ExternalIP}, externalMac: {ExternalMAC}, logicalIP: {LogicalIP}, logicalPort: {LogicalPort}";
 }
