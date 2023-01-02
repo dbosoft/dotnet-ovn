@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.Text;
 using Dbosoft.OVN.OSCommands.OVS;
 using JetBrains.Annotations;
@@ -158,8 +159,51 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
             _ovsProcess = new OVSProcess(_sysEnv, _exeFile, arguments);
             _ovsProcess.AddMessageHandler(msg =>
             {
+                var logMessageParts = msg?.Split('|');
+                
+                if(logMessageParts?.Length>=5)
+                {
+                    var timeStampFound = DateTime.TryParse(logMessageParts[0], out var timestamp);
+                    var logNumberFound = int.TryParse(logMessageParts[1], out var lineNumber);
+                    var sender = logMessageParts[2];
+                    var hasLogLevel = Enum.TryParse<OvsLogLevel>(logMessageParts[3], true, out var ovsLogLevel);
+
+                    var msgBuilder = new StringBuilder();
+                    for (var i = 4; i < logMessageParts.Length; i++)
+                    {
+                        msgBuilder.Append(logMessageParts[i]);
+                        msgBuilder.Append('|');
+                    }
+
+                    var message = msgBuilder.ToString().TrimEnd('|');
+
+                    if (timeStampFound && logNumberFound && hasLogLevel)
+                    {
+                        var logLevel = ovsLogLevel switch
+                        {
+                            OvsLogLevel.emer => LogLevel.Error,
+                            OvsLogLevel.err => LogLevel.Information,
+                            OvsLogLevel.warn => LogLevel.Information,
+                            OvsLogLevel.info => LogLevel.Debug,
+                            OvsLogLevel.dbg => LogLevel.Trace,
+                            _ => LogLevel.None
+                        };
+                        
+                        using (_logger.BeginScope(new Dictionary<string, object>{
+                                   ["ovsLogLevel"] = ovsLogLevel,
+                                   ["ovsTimeStamp"] = timestamp,
+                                   ["logNo"] = lineNumber,
+                                   ["sender"] = sender
+                               }))
+                            _logger.Log(logLevel, "{message}", message);
+                        
+                        return;
+                    }
+                    
+                }
                 using var scope =
                     _logger.BeginScope("Demon {ovsFile}:{controlFile}", _exeFile.Name, _controlFile.Name);
+
                 _logger.LogDebug("{message}", msg);
             });
 
@@ -289,5 +333,14 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         }
 
         return CheckAliveAsync().ToAsync();
+    }
+
+    private enum OvsLogLevel
+    {
+        emer,
+        err,
+        warn,
+        info,
+        dbg
     }
 }
