@@ -274,6 +274,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         }
     }
 
+    private int _checkAliveFailedCounter = 0;
 
     public EitherAsync<Error, bool> CheckAlive(
         bool checkResponse,
@@ -319,7 +320,18 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     {
                         _logger.LogDebug("Process {ovsFile}:{controlFile}: AppControl error: {error}", _exeFile.Name,
                             _controlFile.Name, l);
-                        return "";
+
+                        if (_checkAliveFailedCounter > 0)
+                            return "";
+                            
+                        if (!l.Message.Contains("stream_windows|ERR|Could not send data on synchronous named pipe"))
+                            return "";
+                        
+                        _logger.LogDebug("Process {ovsFile}:{controlFile}: response indicates a temporary error. Trying again later", _exeFile.Name,
+                            _controlFile.Name, l);
+                        _checkAliveFailedCounter++;
+                        return "TEMP_ERROR";
+
                     });
 
                 if (string.IsNullOrWhiteSpace(version))
@@ -341,11 +353,13 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     return canRestart ? await Start(cancellationToken).Map(_ => true) : false;
                 }
             }
-
+            
             _logger.LogTrace("Process {ovsFile}:{controlFile}: check alive retrieved version response '{version}'",
                 _exeFile.Name, _controlFile.Name, version);
-
-
+            
+            if(version!= "TEMP_ERROR")
+                _checkAliveFailedCounter = 0;
+            
             return true;
         }
 
