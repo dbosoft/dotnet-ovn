@@ -314,7 +314,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     _exeFile.Name, _controlFile.Name);
 
                 var secondToken = new CancellationTokenSource(2000);
-                await appControl.GetVersion(secondToken.Token)
+                version = await appControl.GetVersion(secondToken.Token)
                     .Match(r => r, l =>
                     {
                         _logger.LogDebug("Process {ovsFile}:{controlFile}: AppControl error: {error}", _exeFile.Name,
