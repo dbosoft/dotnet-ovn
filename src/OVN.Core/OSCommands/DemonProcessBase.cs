@@ -159,6 +159,9 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
             _ovsProcess = new OVSProcess(_sysEnv, _exeFile, arguments);
             _ovsProcess.AddMessageHandler(msg =>
             {
+                using var scope =
+                    _logger.BeginScope("Demon {ovsFile}:{controlFile}", _exeFile.Name, _controlFile.Name);
+
                 var logMessageParts = msg?.Split('|');
                 
                 if(logMessageParts?.Length>=5)
@@ -192,8 +195,8 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                         using (_logger.BeginScope(new Dictionary<string, object>{
                                    ["ovsLogLevel"] = ovsLogLevel,
                                    ["ovsTimeStamp"] = timestamp,
-                                   ["logNo"] = lineNumber,
-                                   ["sender"] = sender
+                                   ["ovsLogNo"] = lineNumber,
+                                   ["ovsSender"] = sender
                                }))
                             _logger.Log(logLevel, "{message}", message);
                         
@@ -201,8 +204,6 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     }
                     
                 }
-                using var scope =
-                    _logger.BeginScope("Demon {ovsFile}:{controlFile}", _exeFile.Name, _controlFile.Name);
 
                 _logger.LogDebug("{message}", msg);
             });
@@ -308,21 +309,37 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
             if (string.IsNullOrWhiteSpace(version))
             {
-                _logger.LogTrace("Process {ovsFile}:{controlFile}: check alive retrieved empty version responds.",
+                _logger.LogTrace(
+                    "Process {ovsFile}:{controlFile}: check alive retrieved empty version responds. Trying again",
                     _exeFile.Name, _controlFile.Name);
 
-
-                //not possible to contact process, kill it and restart
-                _ = _ovsProcess.Kill()
-                    .IfFail(e =>
+                var secondToken = new CancellationTokenSource(2000);
+                await appControl.GetVersion(secondToken.Token)
+                    .Match(r => r, l =>
                     {
-                        _logger.LogDebug(e, "{ovsFile}:{controlFile}: Failed to kill process.", _exeFile.Name,
-                            _controlFile.Name);
-                        return Unit.Default;
+                        _logger.LogDebug("Process {ovsFile}:{controlFile}: AppControl error: {error}", _exeFile.Name,
+                            _controlFile.Name, l);
+                        return "";
                     });
 
+                if (string.IsNullOrWhiteSpace(version))
+                {
+                    _logger.LogTrace(
+                        "Process {ovsFile}:{controlFile}: check alive retrieved empty version responds (second try).",
+                        _exeFile.Name, _controlFile.Name);
 
-                return canRestart ? await Start(cancellationToken).Map(_ => true) : false;
+                    //not possible to contact process, kill it and restart
+                    _ = _ovsProcess.Kill()
+                        .IfFail(e =>
+                        {
+                            _logger.LogDebug(e, "{ovsFile}:{controlFile}: Failed to kill process.", _exeFile.Name,
+                                _controlFile.Name);
+                            return Unit.Default;
+                        });
+
+
+                    return canRestart ? await Start(cancellationToken).Map(_ => true) : false;
+                }
             }
 
             _logger.LogTrace("Process {ovsFile}:{controlFile}: check alive retrieved version response '{version}'",
