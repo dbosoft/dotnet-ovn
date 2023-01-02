@@ -46,6 +46,14 @@ public class SystemEnvironment : ISysEnvironment
         throw new PlatformNotSupportedException();
     }
 
+    public IOvsExtensionManager GetOvsExtensionManager()
+    {
+        if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return new WMIOvsExtensionManager("dbosoft Open vSwitch Extension");
+
+        throw new PlatformNotSupportedException();
+    }
+
     /// <inheritdoc />
     public virtual IFileSystem FileSystem => new DefaultFileSystem(GetPlatform());
 
