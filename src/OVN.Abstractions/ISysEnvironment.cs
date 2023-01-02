@@ -27,5 +27,6 @@ public interface ISysEnvironment
     /// <param name="serviceName">name of service</param>
     /// <returns></returns>
     IServiceManager GetServiceManager(string serviceName);
-    
+
+    IOvsExtensionManager GetOvsExtensionManager();
 }

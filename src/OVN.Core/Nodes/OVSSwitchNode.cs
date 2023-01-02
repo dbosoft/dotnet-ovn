@@ -1,5 +1,4 @@
 using Dbosoft.OVN.OSCommands;
-using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVN.OSCommands.OVS;
 using LanguageExt;
 using LanguageExt.Common;
@@ -18,6 +17,7 @@ public class OVSSwitchNode : DemonNodeBase
     // connects to OVSDbNode
 
     private readonly ISysEnvironment _sysEnv;
+    private readonly ILogger _logger;
 
     private VSwitchDProcess? _vSwitchDProcess;
 
@@ -26,7 +26,8 @@ public class OVSSwitchNode : DemonNodeBase
     {
         _sysEnv = sysEnv;
         _loggerFactory = loggerFactory;
-      }
+        _logger = _loggerFactory.CreateLogger<OVSSwitchNode>();
+    }
 
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
@@ -36,6 +37,23 @@ public class OVSSwitchNode : DemonNodeBase
 
         yield return _vSwitchDProcess;
         
+    }
+    public override EitherAsync<Error, Unit> Start(CancellationToken cancellationToken = default)
+    {
+        var extensionManager = _sysEnv.GetOvsExtensionManager();
+        
+        if(extensionManager.IsExtensionEnabled()) 
+            base.Start(cancellationToken).IfLeft(l => _logger.LogError("Failed to start vswitch demon. Error: {@error}", l));
+
+        return Unit.Default;
+    }
+    
+    public override EitherAsync<Error, Unit> EnsureAlive(bool checkResponse, CancellationToken cancellationToken = default)
+    {
+        var extensionManager = _sysEnv.GetOvsExtensionManager();
+        return !extensionManager.IsExtensionEnabled() 
+            ? _vSwitchDProcess?.Stop(false, cancellationToken) ?? Unit.Default
+            : base.EnsureAlive(checkResponse, cancellationToken);
     }
     
 }
