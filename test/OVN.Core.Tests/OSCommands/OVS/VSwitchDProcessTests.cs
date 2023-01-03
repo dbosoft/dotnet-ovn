@@ -18,6 +18,7 @@ public class VSwitchDProcessTests
 
         await using var vSwitchDemon = new VSwitchDProcess(envMock.Object,
             new VSwitchDSettings(localSettings.SouthDBConnection),
+            false,
             loggerMock.Object);
 
         await vSwitchDemon.Start();
