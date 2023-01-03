@@ -57,10 +57,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         _sysEnv.FileSystem.EnsurePathForFileExists(pidFileFullName);
 
         var sb = new StringBuilder();
-        if (_logger.IsEnabled(LogLevel.Trace))
-            sb.Append("-v ");
         
-  
         if (!NoControlFileArgument) 
             sb.Append($"--unixctl=\"{controlFileFullPath}\" ");
 

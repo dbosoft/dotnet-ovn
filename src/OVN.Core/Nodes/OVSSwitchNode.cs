@@ -62,7 +62,9 @@ public class OVSSwitchNode : DemonNodeBase
     {
         var extensionManager = _sysEnv.GetOvsExtensionManager();
         return !extensionManager.IsExtensionEnabled() 
-            ? _vSwitchDProcess?.Stop(false, cancellationToken) ?? Unit.Default
+            ? _vSwitchDProcess?.Stop(false, cancellationToken)
+                .Bind(_ => _fallBackvSwitchDProcess?.Stop(false, cancellationToken) ?? Unit.Default )
+              ?? Unit.Default
             : base.EnsureAlive(checkResponse, cancellationToken);
     }
     
