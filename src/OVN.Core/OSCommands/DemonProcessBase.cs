@@ -51,6 +51,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
     protected virtual string BuildArguments()
     {
         var controlFileFullPath = _sysEnv.FileSystem.ResolveOvsFilePath(_controlFile);
+
         var pidFileFullName = Path.ChangeExtension(_sysEnv.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
         _sysEnv.FileSystem.EnsurePathForFileExists(_controlFile);
         _sysEnv.FileSystem.EnsurePathForFileExists(pidFileFullName);
@@ -69,8 +70,6 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
     }
     
-    
-
     private void Dispose(bool disposing)
     {
         if (!disposing) return;
@@ -96,7 +95,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         {
             if (_ovsProcess is { IsRunning: true }) return Unit.Default;
             
-            var pidFileFullName = Path.ChangeExtension(_sysEnv.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
+             var pidFileFullName = Path.ChangeExtension(_sysEnv.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
 
             OVSProcess? orphanedDemon = default;
             if (_sysEnv.FileSystem.FileExists(pidFileFullName))

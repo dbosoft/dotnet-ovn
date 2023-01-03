@@ -20,6 +20,7 @@ public class OVSSwitchNode : DemonNodeBase
     private readonly ILogger _logger;
 
     private VSwitchDProcess? _vSwitchDProcess;
+    private VSwitchDProcess? _fallBackvSwitchDProcess;
 
     public OVSSwitchNode(ISysEnvironment sysEnv,
         ILoggerFactory loggerFactory)
@@ -33,9 +34,18 @@ public class OVSSwitchNode : DemonNodeBase
     {
         _vSwitchDProcess = new VSwitchDProcess(_sysEnv,
             new VSwitchDSettings(LocalOVSConnection),
+            false,
             _loggerFactory.CreateLogger<VSwitchDProcess>());
 
         yield return _vSwitchDProcess;
+        Thread.Sleep(1000);
+        
+        _fallBackvSwitchDProcess = new VSwitchDProcess(_sysEnv,
+            new VSwitchDSettings(LocalOVSConnection),
+            true,
+            _loggerFactory.CreateLogger<VSwitchDProcess>());
+        
+        yield return _fallBackvSwitchDProcess;
         
     }
     public override EitherAsync<Error, Unit> Start(CancellationToken cancellationToken = default)
