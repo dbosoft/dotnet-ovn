@@ -50,7 +50,7 @@ public class OVSNodeService<TNode> : IOVSService<TNode>, IDisposable, IAsyncDisp
 
     public async Task StartAsync(CancellationToken stoppingToken)
     {
-        _stoppingCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+        _stoppingCts = new CancellationTokenSource();
         await _ovsNode.Start(stoppingToken).IfLeft(
             l => _logger.LogError("Node service {nodeName}: Error in node startup. {error}", typeof(TNode), l));
 
@@ -85,12 +85,12 @@ public class OVSNodeService<TNode> : IOVSService<TNode>, IDisposable, IAsyncDisp
     {
         if (_executingTask == null || _executingTask.IsCompleted)
         {
-            _logger.LogTrace("No task is running, check for new job");
+            _logger.LogTrace("Running ovs node keep alive check");
             _executingTask = ExecuteNextJobAsync(_stoppingCts?.Token ?? default);
         }
         else
         {
-            _logger.LogTrace("There is a task still running, wait for next cycle");
+            _logger.LogTrace("OVS keep alive check is still running. Wait for next cycle.");
         }
     }
 

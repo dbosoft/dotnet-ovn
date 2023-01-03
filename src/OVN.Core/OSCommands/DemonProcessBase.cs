@@ -159,6 +159,9 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
             _ovsProcess = new OVSProcess(_sysEnv, _exeFile, arguments);
             _ovsProcess.AddMessageHandler(msg =>
             {
+                using var scope =
+                    _logger.BeginScope("Demon {ovsFile}:{controlFile}", _exeFile.Name, _controlFile.Name);
+
                 var logMessageParts = msg?.Split('|');
                 
                 if(logMessageParts?.Length>=5)
@@ -192,8 +195,8 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                         using (_logger.BeginScope(new Dictionary<string, object>{
                                    ["ovsLogLevel"] = ovsLogLevel,
                                    ["ovsTimeStamp"] = timestamp,
-                                   ["logNo"] = lineNumber,
-                                   ["sender"] = sender
+                                   ["ovsLogNo"] = lineNumber,
+                                   ["ovsSender"] = sender
                                }))
                             _logger.Log(logLevel, "{message}", message);
                         
@@ -201,8 +204,6 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     }
                     
                 }
-                using var scope =
-                    _logger.BeginScope("Demon {ovsFile}:{controlFile}", _exeFile.Name, _controlFile.Name);
 
                 _logger.LogDebug("{message}", msg);
             });
@@ -273,6 +274,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         }
     }
 
+    private int _checkAliveFailedCounter = 0;
 
     public EitherAsync<Error, bool> CheckAlive(
         bool checkResponse,
@@ -305,12 +307,12 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                         _controlFile.Name, l);
                     return "";
                 });
-
+            
             if (string.IsNullOrWhiteSpace(version))
             {
-                _logger.LogTrace("Process {ovsFile}:{controlFile}: check alive retrieved empty version responds.",
+                _logger.LogTrace(
+                    "Process {ovsFile}:{controlFile}: check alive retrieved empty version responds.",
                     _exeFile.Name, _controlFile.Name);
-
 
                 //not possible to contact process, kill it and restart
                 _ = _ovsProcess.Kill()
@@ -324,6 +326,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
                 return canRestart ? await Start(cancellationToken).Map(_ => true) : false;
             }
+            
 
             _logger.LogTrace("Process {ovsFile}:{controlFile}: check alive retrieved version response '{version}'",
                 _exeFile.Name, _controlFile.Name, version);
