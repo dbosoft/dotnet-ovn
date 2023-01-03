@@ -16,4 +16,10 @@ public interface IOVSService<TNode> where TNode: IOVSNode
     /// </summary>
     /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
     Task StopAsync(bool ensureNodeStopped, CancellationToken cancellationToken);
+    
+    /// <summary>
+    /// Disconnects all running demons from the node and keep them running.
+    /// </summary>
+    /// <returns></returns>
+    Task DisconnectDemons();
 }

@@ -10,4 +10,7 @@ public interface IOVSNode :  IDisposable, IAsyncDisposable
 
     EitherAsync<Error, Unit> EnsureAlive(bool checkResponse,
         CancellationToken cancellationToken = default);
+    
+    EitherAsync<Error, Unit> Disconnect();
+
 }

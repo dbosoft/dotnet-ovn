@@ -81,6 +81,12 @@ public class OVSNodeService<TNode> : IOVSService<TNode>, IDisposable, IAsyncDisp
         }
     }
 
+    public Task DisconnectDemons()
+    {
+        return _ovsNode.Disconnect().IfLeft(
+            l => _logger.LogDebug("Node service {nodeName}: Error on disconnecting demons: {error}", typeof(TNode), l));
+    }
+
     private void FireTask(object? state)
     {
         if (_executingTask == null || _executingTask.IsCompleted)

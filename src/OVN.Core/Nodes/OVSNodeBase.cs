@@ -26,7 +26,7 @@ public abstract class OVSNodeBase : IOVSNode
     public abstract EitherAsync<Error, Unit> Start(CancellationToken cancellationToken = default);
     public abstract EitherAsync<Error, Unit> Stop(bool ensureNodeStopped, CancellationToken cancellationToken = default);
 
-
+    
     protected virtual void Dispose(bool disposing)
     {
         
@@ -37,4 +37,6 @@ public abstract class OVSNodeBase : IOVSNode
     {
         return Unit.Default;
     }
+
+    public abstract EitherAsync<Error, Unit> Disconnect();
 }

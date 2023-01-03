@@ -68,7 +68,7 @@ public abstract class DemonNodeBase : OVSNodeBase
             });
     }
 
-    public EitherAsync<Error, Unit> Disconnect()
+    public override EitherAsync<Error, Unit> Disconnect()
     {
         var statusBefore = Status;
         Status = NodeStatus.Stopping;
