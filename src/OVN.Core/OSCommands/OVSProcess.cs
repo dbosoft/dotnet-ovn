@@ -14,7 +14,7 @@ public class OVSProcess : IDisposable
     private readonly ISysEnvironment _syEnv;
     private IProcess? _startedProcess;
     private bool _canBeStarted = true;
-    
+    private bool _canBeRedirected = true;
     public OVSProcess(ISysEnvironment syEnv, OvsFile exeFile, string arguments = "")
     {
         _syEnv = syEnv;
@@ -28,7 +28,7 @@ public class OVSProcess : IDisposable
         _startedProcess = _syEnv.CreateProcess(processId);
         _canBeStarted = false;
         _exeFile = exeFile;
-
+        _canBeRedirected = false;
         if (_startedProcess.ProcessName != exeFile.Name)
             throw new InvalidOperationException($"Process {_startedProcess.ProcessName} is not same as {exeFile.Name}");
     }
@@ -138,6 +138,9 @@ public class OVSProcess : IDisposable
             if (_startedProcess == null)
                 throw new IOException("Process not started");
 
+            if(!_canBeRedirected)
+                throw new IOException("Process was attached and output cannot be redirected.");
+            
             var outputBuilder = new StringBuilder();
             _startedProcess.OutputDataReceived += (_, o) =>
             {

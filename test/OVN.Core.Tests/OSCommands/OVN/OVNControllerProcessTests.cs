@@ -17,7 +17,7 @@ public class OVNControllerProcessTests
         var loggerMock = new Mock<ILogger<OVNControllerProcess>>();
 
         await using var ovnController = new OVNControllerProcess(envMock.Object,
-            new OVNControllerSettings(localSettings.SouthDBConnection),
+            new OVNControllerSettings(localSettings.SouthDBConnection, false),
             loggerMock.Object);
 
         await ovnController.Start();

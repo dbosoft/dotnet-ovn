@@ -21,10 +21,12 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
     private OVSProcess? _ovsProcess;
     protected bool NoControlFileArgument = false;
     private bool _isStopping = false;
+    private bool _allowAttached = false;
     
     protected DemonProcessBase(
         ISysEnvironment sysEnv, OvsFile exeFile, OvsFile controlFile,
         bool isOvn,
+        bool allowAttached,
         ILogger logger)
     {
         _sysEnv = sysEnv;
@@ -32,6 +34,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         _controlFile = controlFile;
         _isOvn = isOvn;
         _logger = logger;
+        _allowAttached = allowAttached;
     }
 
     public async ValueTask DisposeAsync()
@@ -111,6 +114,13 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                 {
                     orphanedDemon = null;
                 }
+            }
+
+            if (_allowAttached && orphanedDemon != null)
+            {
+                _ovsProcess = orphanedDemon;
+                _logger.LogInformation("Demon {ovsFile}:{controlFile}: Successfully attached existing process, however logging will be unavailable for this process.",_exeFile.Name, _controlFile.Name);
+                return Unit.Default;
             }
             
             var internalTokenSource =

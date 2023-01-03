@@ -38,7 +38,7 @@ public class OVSDbNode : DemonNodeBase
                 // ReSharper disable StringLiteralTypo
                 new OvsFile("usr/share/openvswitch", "vswitch.ovsschema"),
                 // ReSharper restore StringLiteralTypo
-                new OvsFile("var/run/openvswitch", "ovs-db.ctl")),
+                new OvsFile("var/run/openvswitch", "ovs-db.ctl"), true),
             _loggerFactory.CreateLogger<OVSDBProcess>());
 
         yield return _ovsdbProcess;

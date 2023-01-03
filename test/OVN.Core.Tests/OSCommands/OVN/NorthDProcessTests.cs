@@ -19,7 +19,7 @@ public class NorthDProcessTests
         var loggerMock = new Mock<ILogger<NorthDProcess>>();
 
         await using var northDProcess = new NorthDProcess(envMock.Object,
-            new NorthDSettings(localSettings.NorthDBConnection, localSettings.SouthDBConnection),
+            new NorthDSettings(localSettings.NorthDBConnection, localSettings.SouthDBConnection, false),
             loggerMock.Object);
 
         await northDProcess.Start();
