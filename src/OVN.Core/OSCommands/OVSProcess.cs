@@ -123,7 +123,7 @@ public class OVSProcess : IDisposable
 
                     _startedProcess.Kill();
                     throw new TimeoutException(
-                        $"Process {_exeFile.Name} has not exited before timeout.", ex);
+                        $"Process {_exeFile.Name} has not exited before timeout. Message: {ex.Message}", ex);
                 }
             }
 
