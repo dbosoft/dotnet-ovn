@@ -296,7 +296,9 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                 ? new OVNAppControl(_sysEnv, _controlFile) 
                 : new OVSAppControl(_sysEnv, _controlFile);
             
-            var version = await appControl.GetVersion(cancellationToken)
+            // check alive version check should never user parent timeout as it may already timed out
+            var checkCancelSource = new CancellationTokenSource(2000);
+            var version = await appControl.GetVersion(checkCancelSource.Token)
                 .Match(r => r, l =>
                 {
                     _logger.LogDebug("Process {ovsFile}:{controlFile}: AppControl error: {error}", _exeFile.Name,
