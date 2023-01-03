@@ -344,4 +344,15 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         info,
         dbg
     }
+
+    /// <summary>
+    /// disconnects from watched process
+    /// </summary>
+    /// <returns></returns>
+    public EitherAsync<Error, Unit> Disconnect()
+    {
+        _ovsProcess?.Dispose();
+        _ovsProcess = null;
+        return Unit.Default;
+    }
 }

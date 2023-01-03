@@ -68,6 +68,23 @@ public abstract class DemonNodeBase : OVSNodeBase
             });
     }
 
+    public EitherAsync<Error, Unit> Disconnect()
+    {
+        var statusBefore = Status;
+        Status = NodeStatus.Stopping;
+        
+        return RunDemonsOp(_demons, d => d.Disconnect())
+            .Map(s =>
+                {
+                    Status = NodeStatus.Stopped;
+                    return Unit.Default;
+                }).MapLeft(l =>
+            {
+                Status = statusBefore;
+                return l;
+            });
+    }
+
     public override EitherAsync<Error, Unit> Stop(bool ensureNodeStopped, CancellationToken cancellationToken = default)
     {
         var statusBefore = Status;
