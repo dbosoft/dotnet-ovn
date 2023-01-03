@@ -165,6 +165,9 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
             _ovsProcess = new OVSProcess(_sysEnv, _exeFile, arguments);
             _ovsProcess.AddMessageHandler(msg =>
             {
+                if (string.IsNullOrWhiteSpace(msg))
+                    return;
+                
                 using var scope =
                     _logger.BeginScope("Demon {ovsFile}:{controlFile}", _exeFile.Name, _controlFile.Name);
 
@@ -188,7 +191,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
                     if (timeStampFound && logNumberFound && hasLogLevel)
                     {
-                        var logLevel = ovsLogLevel switch
+                         var logLevel = ovsLogLevel switch
                         {
                             OvsLogLevel.emer => LogLevel.Error,
                             OvsLogLevel.err => LogLevel.Information,
@@ -197,21 +200,33 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                             OvsLogLevel.dbg => LogLevel.Trace,
                             _ => LogLevel.None
                         };
-                        
-                        using (_logger.BeginScope(new Dictionary<string, object>{
-                                   ["ovsLogLevel"] = ovsLogLevel,
-                                   ["ovsTimeStamp"] = timestamp,
-                                   ["ovsLogNo"] = lineNumber,
-                                   ["ovsSender"] = sender
-                               }))
+
+                         // update level of some known messages
+                         if (message.Contains("seconds ago) due to excessive rate") ||
+                             message.Contains("another ovs-vswitchd process is running, disabling this process"))
+                         {
+                             logLevel = LogLevel.Trace;
+                         }
+
+                         if (message.Contains("could not open network device"))
+                         {
+                             logLevel = LogLevel.Warning;
+                         }
+
+                         using (_logger.BeginScope(new Dictionary<string, object>{
+                                    ["ovsLogLevel"] = ovsLogLevel,
+                                    ["ovsTimeStamp"] = timestamp,
+                                    ["ovsLogNo"] = lineNumber,
+                                    ["ovsSender"] = sender
+                                }))
                             _logger.Log(logLevel, "{message}", message);
                         
-                        return;
+                         return;
                     }
                     
                 }
 
-                _logger.LogDebug("{message}", msg);
+                _logger.LogTrace("{message}", msg);
             });
 
             return _ovsProcess.Start().ToEither(Error.New).Map(_ =>
