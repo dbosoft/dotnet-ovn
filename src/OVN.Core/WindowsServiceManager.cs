@@ -119,7 +119,15 @@ internal class WindowsServiceManager : IServiceManager
                 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    c.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 1));
+                    try
+                    {
+                        c.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 1));
+                    }
+                    catch (System.ServiceProcess.TimeoutException)
+                    {
+                        // ignored
+                    }
+
                     if (c.Status == ServiceControllerStatus.Running)
                         return Unit.Default;
                 }
@@ -144,12 +152,20 @@ internal class WindowsServiceManager : IServiceManager
                 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    c.WaitForStatus(ServiceControllerStatus.Stopped, new TimeSpan(0, 0, 1));
+                    try
+                    {
+                        c.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 1));
+                    }
+                    catch (System.ServiceProcess.TimeoutException)
+                    {
+                        // ignored
+                    }                   
+                    
                     if (c.Status == ServiceControllerStatus.Stopped)
                         return Unit.Default;
                 }
 
-                throw new OperationCanceledException("Failed to start service before operation was cancelled");
+                throw new OperationCanceledException("Failed to stop service before operation was cancelled");
 
             });
         }).ToEitherAsync().Flatten();
