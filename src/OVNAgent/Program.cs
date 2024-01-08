@@ -144,7 +144,7 @@ static async Task ManageServiceCommand(bool install, LogLevel logLevel, NodeType
     if (install)
     {
         _ = await serviceManager.CreateService(
-                $"OVN {nodeType}", command, Prelude.Seq<string>(), CancellationToken.None)
+                $"OVN {nodeType}", command, Seq<string>.Empty, CancellationToken.None)
             .Bind(_ => serviceManager.EnsureServiceStarted(CancellationToken.None))
             .IfLeft(l => l.Throw());
         return;
