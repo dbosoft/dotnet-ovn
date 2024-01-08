@@ -47,7 +47,11 @@ internal class WindowsServiceManager : IServiceManager
             .ToEitherAsync().Flatten();
     }
 
-    public EitherAsync<Error, Unit> CreateService(string displayName, string command, CancellationToken cancellationToken)
+    public EitherAsync<Error, Unit> CreateService(
+        string displayName,
+        string command,
+        Seq<string> dependencies,
+        CancellationToken cancellationToken)
     {
         return Prelude.TryAsync<Either<Error, Unit>>(async () =>
             {
@@ -56,6 +60,8 @@ internal class WindowsServiceManager : IServiceManager
                 sb.Append((string?)$"binPath=\"{command.Replace("\"", "\\\"")}\" ");
                 sb.Append((string?)$"DisplayName=\"{displayName}\" ");
                 sb.Append($"start=auto ");
+                if(!dependencies.IsEmpty)
+                    sb.Append($"depend=\"{ string.Join("/", dependencies) }\" ");
 
                 var scProcess = _sysEnv.CreateProcess();
                 scProcess.StartInfo.FileName = "sc.exe";

@@ -6,14 +6,15 @@ using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVNAgent;
+using LanguageExt;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
 
-var logLevelOptions = new Option<LogLevel>("--logLevel", () => LogLevel.Information);
-var nodeTypeOptions = new Option<NodeType>("--nodes", () => NodeType.AllInOne );
+var logLevelOptions = new System.CommandLine.Option<LogLevel>("--logLevel", () => LogLevel.Information);
+var nodeTypeOptions = new System.CommandLine.Option<NodeType>("--nodes", () => NodeType.AllInOne );
 
 var rootCommand = new RootCommand();
 rootCommand.AddGlobalOption(logLevelOptions);
@@ -27,7 +28,7 @@ var netplanCommand = new Command("netplan", "netplan commands");
 rootCommand.Add(netplanCommand);
 
 var applyCommand = new Command("apply", "apply network plan");
-var fileOption = new Option<FileInfo>("--file");
+var fileOption = new System.CommandLine.Option<FileInfo>("--file");
 applyCommand.AddOption(fileOption);
 applyCommand.SetHandler(ApplyNetplan, logLevelOptions, fileOption);
 netplanCommand.AddCommand(applyCommand);
@@ -143,7 +144,7 @@ static async Task ManageServiceCommand(bool install, LogLevel logLevel, NodeType
     if (install)
     {
         _ = await serviceManager.CreateService(
-                $"OVN {nodeType}", command, CancellationToken.None)
+                $"OVN {nodeType}", command, Prelude.Seq<string>(), CancellationToken.None)
             .Bind(_ => serviceManager.EnsureServiceStarted(CancellationToken.None))
             .IfLeft(l => l.Throw());
         return;
