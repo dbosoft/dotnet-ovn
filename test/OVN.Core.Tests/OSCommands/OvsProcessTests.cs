@@ -72,19 +72,22 @@ public class OvsProcessTests
     }
 
     [Fact]
-    public void WaitForExit_throws_without_process()
+    public async Task WaitForExit_throws_without_process()
     {
         var mockEnv = new Mock<ISysEnvironment>();
         using var ovsProcess = new OVSProcess(
             mockEnv.Object,
             new OvsFile("bin", "test", true));
 
-        Assert.ThrowsAsync<IOException>(async () =>
-            await ovsProcess.WaitForExit(false,CancellationToken.None));
+        await Assert.ThrowsAsync<IOException>(async () =>
+        {
+            var t = await ovsProcess.WaitForExit(false, CancellationToken.None);
+            _ = t().IfFail(f => throw f);
+        });
     }
     
     [Fact]
-    public void WaitForExit_throws_if_process_not_exited()
+    public async Task WaitForExit_throws_if_process_not_exited()
     {
         var processStartInfo = new ProcessStartInfo();
         var (mockEnv, mockProcess) = OvsMocks.SetupEnvForOvsToolWithProcess(processStartInfo);
@@ -98,7 +101,10 @@ public class OvsProcessTests
         
         var cts = new CancellationTokenSource();
         cts.Cancel();
-        Assert.ThrowsAsync<IOException>(async () =>
-            await ovsProcess.WaitForExit(false, cts.Token));
+        await Assert.ThrowsAsync<TimeoutException>(async () =>
+        {
+            var t = await ovsProcess.WaitForExit(false, cts.Token);
+            _ = t().IfFail(f => throw f);
+        });
     }
 }

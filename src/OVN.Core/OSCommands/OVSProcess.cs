@@ -127,6 +127,17 @@ public class OVSProcess : IDisposable
                 }
             }
 
+            if (!_startedProcess.HasExited)
+            {
+                if (softWait)
+                    return 0;
+
+                _startedProcess.Kill();
+                throw new TimeoutException(
+                    $"Process {_exeFile.Name} has not exited before timeout.");
+
+            }
+
             return _startedProcess.ExitCode;
         });
     }
