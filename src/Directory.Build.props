@@ -2,7 +2,7 @@
 <Project>
   <PropertyGroup>
     <PackageOutputPath>..\..\build-packages</PackageOutputPath>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/dbosoft/dotnet-ovn</PackageProjectUrl>
     <PackageReleaseNotes>https://github.com/dbosoft/dotnet-ovn/releases</PackageReleaseNotes>
     <Copyright>dbosoft GmbH</Copyright>
