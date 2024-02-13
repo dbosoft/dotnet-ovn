@@ -167,7 +167,11 @@ public static class NetworkPlanConfigurationExtensions
                 Name = portNameSwitch,
                 Type = "router",
                 Addresses = new Seq<string>(new[] { "router" }),
-                Options = new Map<string, string>(new[] { ("router-port", portNameRouter) }),
+                Options = new Map<string, string>(new[]
+                {
+                    ("router-port", portNameRouter),
+                    ("nat-addresses", "router")
+                }),
                 ExternalIds = new Dictionary<string, string> { { "network_plan", plan.Id } }.ToMap()
             })
         };
