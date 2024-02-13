@@ -9,8 +9,16 @@
 
     <ItemGroup>
         <PackageReference Include="IPNetwork2" Version="2.6.472" />
-        <PackageReference Include="JetBrains.Annotations" Version="2022.1.0" />
+        <PackageReference Include="JetBrains.Annotations" Version="2023.3.0" />
         <PackageReference Include="LanguageExt.Core" Version="4.4.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Update="GitVersion.MsBuild" Version="5.12.0">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     </ItemGroup>    
     
 </Project>
