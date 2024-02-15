@@ -14,7 +14,8 @@ public record PlannedSwitchPort(string SwitchName) : OVSEntity, IHasParentRefere
             { "dhcpv4_options", OVSSet<Guid>.Metadata() },
             { "port_security", OVSSet<string>.Metadata() },
             { "options", OVSMap<string>.Metadata() },
-            { "type", OVSValue<string>.Metadata() }
+            { "type", OVSValue<string>.Metadata() },
+            { "tag", OVSValue<int>.Metadata() }
         };
 
     public Seq<string> Addresses
@@ -56,5 +57,11 @@ public record PlannedSwitchPort(string SwitchName) : OVSEntity, IHasParentRefere
     {
         get => GetValue<string>("name");
         init => SetValue("name", value);
+    }
+
+    public int? Tag
+    {
+        get => GetValue<int>("tag");
+        init => SetValue("tag", value);
     }
 }
