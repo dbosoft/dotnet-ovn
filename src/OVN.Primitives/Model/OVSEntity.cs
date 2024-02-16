@@ -47,14 +47,14 @@ public record OVSEntity
             : ((OVSReference)Values[propertyName]).Set;
     }
 
-    protected Map<string, T> GetMap<T>(string propertyName) where T : notnull
+    protected Map<string, T> GetMap<T>(string propertyName)
     {
         return !Values.ContainsKey(propertyName)
             ? default
             : ((OVSMap<T>)Values[propertyName]).Map;
     }
 
-    protected void SetValue<T>(string propertyName, T? value) where T : notnull
+    protected void SetValue<T>(string propertyName, T? value)
     {
         if (Values.ContainsKey(propertyName)) Values = Values.Remove(propertyName);
 

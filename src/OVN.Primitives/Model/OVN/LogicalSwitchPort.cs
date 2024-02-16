@@ -14,7 +14,9 @@ public record LogicalSwitchPort : OVSTableRecord, IHasParentReference, IOVSEntit
             { "addresses", OVSSet<string>.Metadata() },
             { "dhcpv4_options", OVSSet<Guid>.Metadata() },
             { "port_security", OVSSet<string>.Metadata() },
-            { "options", OVSMap<string>.Metadata(true) }
+            { "options", OVSMap<string>.Metadata(true) },
+            { "tag", OVSValue<int>.Metadata() }
+
         };
 
     public Seq<string> Addresses => GetSet<string>("addresses");

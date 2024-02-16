@@ -55,7 +55,7 @@ public static class NetworkPlanConfigurationExtensions
         };
     }
 
-    public static NetworkPlan AddExternalNetworkPort(this NetworkPlan plan, string switchName, string externalNetwork)
+    public static NetworkPlan AddExternalNetworkPort(this NetworkPlan plan, string switchName, string externalNetwork, int? tag)
     {
         var name = $"SN-{switchName}-{externalNetwork}";
         return plan with
@@ -67,7 +67,8 @@ public static class NetworkPlanConfigurationExtensions
                 Type = "localnet",
                 Options = new Dictionary<string, string> { { "network_name", externalNetwork } }.ToMap(),
                 Addresses = new[] { "unknown" }.ToSeq(),
-                ExternalIds = new Dictionary<string, string> { { "network_plan", plan.Id } }.ToMap()
+                ExternalIds = new Dictionary<string, string> { { "network_plan", plan.Id } }.ToMap(),
+                Tag = tag
             })
         };
     }

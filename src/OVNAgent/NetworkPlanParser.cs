@@ -292,8 +292,16 @@ public static class NetworkPlanParser
                 || portValues["network"] is not string networkName)
                 throw new InvalidDataException($"network name is required for network port (switch: {switchName})");
 
+            int? tag = null;
+
+            if (portValues.ContainsKey("tag")
+                && portValues["tag"] is int tagValue)
+            {
+                tag = tagValue;
+            }
+
             return networkPlan
-                .AddExternalNetworkPort(switchName, networkName);
+                .AddExternalNetworkPort(switchName, networkName, tag);
         }
         
         NetworkPlan ParseGenericPort(NetworkPlan networkPlan, 
