@@ -10,7 +10,7 @@
     <ItemGroup>
         <PackageReference Include="IPNetwork2" Version="2.6.472" />
         <PackageReference Include="JetBrains.Annotations" Version="2023.3.0" />
-        <PackageReference Include="LanguageExt.Core" Version="4.4.0" />
+        <PackageReference Include="LanguageExt.Core" Version="4.4.8" />
     </ItemGroup>
 
 </Project>
