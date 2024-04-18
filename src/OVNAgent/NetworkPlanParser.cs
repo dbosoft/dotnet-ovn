@@ -168,7 +168,7 @@ public static class NetworkPlanParser
             var networkParts = networkString.Split('/');
             if (networkParts.Length != 2
                 || !IPAddress.TryParse(networkParts[0], out var ipAddress)
-                || !IPNetwork.TryParse(networkString, out var network))
+                || !IPNetwork2.TryParse(networkString, out var network))
             {
                 throw new InvalidDataException(
                     $"network {networkString} is invalid for gateway port (router: {routerName})\n" +
@@ -198,7 +198,7 @@ public static class NetworkPlanParser
             var networkParts = networkString.Split('/');
             if (networkParts.Length != 2
                 || !IPAddress.TryParse(networkParts[0], out var ipAddress)
-                || !IPNetwork.TryParse(networkString, out var network))
+                || !IPNetwork2.TryParse(networkString, out var network))
             {
                 throw new InvalidDataException(
                     $"network {networkString} is invalid for router port (router: {routerName}, switch: {switchName})\n" +
@@ -356,7 +356,7 @@ public static class NetworkPlanParser
                 || optionValue["cidr"] is not string cidrString)
                 throw new InvalidDataException($"cidr is required for v4 dhcp options (options: {optionName})");
 
-            if(!IPNetwork.TryParse(cidrString, out var cidrNetwork) 
+            if(!IPNetwork2.TryParse(cidrString, out var cidrNetwork) 
                || cidrNetwork.AddressFamily != AddressFamily.InterNetwork)
                 throw new InvalidDataException($"invalid cidr address {cidrString} for v4 dhcp options (options: {optionName})");
         

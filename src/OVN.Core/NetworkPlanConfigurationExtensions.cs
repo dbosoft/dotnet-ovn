@@ -37,7 +37,7 @@ public static class NetworkPlanConfigurationExtensions
         };
     }
 
-    public static NetworkPlan AddDHCPOptions(this NetworkPlan plan, string id, IPNetwork cidr, Map<string, string> options)
+    public static NetworkPlan AddDHCPOptions(this NetworkPlan plan, string id, IPNetwork2 cidr, Map<string, string> options)
     {
         return plan with
         {
@@ -144,7 +144,7 @@ public static class NetworkPlanConfigurationExtensions
     }
 
     public static NetworkPlan AddRouterPort(this NetworkPlan plan, string switchName, 
-        string routerName, string macAddress, IPAddress ipAddress, IPNetwork network,
+        string routerName, string macAddress, IPAddress ipAddress, IPNetwork2 network,
         string chassisGroup = "")
     {
         var portNameRouter = $"RS-{routerName}-{switchName}";
