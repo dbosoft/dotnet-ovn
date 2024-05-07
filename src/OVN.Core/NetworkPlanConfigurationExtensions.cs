@@ -22,13 +22,14 @@ public static class NetworkPlanConfigurationExtensions
         };
     }
     
-    public static NetworkPlan AddDnsRecords(this NetworkPlan plan, string id, Map<string, string> records)
+    public static NetworkPlan AddDnsRecords(this NetworkPlan plan, string id, Map<string, string> records, Map<string, string> options)
     {
         return plan with
         {
             PlannedDnsRecords = plan.PlannedDnsRecords.Add(id, new PlannedDnsRecords
             {
                 Records = records,
+                Options = options,
                 ExternalIds = new Dictionary<string, string> {
                     { "network_plan", plan.Id }, 
                     { "id", id} 
