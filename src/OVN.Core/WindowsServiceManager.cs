@@ -195,6 +195,53 @@ internal class WindowsServiceManager : IServiceManager
             .Bind(_ => EnsureServiceStarted(cancellationToken));
     }
 
+    public EitherAsync<Error, Unit> SetRecoveryOptions(
+        Option<TimeSpan> firstRestartDelay,
+        Option<TimeSpan> secondRestartDelay,
+        Option<TimeSpan> subsequentRestartDelay,
+        Option<TimeSpan> resetDelay,
+        CancellationToken cancellationToken) =>
+        Prelude.AffMaybe<Unit>(async () =>
+        {
+            // sc.exe expects just a slash / to indicate no action.
+            // E.g. actions="/////" means no action on any failure.
+            var actions = string.Join("/",
+                ToRestartAction(firstRestartDelay).IfNone("/"),
+                ToRestartAction(secondRestartDelay).IfNone("/"),
+                ToRestartAction(subsequentRestartDelay).IfNone("/"));
+
+            var resetSeconds = resetDelay
+                .Map(d => d.Ticks / TimeSpan.TicksPerSecond)
+                .Filter(s => s > 0)
+                .IfNone(0);
+
+            var sb = new StringBuilder();
+            sb.Append($"failure {_serviceName} ");
+            sb.Append($"reset={resetSeconds} ");
+            sb.Append($"actions=\"{actions}\"");
+
+            var scProcess = _sysEnv.CreateProcess();
+            scProcess.StartInfo.FileName = "sc.exe";
+            scProcess.StartInfo.Arguments = sb.ToString();
+            scProcess.StartInfo.RedirectStandardError = true;
+            scProcess.StartInfo.RedirectStandardOutput = true;
+            scProcess.Start();
+            scProcess.BeginErrorReadLine();
+            scProcess.BeginOutputReadLine();
+
+            await scProcess.WaitForExit(cancellationToken);
+
+            if (scProcess.ExitCode != 0)
+                return Error.New($"Failed to set recovery options for service {_serviceName}");
+
+            return Prelude.unit;
+        }).Run().AsTask().Map(r => r.ToEither()).ToAsync();
+
+    private static Option<string> ToRestartAction(Option<TimeSpan> delay) =>
+        delay.Map(ts => ts.Ticks / TimeSpan.TicksPerMillisecond)
+            .Filter(ms => ms > 0)
+            .Map(ms => $"restart/{ms}");
+
     public EitherAsync<Error, ServiceController> GetServiceController()
     {
         return new ServiceController(_serviceName);
