@@ -17,14 +17,18 @@ public class VSwitchDProcessTests
         var loggerMock = new Mock<ILogger<VSwitchDProcess>>();
 
         await using var vSwitchDemon = new VSwitchDProcess(envMock.Object,
-            new VSwitchDSettings(localSettings.SouthDBConnection, false),
+            new VSwitchDSettings(localSettings.SouthDBConnection, "warn", false),
             false,
             loggerMock.Object);
 
         await vSwitchDemon.Start();
         Assert.Equal(
             // ReSharper disable once StringLiteralTypo
-            @"""unix:/var/run/ovn/ovnsb_db.sock"" --unixctl=""/var/run/openvswitch/ovs-vswitchd.ctl"" --pidfile=""/var/run/openvswitch/ovs-vswitchd.pid""",
+            @"""unix:/var/run/ovn/ovnsb_db.sock"" "
+                + @"--unixctl=""/var/run/openvswitch/ovs-vswitchd.ctl"" "
+                + @"--pidfile=""/var/run/openvswitch/ovs-vswitchd.pid"" "
+                + @"--log-file=""/var/log/openvswitch/ovs-vswitchd.log"" "
+                + @"--verbose=""file:warn""",
             processStartInfo.Arguments);
         
     }
