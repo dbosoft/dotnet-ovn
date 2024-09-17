@@ -13,6 +13,8 @@ namespace Dbosoft.OVN.OSCommands;
 public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 {
     private readonly OvsFile _controlFile;
+    private readonly OvsFile _logFile;
+    private readonly string _logLevel;
     private readonly bool _isOvn;
     private readonly OvsFile _exeFile;
     private readonly ILogger _logger;
@@ -24,7 +26,11 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
     private bool _allowAttached = false;
     
     protected DemonProcessBase(
-        ISysEnvironment sysEnv, OvsFile exeFile, OvsFile controlFile,
+        ISysEnvironment sysEnv,
+        OvsFile exeFile,
+        OvsFile controlFile,
+        OvsFile logFile,
+        string logLevel,
         bool isOvn,
         bool allowAttached,
         ILogger logger)
@@ -32,6 +38,8 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         _sysEnv = sysEnv;
         _exeFile = exeFile;
         _controlFile = controlFile;
+        _logFile = logFile;
+        _logLevel = logLevel;
         _isOvn = isOvn;
         _logger = logger;
         _allowAttached = allowAttached;
@@ -54,20 +62,21 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
     protected virtual string BuildArguments()
     {
         var controlFileFullPath = _sysEnv.FileSystem.ResolveOvsFilePath(_controlFile);
-
+        var logFileFullName = _sysEnv.FileSystem.ResolveOvsFilePath(_logFile);
         var pidFileFullName = Path.ChangeExtension(_sysEnv.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
         _sysEnv.FileSystem.EnsurePathForFileExists(_controlFile);
         _sysEnv.FileSystem.EnsurePathForFileExists(pidFileFullName);
+        _sysEnv.FileSystem.EnsurePathForFileExists(_logFile);
 
         var sb = new StringBuilder();
         
         if (!NoControlFileArgument) 
             sb.Append($"--unixctl=\"{controlFileFullPath}\" ");
 
-        sb.Append($"--pidfile=\"{pidFileFullName}\"");
+        sb.Append($"--pidfile=\"{pidFileFullName}\" ");
+        sb.Append($"--log-file=\"{logFileFullName}\" --verbose=\"file:{_logLevel}\"");
   
         return sb.ToString();
-
     }
     
     private void Dispose(bool disposing)
@@ -118,20 +127,34 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
             if (_allowAttached && orphanedDemon != null)
             {
+                var internalTokenSource =
+                    new CancellationTokenSource(5000);
+                var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
+                    internalTokenSource.Token,
+                    cancellationToken
+                );
+
                 _ovsProcess = orphanedDemon;
+                var appControl = new OVSAppControl(_sysEnv, _controlFile);
+                await appControl.SetLogFileLevel(_logLevel, cancelSource.Token).IfLeft(l =>
+                {
+                    _logger.LogDebug(
+                        "Demon {ovsFile}:{controlFile}: Response from ovs-appctl, while trying to stop orphaned process: {error}",
+                        _exeFile.Name, _controlFile.Name, l);
+                });
                 _logger.LogInformation("Demon {ovsFile}:{controlFile}: Successfully attached existing process, however logging will be unavailable for this process.",_exeFile.Name, _controlFile.Name);
                 return Unit.Default;
             }
             
-            var internalTokenSource =
-                new CancellationTokenSource(5000);
-            var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
-                internalTokenSource.Token,
-                cancellationToken
-            );
-            
             if (_sysEnv.FileSystem.FileExists(_controlFile))
             {
+                var internalTokenSource =
+                    new CancellationTokenSource(5000);
+                var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
+                    internalTokenSource.Token,
+                    cancellationToken
+                );
+
                 _logger.LogDebug("Existing control file found. Trying to stop orphaned demon.");
                 
                 var appControl = new OVSAppControl(_sysEnv, _controlFile);

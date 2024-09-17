@@ -19,12 +19,16 @@ public class OVSDbNode : DemonNodeBase
     // connects to OVNDatabaseNode
 
     private readonly ISysEnvironment _sysEnv;
+    private readonly IOvsSettings _ovsSettings;
     private OVSDBProcess? _ovsdbProcess;
 
-    public OVSDbNode(ISysEnvironment sysEnv,
+    public OVSDbNode(
+        ISysEnvironment sysEnv,
+        IOvsSettings ovsSettings,
         ILoggerFactory loggerFactory)
     {
         _sysEnv = sysEnv;
+        _ovsSettings = ovsSettings;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<OVSDbNode>();
     }
@@ -38,7 +42,10 @@ public class OVSDbNode : DemonNodeBase
                 // ReSharper disable StringLiteralTypo
                 new OvsFile("usr/share/openvswitch", "vswitch.ovsschema"),
                 // ReSharper restore StringLiteralTypo
-                new OvsFile("var/run/openvswitch", "ovs-db.ctl"), true),
+                new OvsFile("var/run/openvswitch", "ovs-db.ctl"),
+                new OvsFile("var/log/openvswitch", "ovs-db.log"),
+                _ovsSettings.LogFileLevel,
+                true),
             _loggerFactory.CreateLogger<OVSDBProcess>());
 
         yield return _ovsdbProcess;

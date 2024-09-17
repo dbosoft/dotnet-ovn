@@ -38,12 +38,18 @@ public class NetworkControllerNode : DemonNodeBase
                 // ReSharper disable StringLiteralTypo
                 new OvsFile("usr/share/ovn", "ovn-nb.ovsschema"),
                 // ReSharper restore StringLiteralTypo
-                _ctlFile, false),
+                _ctlFile,
+                new OvsFile("var/log/ovn", "ovn-nb.log"),
+                _ovnSettings.LogFileLevel,
+                false),
             _loggerFactory.CreateLogger<OVSDBProcess>());
 
         yield return new NorthDProcess(_sysEnv,
-            new NorthDSettings(_ovnSettings.NorthDBConnection,
-                _ovnSettings.SouthDBConnection, false),
+            new NorthDSettings(
+                _ovnSettings.NorthDBConnection,
+                _ovnSettings.SouthDBConnection,
+                _ovnSettings.LogFileLevel,
+                false),
             _loggerFactory.CreateLogger<NorthDProcess>());
     }
 

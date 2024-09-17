@@ -14,4 +14,9 @@ public interface IOVNSettings
     /// Connection to Southbound DB.
     /// </summary>
     public OvsDbConnection SouthDBConnection { get; }
+
+    /// <summary>
+    /// The log level when logging to files. off disables the file logging.
+    /// </summary>
+    public string LogFileLevel { get; set; }
 }
