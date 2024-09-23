@@ -1,3 +1,5 @@
+using Dbosoft.OVN.Logging;
+
 namespace Dbosoft.OVN;
 
 /// <summary>
@@ -16,7 +18,7 @@ public interface IOVNSettings
     public OvsDbConnection SouthDBConnection { get; }
 
     /// <summary>
-    /// The log level when logging to files. off disables the file logging.
+    /// The settings for the logging.
     /// </summary>
-    public string LogFileLevel { get; set; }
+    public OvsLoggingSettings Logging { get; set; }
 }

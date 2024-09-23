@@ -1,10 +1,12 @@
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Text;
+using Dbosoft.OVN.Logging;
 using Dbosoft.OVN.OSCommands.OVS;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 
 namespace Dbosoft.OVN.OSCommands;
@@ -14,7 +16,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 {
     private readonly OvsFile _controlFile;
     private readonly OvsFile _logFile;
-    private readonly string _logLevel;
+    private readonly OvsLoggingSettings _logging;
     private readonly bool _isOvn;
     private readonly OvsFile _exeFile;
     private readonly ILogger _logger;
@@ -30,7 +32,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         OvsFile exeFile,
         OvsFile controlFile,
         OvsFile logFile,
-        string logLevel,
+        OvsLoggingSettings logging,
         bool isOvn,
         bool allowAttached,
         ILogger logger)
@@ -39,7 +41,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         _exeFile = exeFile;
         _controlFile = controlFile;
         _logFile = logFile;
-        _logLevel = logLevel;
+        _logging = logging;
         _isOvn = isOvn;
         _logger = logger;
         _allowAttached = allowAttached;
@@ -74,7 +76,9 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
             sb.Append($"--unixctl=\"{controlFileFullPath}\" ");
 
         sb.Append($"--pidfile=\"{pidFileFullName}\" ");
-        sb.Append($"--log-file=\"{logFileFullName}\" --verbose=\"file:{_logLevel}\"");
+
+        sb.Append($"--log-file=\"{logFileFullName}\" ");
+        sb.Append($"--verbose=\"file:{_logging.File.Level.ToOvsValue()}\"");
   
         return sb.ToString();
     }
@@ -127,30 +131,29 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
             if (_allowAttached && orphanedDemon != null)
             {
-                var internalTokenSource =
-                    new CancellationTokenSource(5000);
-                var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
+                using var internalTokenSource = new CancellationTokenSource(5000);
+                using var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
                     internalTokenSource.Token,
                     cancellationToken
                 );
 
                 _ovsProcess = orphanedDemon;
                 var appControl = new OVSAppControl(_sysEnv, _controlFile);
-                await appControl.SetLogFileLevel(_logLevel, cancelSource.Token).IfLeft(l =>
+                await appControl.SetLogging(_logging, cancelSource.Token).IfLeft(l =>
                 {
                     _logger.LogDebug(
-                        "Demon {ovsFile}:{controlFile}: Response from ovs-appctl, while trying to stop orphaned process: {error}",
+                        "Demon {OvsFile}:{ControlFile}: Response from ovs-appctl, while trying to update the logging settings: {Error}",
                         _exeFile.Name, _controlFile.Name, l);
                 });
-                _logger.LogInformation("Demon {ovsFile}:{controlFile}: Successfully attached existing process, however logging will be unavailable for this process.",_exeFile.Name, _controlFile.Name);
+                _logger.LogInformation("Demon {OvsFile}:{ControlFile}: Successfully attached existing process, however logging will be unavailable for this process.",
+                    _exeFile.Name, _controlFile.Name);
                 return Unit.Default;
             }
             
             if (_sysEnv.FileSystem.FileExists(_controlFile))
             {
-                var internalTokenSource =
-                    new CancellationTokenSource(5000);
-                var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
+                using var internalTokenSource = new CancellationTokenSource(5000);
+                using var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
                     internalTokenSource.Token,
                     cancellationToken
                 );
@@ -201,7 +204,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     var timeStampFound = DateTime.TryParse(logMessageParts[0], out var timestamp);
                     var logNumberFound = int.TryParse(logMessageParts[1], out var lineNumber);
                     var sender = logMessageParts[2];
-                    var hasLogLevel = Enum.TryParse<OvsLogLevel>(logMessageParts[3], true, out var ovsLogLevel);
+                    var ovsLogLevel = OvsLogLevelExtensions.ParseOvsValue(logMessageParts[3]);
 
                     var msgBuilder = new StringBuilder();
                     for (var i = 4; i < logMessageParts.Length; i++)
@@ -212,15 +215,15 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
                     var message = msgBuilder.ToString().TrimEnd('|');
 
-                    if (timeStampFound && logNumberFound && hasLogLevel)
+                    if (timeStampFound && logNumberFound && ovsLogLevel.IsSome)
                     {
-                         var logLevel = ovsLogLevel switch
+                         var logLevel = ovsLogLevel.ValueUnsafe() switch
                         {
-                            OvsLogLevel.emer => LogLevel.Error,
-                            OvsLogLevel.err => LogLevel.Information,
-                            OvsLogLevel.warn => LogLevel.Information,
-                            OvsLogLevel.info => LogLevel.Debug,
-                            OvsLogLevel.dbg => LogLevel.Trace,
+                            OvsLogLevel.Emergency => LogLevel.Error,
+                            OvsLogLevel.Error => LogLevel.Information,
+                            OvsLogLevel.Warning => LogLevel.Information,
+                            OvsLogLevel.Info => LogLevel.Debug,
+                            OvsLogLevel.Debug => LogLevel.Trace,
                             _ => LogLevel.None
                         };
 
@@ -382,15 +385,6 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         }
 
         return CheckAliveAsync().ToAsync();
-    }
-
-    private enum OvsLogLevel
-    {
-        emer,
-        err,
-        warn,
-        info,
-        dbg
     }
 
     /// <summary>

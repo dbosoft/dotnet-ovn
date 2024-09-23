@@ -34,7 +34,7 @@ public class OVNDatabaseNode : DemonNodeBase
                 // ReSharper restore StringLiteralTypo
                 new OvsFile("var/run/ovn", "ovn-sb.ctl"),
                 new OvsFile("var/log/ovn", "ovn-sb.log"),
-                _ovnSettings.LogFileLevel,
+                _ovnSettings.Logging,
                 false),
             _loggerFactory.CreateLogger<OVSDBProcess>());
     }

@@ -1,3 +1,5 @@
+using Dbosoft.OVN.Logging;
+
 namespace Dbosoft.OVN.OSCommands.OVS;
 
 public record OVSDbSettings(
@@ -6,5 +8,5 @@ public record OVSDbSettings(
     OvsFile SchemaFile,
     OvsFile ControlFile,
     OvsFile LogFile,
-    string LogLevel,
+    OvsLoggingSettings LoggingSettings,
     bool AllowAttach);

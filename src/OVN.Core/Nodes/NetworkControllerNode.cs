@@ -40,7 +40,7 @@ public class NetworkControllerNode : DemonNodeBase
                 // ReSharper restore StringLiteralTypo
                 _ctlFile,
                 new OvsFile("var/log/ovn", "ovn-nb.log"),
-                _ovnSettings.LogFileLevel,
+                _ovnSettings.Logging,
                 false),
             _loggerFactory.CreateLogger<OVSDBProcess>());
 
@@ -48,7 +48,7 @@ public class NetworkControllerNode : DemonNodeBase
             new NorthDSettings(
                 _ovnSettings.NorthDBConnection,
                 _ovnSettings.SouthDBConnection,
-                _ovnSettings.LogFileLevel,
+                _ovnSettings.Logging,
                 false),
             _loggerFactory.CreateLogger<NorthDProcess>());
     }

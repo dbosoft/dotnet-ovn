@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Dbosoft.OVN.Logging;
 using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVN.TestTools;
 using Microsoft.Extensions.Logging;
@@ -16,10 +17,15 @@ public class NorthDProcessTests
         var processStartInfo = new ProcessStartInfo();
         var envMock = OvsMocks.SetupEnvForOvsTool(processStartInfo);
         var localSettings = new LocalOVSWithOVNSettings();
+        localSettings.Logging.File.Level = OvsLogLevel.Warning;
         var loggerMock = new Mock<ILogger<NorthDProcess>>();
 
         await using var northDProcess = new NorthDProcess(envMock.Object,
-            new NorthDSettings(localSettings.NorthDBConnection, localSettings.SouthDBConnection, "warn", false),
+            new NorthDSettings(
+                localSettings.NorthDBConnection,
+                localSettings.SouthDBConnection,
+                localSettings.Logging,
+                false),
             loggerMock.Object);
 
         await northDProcess.Start();

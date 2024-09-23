@@ -13,7 +13,7 @@ public class VSwitchDProcess : DemonProcessBase
             OVSCommands.VSwitchDemon,
             new OvsFile("/var/run/openvswitch", fallback ? "ovs-vswitchd2.ctl" : "ovs-vswitchd.ctl"),
             new OvsFile("/var/log/openvswitch", fallback ? "ovs-vswitchd2.log" : "ovs-vswitchd.log"),
-            settings.LogFileLevel,
+            settings.LoggingSettings,
             false,
             settings.AllowAttach,
             logger)

@@ -1,3 +1,4 @@
+using Dbosoft.OVN.Logging;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -24,9 +25,12 @@ public class OVSAppControl : OVSTool, IAppControl
         return RunCommandWithResponse("version", cancellationToken);
     }
 
-    public EitherAsync<Error, Unit> SetLogFileLevel(string level, CancellationToken cancellationToken = default)
+    public EitherAsync<Error, Unit> SetLogging(
+        OvsLoggingSettings loggingSettings,
+        CancellationToken cancellationToken = default)
     {
-        return RunCommand($"vlog/set file:{level}", false, cancellationToken).Map(_ => Unit.Default);
+        var logLevel = loggingSettings.File.Level.ToOvsValue();
+        return RunCommand($"vlog/set file:{logLevel}", false, cancellationToken).Map(_ => Unit.Default);
     }
 
     protected override string BuildArguments(string command)

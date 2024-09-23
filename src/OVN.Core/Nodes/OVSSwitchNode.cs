@@ -37,7 +37,7 @@ public class OVSSwitchNode : DemonNodeBase
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
         _vSwitchDProcess = new VSwitchDProcess(_sysEnv,
-            new VSwitchDSettings(LocalOVSConnection, _ovsSettings.LogFileLevel, true),
+            new VSwitchDSettings(LocalOVSConnection, _ovsSettings.Logging, true),
             false,
             _loggerFactory.CreateLogger<VSwitchDProcess>());
 
@@ -45,7 +45,7 @@ public class OVSSwitchNode : DemonNodeBase
         Thread.Sleep(1000);
         
         _fallBackvSwitchDProcess = new VSwitchDProcess(_sysEnv,
-            new VSwitchDSettings(LocalOVSConnection, _ovsSettings.LogFileLevel, true),
+            new VSwitchDSettings(LocalOVSConnection, _ovsSettings.Logging, true),
             true,
             _loggerFactory.CreateLogger<VSwitchDProcess>());
         

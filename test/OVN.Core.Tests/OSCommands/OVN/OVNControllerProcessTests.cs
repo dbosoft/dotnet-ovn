@@ -14,10 +14,14 @@ public class OVNControllerProcessTests
         var processStartInfo = new ProcessStartInfo();
         var envMock = OvsMocks.SetupEnvForOvsTool(processStartInfo);
         var localSettings = new LocalOVSWithOVNSettings();
+        localSettings.Logging.File.Level = OvsLogLevel.Warning;
         var loggerMock = new Mock<ILogger<OVNControllerProcess>>();
 
         await using var ovnController = new OVNControllerProcess(envMock.Object,
-            new OVNControllerSettings(localSettings.SouthDBConnection, "warn", false),
+            new OVNControllerSettings(
+                localSettings.SouthDBConnection,
+                localSettings.Logging,
+                false),
             loggerMock.Object);
 
         await ovnController.Start();

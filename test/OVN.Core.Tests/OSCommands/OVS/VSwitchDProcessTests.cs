@@ -14,10 +14,14 @@ public class VSwitchDProcessTests
         var processStartInfo = new ProcessStartInfo();
         var envMock = OvsMocks.SetupEnvForOvsTool(processStartInfo);
         var localSettings = new LocalOVSWithOVNSettings();
+        localSettings.Logging.File.Level = OvsLogLevel.Warning;
         var loggerMock = new Mock<ILogger<VSwitchDProcess>>();
 
         await using var vSwitchDemon = new VSwitchDProcess(envMock.Object,
-            new VSwitchDSettings(localSettings.SouthDBConnection, "warn", false),
+            new VSwitchDSettings(
+                localSettings.SouthDBConnection,
+                localSettings.Logging,
+                false),
             false,
             loggerMock.Object);
 

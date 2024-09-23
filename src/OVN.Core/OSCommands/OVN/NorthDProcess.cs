@@ -13,7 +13,7 @@ public class NorthDProcess : DemonProcessBase
             OVNCommands.NorthboundDemon,
             new OvsFile("/var/run/ovn", "ovn-northd.ctl"),
             new OvsFile("/var/log/ovn", "ovn-northd.log"),
-            settings.LogFileLevel,
+            settings.LoggingSettings,
             true,
             settings.AllowAttach,
             logger)

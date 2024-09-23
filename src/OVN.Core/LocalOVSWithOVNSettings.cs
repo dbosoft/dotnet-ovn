@@ -1,3 +1,5 @@
+using Dbosoft.OVN.Logging;
+
 namespace Dbosoft.OVN;
 
 /// <summary>
@@ -24,5 +26,6 @@ public class LocalOVSWithOVNSettings : IOVNSettings, IOvsSettings
     /// <inheritdoc />
     public OvsDbConnection SouthDBConnection { get; }
 
-    public string LogFileLevel { get; set; } = "off";
+    /// <inheritdoc cref="IOvsSettings.Logging" />
+    public OvsLoggingSettings Logging { get; set; } = new();
 }

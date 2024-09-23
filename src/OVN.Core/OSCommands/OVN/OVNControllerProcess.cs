@@ -13,7 +13,7 @@ public class OVNControllerProcess : DemonProcessBase
             OVNCommands.OVNController,
             new OvsFile("/var/run/ovn", "ovn-controller.ctl"),
             new OvsFile("/var/log/ovn", "ovn-controller.log"),
-            settings.LogFileLevel,
+            settings.LoggingSettings,
             true,
             settings.AllowAttach,
             logger)
