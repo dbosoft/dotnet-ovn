@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Dbosoft.OVN.Logging;
 using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVN.TestTools;
 using Microsoft.Extensions.Logging;
@@ -16,14 +17,27 @@ public class NorthDProcessTests
         var processStartInfo = new ProcessStartInfo();
         var envMock = OvsMocks.SetupEnvForOvsTool(processStartInfo);
         var localSettings = new LocalOVSWithOVNSettings();
+        localSettings.Logging.File.Level = OvsLogLevel.Warning;
         var loggerMock = new Mock<ILogger<NorthDProcess>>();
 
         await using var northDProcess = new NorthDProcess(envMock.Object,
-            new NorthDSettings(localSettings.NorthDBConnection, localSettings.SouthDBConnection, false),
+            new NorthDSettings(
+                localSettings.NorthDBConnection,
+                localSettings.SouthDBConnection,
+                localSettings.Logging,
+                false),
             loggerMock.Object);
 
         await northDProcess.Start();
-         Assert.Equal(@"--ovnnb-db=""unix:/var/run/ovn/ovnnb_db.sock"" --ovnsb-db=""unix:/var/run/ovn/ovnsb_db.sock"" --unixctl=""/var/run/ovn/ovn-northd.ctl"" --pidfile=""/var/run/ovn/ovn-northd.pid""", processStartInfo.Arguments);
+         Assert.Equal(
+             @"--ovnnb-db=""unix:/var/run/ovn/ovnnb_db.sock"" "
+                + @"--ovnsb-db=""unix:/var/run/ovn/ovnsb_db.sock"" "
+                + @"--unixctl=""/var/run/ovn/ovn-northd.ctl"" "
+                + @"--pidfile=""/var/run/ovn/ovn-northd.pid"" "
+                + @"--log-file=""/var/log/ovn/ovn-northd.log"" "
+                + @"--verbose=""file:warn""",
+
+             processStartInfo.Arguments);
         
     }
 }

@@ -11,7 +11,12 @@ public class NorthDProcess : DemonProcessBase
     public NorthDProcess(ISysEnvironment sysEnv, NorthDSettings settings, ILogger logger)
         : base(sysEnv,
             OVNCommands.NorthboundDemon,
-            new OvsFile("/var/run/ovn", "ovn-northd.ctl"), true, settings.AllowAttach, logger)
+            new OvsFile("/var/run/ovn", "ovn-northd.ctl"),
+            new OvsFile("/var/log/ovn", "ovn-northd.log"),
+            settings.LoggingSettings,
+            true,
+            settings.AllowAttach,
+            logger)
     {
         _sysEnv = sysEnv;
         _settings = settings;

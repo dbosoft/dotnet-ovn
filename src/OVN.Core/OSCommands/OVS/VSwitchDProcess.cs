@@ -11,7 +11,12 @@ public class VSwitchDProcess : DemonProcessBase
     public VSwitchDProcess(ISysEnvironment sysEnv, VSwitchDSettings settings, bool fallback, ILogger logger)
         : base(sysEnv,
             OVSCommands.VSwitchDemon,
-            new OvsFile("/var/run/openvswitch", fallback? "ovs-vswitchd2.ctl" : "ovs-vswitchd.ctl"), false, settings.AllowAttach, logger)
+            new OvsFile("/var/run/openvswitch", fallback ? "ovs-vswitchd2.ctl" : "ovs-vswitchd.ctl"),
+            new OvsFile("/var/log/openvswitch", fallback ? "ovs-vswitchd2.log" : "ovs-vswitchd.log"),
+            settings.LoggingSettings,
+            false,
+            settings.AllowAttach,
+            logger)
     {
         _sysEnv = sysEnv;
         _settings = settings;

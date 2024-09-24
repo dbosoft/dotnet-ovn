@@ -35,7 +35,7 @@ public class OVNChassisNode : DemonNodeBase
     {
         
         yield return new OVNControllerProcess(_sysEnv,
-            new OVNControllerSettings(LocalOVSConnection, false),
+            new OVNControllerSettings(LocalOVSConnection, _ovnSettings.Logging, false),
             _loggerFactory.CreateLogger<OVNControllerProcess>());
     }
 

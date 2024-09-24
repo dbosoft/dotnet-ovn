@@ -14,15 +14,24 @@ public class OVNControllerProcessTests
         var processStartInfo = new ProcessStartInfo();
         var envMock = OvsMocks.SetupEnvForOvsTool(processStartInfo);
         var localSettings = new LocalOVSWithOVNSettings();
+        localSettings.Logging.File.Level = OvsLogLevel.Warning;
         var loggerMock = new Mock<ILogger<OVNControllerProcess>>();
 
         await using var ovnController = new OVNControllerProcess(envMock.Object,
-            new OVNControllerSettings(localSettings.SouthDBConnection, false),
+            new OVNControllerSettings(
+                localSettings.SouthDBConnection,
+                localSettings.Logging,
+                false),
             loggerMock.Object);
 
         await ovnController.Start();
         // ReSharper disable once StringLiteralTypo
-        Assert.Equal(@"--pidfile=""/var/run/ovn/ovn-controller.pid"" ""unix:/var/run/ovn/ovnsb_db.sock""", processStartInfo.Arguments);
+        Assert.Equal(
+            @"--pidfile=""/var/run/ovn/ovn-controller.pid"" "
+                + @"--log-file=""/var/log/ovn/ovn-controller.log"" "
+                + @"--verbose=""file:warn"" "
+                + @"""unix:/var/run/ovn/ovnsb_db.sock""",
+            processStartInfo.Arguments);
         
     }
 }

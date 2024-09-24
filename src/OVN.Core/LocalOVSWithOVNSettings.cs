@@ -1,9 +1,11 @@
+using Dbosoft.OVN.Logging;
+
 namespace Dbosoft.OVN;
 
 /// <summary>
 /// Settings for full location installation of both OVS and OVN.
 /// </summary>
-public class LocalOVSWithOVNSettings : IOVNSettings
+public class LocalOVSWithOVNSettings : IOVNSettings, IOvsSettings
 {
     /// <summary>
     /// Creates default settings.
@@ -23,4 +25,7 @@ public class LocalOVSWithOVNSettings : IOVNSettings
 
     /// <inheritdoc />
     public OvsDbConnection SouthDBConnection { get; }
+
+    /// <inheritdoc cref="IOvsSettings.Logging" />
+    public OvsLoggingSettings Logging { get; set; } = new();
 }

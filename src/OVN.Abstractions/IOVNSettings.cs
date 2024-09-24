@@ -1,3 +1,5 @@
+using Dbosoft.OVN.Logging;
+
 namespace Dbosoft.OVN;
 
 /// <summary>
@@ -14,4 +16,9 @@ public interface IOVNSettings
     /// Connection to Southbound DB.
     /// </summary>
     public OvsDbConnection SouthDBConnection { get; }
+
+    /// <summary>
+    /// The settings for the logging.
+    /// </summary>
+    public OvsLoggingSettings Logging { get; set; }
 }
