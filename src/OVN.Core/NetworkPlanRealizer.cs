@@ -48,7 +48,9 @@ public class NetworkPlanRealizer
         }
 
         EitherAsync<Error, HashMap<string, TEntity>> RemoveEntitiesNotPlanned<TEntity, TPlanned>(
-            string tableName, HashMap<Guid, TEntity> realized, HashMap<string, TPlanned> planned)
+            string tableName,
+            HashMap<Guid, TEntity> realized,
+            HashMap<string, TPlanned> planned)
             where TEntity : OVSTableRecord, IOVSEntityWithName
             where TPlanned : OVSEntity
         {
@@ -66,22 +68,17 @@ public class NetworkPlanRealizer
 
             var notFound = realized - foundById;
 
-            return RightAsync<Error, HashMap<string, TEntity>>(notFound.Values.AsParallel().Map(r =>
+            return notFound.Values.Map(r =>
             {
                 OVSParentReference? reference = default;
                 if (r is IHasParentReference hasReference) reference = hasReference.GetParentReference();
 
                 if (!reference.HasValue)
-                    return _ovnDBTool.RemoveRecord(tableName,
-                        r.Id.ToString("D"), cancellationToken).Match(
-                        _ => Unit.Default,
-                        l =>
-                        {
-                            _logger.LogWarning(
-                                "Apply network plan {netplan}: could not remove entity {entity} from table {tableName}. Error: {error}",
-                                networkPlan.Id, r, tableName, l);
-                            return Unit.Default;
-                        });
+                    return _ovnDBTool.RemoveRecord(tableName, r.Id.ToString("D"), cancellationToken)
+                        .MapLeft(l =>
+                            Error.New(
+                                $"Apply network plan {networkPlan.Id}: could not remove entity {r} from table {tableName}",
+                                l));
 
                 if (reference.Value.RowId == Guid.Empty.ToString("D"))
                     //special case - parent not found in netplan. To remove record query for parent for this record
@@ -99,15 +96,9 @@ public class NetworkPlanRealizer
                             r.Id.ToString("D"),
                             cancellationToken
                         ))
-                        .Match(
-                            _ => Unit.Default,
-                            l =>
-                            {
-                                _logger.LogWarning(
-                                    "Apply network plan {netplan}: could not remove entity reference {entity} from table {tableName}. Error: {error}",
-                                    networkPlan.Id, r, reference.Value.TableName, l);
-                                return Unit.Default;
-                            });
+                        .MapLeft(e => Error.New(
+                            $"Apply network plan {networkPlan.Id}: could not remove entity reference {r} from table {tableName}.",
+                            e));
 
                 return _ovnDBTool.RemoveColumnValue(
                     reference.Value.TableName,
@@ -115,16 +106,10 @@ public class NetworkPlanRealizer
                     reference.Value.RefColumn,
                     r.Id.ToString("D"),
                     cancellationToken
-                ).Match(
-                    _ => Unit.Default,
-                    l =>
-                    {
-                        _logger.LogWarning(
-                            "Apply network plan {netplan}: could not remove entity reference {entity} from table {tableName}. Error: {error}",
-                            networkPlan.Id, r, reference.Value.TableName, l);
-                        return Unit.Default;
-                    });
-            }).TraverseParallel(l => l).Map(_ => foundByName));
+                ).MapLeft(e => Error.New(
+                    $"Apply network plan {networkPlan.Id}: could not remove entity reference {r} from table {reference.Value.TableName}.",
+                    e));
+            }).SequenceSerial().Map(_ => foundByName);
         }
 
         EitherAsync<Error, HashMap<string, TPlanned>> CreatePlannedEntities<TEntity, TPlanned>(
@@ -137,25 +122,20 @@ public class NetworkPlanRealizer
             var found = planned.Filter(p => p.Name != null && realized.ContainsKey(p.Name));
             var notFound = planned - found;
 
-
-            return RightAsync<Error, HashMap<string, TPlanned>>(notFound.Values.AsParallel().Map(p =>
+            return notFound.Values.Map(p =>
             {
                 OVSParentReference? reference = null;
                 if (p is IHasParentReference hasReference) reference = hasReference.GetParentReference();
 
                 return _ovnDBTool.CreateRecord(tableName,
-                    p.ToMap(),
-                    reference,
-                    cancellationToken).Match(
-                    _ => Unit.Default,
-                    l =>
-                    {
-                        _logger.LogWarning(
-                            "Apply network plan {netplan}: could not create entity {entity} in table {tableName}. Error: {error}",
-                            networkPlan.Id, p, tableName, l);
-                        return Unit.Default;
-                    });
-            }).TraverseParallel(l => l).Map(_ => found));
+                        p.ToMap(),
+                        reference,
+                        cancellationToken)
+                    .MapLeft(l =>
+                        Error.New(
+                            $"Apply network plan {networkPlan.Id}: could not create entity {p} in table {tableName}",
+                            l));
+            }).SequenceSerial().Map(_ => found);
         }
 
 
@@ -170,14 +150,13 @@ public class NetworkPlanRealizer
                 Map<string, IOVSField> SetValues,
                 Seq<string> ClearValues)>();
 
-            planned.AsParallel().ForAll(kv =>
+            updates = planned.Map(kv =>
             {
                 var plannedEntity = kv.Value;
                 var plannedName = kv.Key;
 
                 var realizedEntity = realized[plannedName];
-                
-                
+
                 var plannedFields = plannedEntity.ToMap();
                 var realizedFields = realizedEntity.ToMap();
 
@@ -215,26 +194,21 @@ public class NetworkPlanRealizer
                     .Where(pf => !processedFields.Contains(pf.Key)).ToDictionary(plannedField =>
                         plannedField.Key, plannedField => plannedField.Value);
 
-                if (add.Count > 0 || set.Count > 0 || clear.Count > 0)
-                    updates = updates.Add(realizedEntity.Id, (add.ToMap(), set.ToMap(), clear.ToSeq()));
-            });
+                return add.Count > 0 || set.Count > 0 || clear.Count > 0
+                    ? Some((realizedEntity.Id, (add.ToMap(), set.ToMap(), clear.ToSeq())))
+                    : None;
+            }).Somes().ToMap();
 
-            return RightAsync<Error, IEnumerable<Unit>>(updates.AsParallel().Map(update =>
+            return updates.Map(update =>
             {
                 var (key, value) = update;
 
                 return _ovnDBTool.UpdateRecord(tableName, key.ToString("D"),
                         value.AddValues, value.SetValues, value.ClearValues, cancellationToken)
-                    .Match(
-                        _ => Unit.Default,
-                        l =>
-                        {
-                            _logger.LogWarning(
-                                "Apply network plan {netplan}: could not update entity {entity} in table {tableName}. Error: {error}",
-                                networkPlan.Id, key, tableName, l);
-                            return Unit.Default;
-                        });
-            }).TraverseParallel(l => l)).Map(_ => Unit.Default);
+                    .MapLeft(l => Error.New(
+                        $"Apply network plan {networkPlan.Id}: could not update entity {key} in table {tableName}.",
+                        l));
+            }).SequenceSerial().Map(_ => Unit.Default);
         }
 
         EitherAsync<Error, Stopwatch> StartStopWatch()
