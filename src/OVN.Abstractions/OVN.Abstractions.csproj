@@ -1,11 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Dbosoft.OVN</RootNamespace>
     </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="LanguageExt.Core" Version="4.4.9" />
+    </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\OVN.Primitives\OVN.Primitives.csproj" />
