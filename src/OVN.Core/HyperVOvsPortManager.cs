@@ -1,14 +1,7 @@
-﻿using System;
-using System.CodeDom;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Formats.Asn1;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Management;
 using System.Runtime.Versioning;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -23,6 +16,7 @@ public sealed partial class HyperVOvsPortManager(
     TimeSpan pollingInterval)
     : IHyperVOvsPortManager
 {
+    /// <inheritdoc cref="IHyperVOvsPortManager"/>
     public HyperVOvsPortManager() : this(TimeSpan.FromMinutes(1), TimeSpan.FromMilliseconds(100))
     {
     }
@@ -43,6 +37,12 @@ public sealed partial class HyperVOvsPortManager(
             return instances.Cast<ManagementObject>().Single();
         },
         LazyThreadSafetyMode.ExecutionAndPublication);
+
+    // The ManagementBaseObjects must be explicitly disposed as they
+    // hold COM objects. Furthermore, ManagementBaseObject.Dispose()
+    // does only work correctly when being invoked directly.
+    // The method is defined with the new keyword and will not be invoked
+    // via the IDisposable interface (e.g. with a using statement).
 
     /// <inheritdoc/>
     public EitherAsync<Error, Option<string>> GetPortName(string adapterId) =>
@@ -221,17 +221,6 @@ public sealed partial class HyperVOvsPortManager(
         !string.IsNullOrWhiteSpace(portName)
         && PortNameRegex().IsMatch(portName);
 
-    /// <summary>
-    /// Dispose the <paramref name="managementObjects"/>.
-    /// </summary>
-    /// <remarks>
-    /// The <see cref="ManagementBaseObject"/>s must be explicitly disposed
-    /// as there are COM objects attached to them. Furthermore,
-    /// <see cref="ManagementBaseObject.Dispose"/> does only work correctly
-    /// when being invoked directly. The method is defined with the
-    /// <see langwork="new"/> keyword and will not be invoked via the
-    /// <see cref="IDisposable"/> interface.
-    /// </remarks>
     private static void DisposeAll(IList<ManagementBaseObject> managementObjects)
     {
         foreach (var managementObject in managementObjects)
