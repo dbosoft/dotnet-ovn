@@ -1,5 +1,7 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Formats.Asn1;
 using System.Linq;
 using System.Management;
@@ -14,9 +16,17 @@ using static LanguageExt.Prelude;
 
 namespace Dbosoft.OVN;
 
+/// <inheritdoc cref="IHyperVOvsPortManager"/>
 [SupportedOSPlatform("windows")]
-public sealed partial class HyperOvsPortManager : IDisposable
+public sealed partial class HyperVOvsPortManager(
+    TimeSpan timeOut,
+    TimeSpan pollingInterval)
+    : IHyperVOvsPortManager
 {
+    public HyperVOvsPortManager() : this(TimeSpan.FromMinutes(1), TimeSpan.FromMilliseconds(100))
+    {
+    }
+
     [GeneratedRegex("^[a-zA-Z0-9-_]+$")]
     private static partial Regex PortNameRegex();
     private const string Scope = @"root\virtualization\v2";
@@ -34,7 +44,8 @@ public sealed partial class HyperOvsPortManager : IDisposable
         },
         LazyThreadSafetyMode.ExecutionAndPublication);
 
-    public EitherAsync<Error, Option<string>> GetOvsPortName(string adapterId) =>
+    /// <inheritdoc/>
+    public EitherAsync<Error, Option<string>> GetPortName(string adapterId) =>
         from _ in guard(IsValidAdapterId(adapterId),
                 Error.New($"The Hyper-V network adapter ID '{adapterId}' is invalid."))
             .ToEitherAsync()
@@ -42,15 +53,16 @@ public sealed partial class HyperOvsPortManager : IDisposable
         let portName = adapterInfo.Map(i => i.ElementName)
         select portName;
 
-    public EitherAsync<Error, Option<string>> GetAdapterId(string portName) =>
+    /// <inheritdoc/>
+    public EitherAsync<Error, Seq<string>> GetAdapterIds(string portName) =>
         from _ in guard(IsValidPortName(portName),
                 Error.New($"The OVS port name '{portName}' is invalid."))
             .ToEitherAsync()
-        from instanceId in TryAsync(Task.Factory.StartNew(() =>
+        from instanceIds in Try(() =>
             {
                 using var searcher = new ManagementObjectSearcher(
                     new ManagementScope(Scope),
-                    new ObjectQuery("SELECT ElementName "
+                    new ObjectQuery("SELECT InstanceID "
                                     + "FROM Msvm_EthernetPortAllocationSettingData "
                                     + $"WHERE ElementName = '{portName}'"));
 
@@ -58,25 +70,29 @@ public sealed partial class HyperOvsPortManager : IDisposable
                 var results = collection.Cast<ManagementBaseObject>().ToList();
                 try
                 {
-                    return results.Count == 0
-                        ? Option<string>.None
-                        : Optional((string)results.Single()["InstanceID"]);
+                    // Invoke ToList() to force eager evaluation of the LINQ query
+                    return results.Map(r => (string)r["InstanceID"]).ToList().ToSeq();
                 }
                 finally
                 {
                     DisposeAll(results);
                 }
-            }, TaskCreationOptions.LongRunning))
-            .ToEither(e => Error.New($"Could not get adapter ID for OVS port name '{portName}'.", e))
-        select instanceId;
+            })
+            .ToEither(e => Error.New($"Could not get adapter ID for OVS port name '{portName}'.", Error.New(e)))
+            .ToAsync()
+        from adapterIds in instanceIds.Map(ExtractAdapterId).SequenceSerial()
+        select adapterIds;
 
-    public EitherAsync<Error, Unit> SetOvsPortName(string adapterId, string portName) =>
+    /// <inheritdoc/>
+    public EitherAsync<Error, Unit> SetPortName(
+        string adapterId,
+        string portName) =>
         from adapterInfo in GetAdapterInfo(adapterId)
         from validAdapterInfo in adapterInfo.ToEitherAsync(
             Error.New($"The Hyper-V network adapter '{adapterId}' does not exist."))
         from _2 in guard(IsValidPortName(portName),
             Error.New($"The OVS port name '{portName}' is invalid."))
-        from __3 in TryAsync(Task.Factory.StartNew(() =>
+        from jobPath in Try(() =>
         {
             ManagementObject? adapterData = null;
             ManagementBaseObject? parameters = null;
@@ -95,9 +111,13 @@ public sealed partial class HyperOvsPortManager : IDisposable
                 parameters["ResourceSettings"] = new[] { adapterData.GetText(TextFormat.WmiDtd20) };
                 result = _vmms.Value.InvokeMethod("ModifyResourceSettings", parameters, null);
 
-                throw Error.New("Invalid response");
-                // TODO Check result and job status
-                return unit;
+                var returnValue = (uint)result["ReturnValue"];
+                return returnValue switch
+                {
+                    0 => Option<string>.None,
+                    4096 => Some((string)result["Job"]),
+                    _ => throw Error.New($"ModifyResourceSettings failed with result '{ConvertReturnValue(returnValue)}'"),
+                };
             }
             finally
             {
@@ -105,15 +125,21 @@ public sealed partial class HyperOvsPortManager : IDisposable
                 parameters?.Dispose();
                 result?.Dispose();
             }
-        })).ToEither(e => Error.New($"Could not set OVS port name for adapter '{adapterId}'.", e))
-        // TODO Query job progress
+        }).ToEither(ex => Error.New($"Could not set OVS port name for adapter '{adapterId}'.", Error.New(ex)))
+            .ToAsync()
+        from _4 in jobPath.Map(WaitForJob).SequenceSerial()
+        from reportedPortName in GetPortName(adapterId)
+        from _5 in guard(reportedPortName == portName,
+            Error.New($"The OVS port name was not properly set for the adapter '{adapterId}'"))
+            .ToEitherAsync()
         select unit;
 
-    private EitherAsync<Error, Option<(string Path, string ElementName)>> GetAdapterInfo(string adapterId) =>
+    private static EitherAsync<Error, Option<(string Path, string ElementName)>> GetAdapterInfo(
+        string adapterId) =>
         from _ in guard(IsValidAdapterId(adapterId),
                 Error.New($"The Hyper-V network adapter ID '{adapterId}' is invalid."))
             .ToEitherAsync()
-        from portName in TryAsync(Task.Factory.StartNew(() =>
+        from portName in Try(() =>
             {
                 using var searcher = new ManagementObjectSearcher(
                     new ManagementScope(Scope),
@@ -135,11 +161,51 @@ public sealed partial class HyperOvsPortManager : IDisposable
                 {
                     DisposeAll(results);
                 }
-            }, TaskCreationOptions.LongRunning))
-            .ToEither(ex => Error.New($"Could not get data for Hyper-V network adapter '{adapterId}'.", Error.New(ex)))
+            }).ToEither(ex => Error.New($"Could not get data for Hyper-V network adapter '{adapterId}'.", Error.New(ex)))
+            .ToAsync()
         select portName;
 
-    private bool IsValidAdapterId(string adapterId)
+    private EitherAsync<Error, Unit> WaitForJob(string jobPath) =>
+        TryAsync(async () =>
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var job = new ManagementObject(jobPath);
+            try
+            {
+                job.Get();
+                while (IsJobRunning((ushort)job["JobState"]) && stopwatch.Elapsed <= timeOut)
+                {
+                    await Task.Delay(pollingInterval);
+                    job.Get();
+                }
+
+                if (!IsJobCompleted((ushort)job["JobState"]))
+                    throw Error.New("The job did not complete successfully within the allotted time."
+                                    + $"The last reported state was {ConvertJobState((ushort)job["JobState"])}.");
+
+                return unit;
+            }
+            finally
+            {
+                job.Dispose();
+            }
+        }).ToEither(e => Error.New($"Failed to wait for completion of the job '{jobPath}'.", e));
+
+    private static EitherAsync<Error, string> ExtractAdapterId(
+        string instanceId) =>
+        from _1 in guard(notEmpty(instanceId),
+                Error.New("The instance ID is null or empty."))
+            .ToEitherAsync()
+        let unescaped = instanceId.Replace(@"\\", @"\")
+        let parts = unescaped.Split('\\')
+        from _2 in guard(parts.Length >= 2,
+            Error.New($"The instance ID '{instanceId}' does not contain a valid adapter ID."))
+        let adapterId = $@"{parts[0]}\{parts[1]}"
+        from _3 in guard(IsValidAdapterId(adapterId),
+            Error.New($"The instance ID '{instanceId}' does not contain a valid adapter ID."))
+        select adapterId;
+
+    private static bool IsValidAdapterId(string adapterId)
     {
         if(string.IsNullOrWhiteSpace(adapterId))
             return false;
@@ -153,7 +219,7 @@ public sealed partial class HyperOvsPortManager : IDisposable
                && Guid.TryParse(parts[1], out _);
     }
 
-    private bool IsValidPortName(string portName) =>
+    private static bool IsValidPortName(string portName) =>
         !string.IsNullOrWhiteSpace(portName)
         && PortNameRegex().IsMatch(portName);
 
@@ -168,7 +234,7 @@ public sealed partial class HyperOvsPortManager : IDisposable
     /// <see langwork="new"/> keyword and will not be invoked via the
     /// <see cref="IDisposable"/> interface.
     /// </remarks>
-    private void DisposeAll(IList<ManagementBaseObject> managementObjects)
+    private static void DisposeAll(IList<ManagementBaseObject> managementObjects)
     {
         foreach (var managementObject in managementObjects)
         {
@@ -187,8 +253,39 @@ public sealed partial class HyperOvsPortManager : IDisposable
             _vmms.Value.Dispose();
     }
 
-    private enum ModifyResourceSettingsResult
-    {
+    private static string ConvertReturnValue(uint returnValue) =>
+        returnValue switch
+        {
+            0 => "Completed",
+            1 => "Not Supported",
+            2 => "Failed",
+            3 => "Timeout",
+            4 => "Invalid Parameter",
+            5 => "Invalid State",
+            6 => "Incompatible Parameters",
+            4096 => "Job Started",
+            _ => $"Other ({returnValue})",
+        };
 
-    }
+    private static string ConvertJobState(ushort jobState) =>
+        jobState switch
+        {
+            2 => "New",
+            3 => "Starting",
+            4 => "Running",
+            5 => "Suspended",
+            6 => "Shutting Down",
+            7 => "Completed",
+            8 => "Terminated",
+            9 => "Killed",
+            10 => "Exception",
+            11 => "Service",
+            _ => $"Other ({jobState})",
+        };
+
+    private static bool IsJobRunning(ushort jobState) =>
+        jobState is 2 or 3 or 4 or 5 or 6;
+
+    private static bool IsJobCompleted(ushort jobState) =>
+        jobState is 7;
 }
