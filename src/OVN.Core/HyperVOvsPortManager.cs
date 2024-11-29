@@ -78,7 +78,7 @@ public sealed partial class HyperVOvsPortManager(
                     DisposeAll(results);
                 }
             }))
-            .ToEither(e => Error.New($"Could not get adapter ID for OVS port name '{portName}'.",e))
+            .ToEither(e => Error.New($"Could not get the adapter IDs for OVS port name '{portName}'.",e))
         from adapterIds in instanceIds.Map(ExtractAdapterId).SequenceSerial()
         select adapterIds;
 
@@ -124,7 +124,7 @@ public sealed partial class HyperVOvsPortManager(
                 parameters?.Dispose();
                 result?.Dispose();
             }
-        })).ToEither(e => Error.New($"Could not set OVS port name for adapter '{adapterId}'.", e))
+        })).ToEither(e => Error.New($"Could not set the OVS port name of the adapter '{adapterId}'.", e))
         from _4 in jobPath.Map(WaitForJob).SequenceSerial()
         from reportedPortName in GetPortName(adapterId)
         from _5 in guard(reportedPortName == portName,
@@ -159,7 +159,7 @@ public sealed partial class HyperVOvsPortManager(
             {
                 DisposeAll(results);
             }
-        })).ToEither(e => Error.New($"Could not get data for Hyper-V network adapter '{adapterId}'.", e))
+        })).ToEither(e => Error.New($"Could not get data for the Hyper-V network adapter '{adapterId}'.", e))
         select portName;
 
     private EitherAsync<Error, Unit> WaitForJob(string jobPath) =>
@@ -172,8 +172,7 @@ public sealed partial class HyperVOvsPortManager(
                 job.Get();
                 while (IsJobRunning((ushort)job["JobState"]) && stopwatch.Elapsed <= timeOut)
                 {
-                    await Task.Delay(pollingInterval)
-                        .ConfigureAwait(false);
+                    await Task.Delay(pollingInterval).ConfigureAwait(false);
                     job.Get();
                 }
 
@@ -187,7 +186,7 @@ public sealed partial class HyperVOvsPortManager(
             {
                 job.Dispose();
             }
-        }).ToEither(e => Error.New($"Failed to wait for completion of the job '{jobPath}'.", e));
+        }).ToEither(e => Error.New($"Failed to wait for the completion of the job '{jobPath}'.", e));
 
     private static EitherAsync<Error, string> ExtractAdapterId(
         string instanceId) =>
@@ -205,13 +204,13 @@ public sealed partial class HyperVOvsPortManager(
 
     private static bool IsValidAdapterId(string adapterId)
     {
-        if(string.IsNullOrWhiteSpace(adapterId))
+        if (string.IsNullOrWhiteSpace(adapterId))
             return false;
 
         if (!adapterId.StartsWith("Microsoft:", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        var parts = adapterId.Substring("Microsoft:".Length).Split('\\');
+        var parts = adapterId["Microsoft:".Length..].Split('\\');
         return parts.Length == 2
                && Guid.TryParse(parts[0], out _)
                && Guid.TryParse(parts[1], out _);
@@ -229,6 +228,7 @@ public sealed partial class HyperVOvsPortManager(
         }
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         if (_disposed)

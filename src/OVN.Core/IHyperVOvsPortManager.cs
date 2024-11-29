@@ -10,18 +10,18 @@ public interface IHyperVOvsPortManager : IDisposable
 {
     /// <summary>
     /// Returns the OVS port name which is assigned to the Hyper-V
-    /// network adapter with the given <paramref name="adapterId"/>
+    /// network adapter with the given <paramref name="adapterId"/>.
     /// </summary>
     EitherAsync<Error, Option<string>> GetPortName(
         string adapterId);
 
     /// <summary>
-    /// Returns IDs of the Hyper-V network adapters which are
+    /// Returns the IDs of the Hyper-V network adapters which are
     /// assigned the given <paramref name="portName"/> in OVS.
     /// </summary>
     /// <remarks>
     /// An OVS port name should be assigned to at most one Hyper-V
-    /// network adapter. When this method returns multiple result,
+    /// network adapter. When this method returns multiple results,
     /// the OVS configuration is invalid.
     /// </remarks>
     EitherAsync<Error, Seq<string>> GetAdapterIds(
