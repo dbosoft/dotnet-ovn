@@ -58,7 +58,7 @@ public sealed partial class HyperVOvsPortManager(
         from _ in guard(IsValidPortName(portName),
                 Error.New($"The OVS port name '{portName}' is invalid."))
             .ToEitherAsync()
-        from instanceIds in Try(() =>
+        from instanceIds in TryAsync(Task.Run(() =>
             {
                 using var searcher = new ManagementObjectSearcher(
                     new ManagementScope(Scope),
@@ -77,9 +77,8 @@ public sealed partial class HyperVOvsPortManager(
                 {
                     DisposeAll(results);
                 }
-            })
-            .ToEither(e => Error.New($"Could not get adapter ID for OVS port name '{portName}'.", Error.New(e)))
-            .ToAsync()
+            }))
+            .ToEither(e => Error.New($"Could not get adapter ID for OVS port name '{portName}'.",e))
         from adapterIds in instanceIds.Map(ExtractAdapterId).SequenceSerial()
         select adapterIds;
 
@@ -92,7 +91,7 @@ public sealed partial class HyperVOvsPortManager(
             Error.New($"The Hyper-V network adapter '{adapterId}' does not exist."))
         from _2 in guard(IsValidPortName(portName),
             Error.New($"The OVS port name '{portName}' is invalid."))
-        from jobPath in Try(() =>
+        from jobPath in TryAsync(Task.Run(() =>
         {
             ManagementObject? adapterData = null;
             ManagementBaseObject? parameters = null;
@@ -125,8 +124,7 @@ public sealed partial class HyperVOvsPortManager(
                 parameters?.Dispose();
                 result?.Dispose();
             }
-        }).ToEither(ex => Error.New($"Could not set OVS port name for adapter '{adapterId}'.", Error.New(ex)))
-            .ToAsync()
+        })).ToEither(e => Error.New($"Could not set OVS port name for adapter '{adapterId}'.", e))
         from _4 in jobPath.Map(WaitForJob).SequenceSerial()
         from reportedPortName in GetPortName(adapterId)
         from _5 in guard(reportedPortName == portName,
@@ -139,30 +137,29 @@ public sealed partial class HyperVOvsPortManager(
         from _ in guard(IsValidAdapterId(adapterId),
                 Error.New($"The Hyper-V network adapter ID '{adapterId}' is invalid."))
             .ToEitherAsync()
-        from portName in Try(() =>
+        from portName in TryAsync(Task.Run(() =>
+        {
+            using var searcher = new ManagementObjectSearcher(
+                new ManagementScope(Scope),
+                new ObjectQuery("SELECT ElementName, __RELPATH "
+                                + "FROM Msvm_EthernetPortAllocationSettingData "
+                                + $"WHERE InstanceID LIKE '{adapterId.Replace(@"\", @"\\")}%'"));
+
+            using var collection = searcher.Get();
+            var results = collection.Cast<ManagementBaseObject>().ToList();
+            try
             {
-                using var searcher = new ManagementObjectSearcher(
-                    new ManagementScope(Scope),
-                    new ObjectQuery("SELECT ElementName, __RELPATH "
-                                    + "FROM Msvm_EthernetPortAllocationSettingData "
-                                    + $"WHERE InstanceID LIKE '{adapterId.Replace(@"\", @"\\")}%'"));
+                if (results.Count == 0)
+                    return Option<(string Path, string ElementName)>.None;
 
-                using var collection = searcher.Get();
-                var results = collection.Cast<ManagementBaseObject>().ToList();
-                try
-                {
-                    if (results.Count == 0)
-                        return Option<(string Path, string ElementName)>.None;
-
-                    var result = results.Single();
-                    return ((string)result["__RELPATH"], (string)result["ElementName"]);
-                }
-                finally
-                {
-                    DisposeAll(results);
-                }
-            }).ToEither(ex => Error.New($"Could not get data for Hyper-V network adapter '{adapterId}'.", Error.New(ex)))
-            .ToAsync()
+                var result = results.Single();
+                return ((string)result["__RELPATH"], (string)result["ElementName"]);
+            }
+            finally
+            {
+                DisposeAll(results);
+            }
+        })).ToEither(e => Error.New($"Could not get data for Hyper-V network adapter '{adapterId}'.", e))
         select portName;
 
     private EitherAsync<Error, Unit> WaitForJob(string jobPath) =>
@@ -175,7 +172,8 @@ public sealed partial class HyperVOvsPortManager(
                 job.Get();
                 while (IsJobRunning((ushort)job["JobState"]) && stopwatch.Elapsed <= timeOut)
                 {
-                    await Task.Delay(pollingInterval);
+                    await Task.Delay(pollingInterval)
+                        .ConfigureAwait(false);
                     job.Get();
                 }
 
