@@ -53,6 +53,33 @@ public sealed partial class HyperVOvsPortManager(
         let portName = adapterInfo.Map(i => i.ElementName)
         select portName;
 
+    public EitherAsync<Error, Seq<(string AdapterId, string PortName)>> GetPortNames() =>
+        from data in TryAsync(Task.Run(() =>
+        {
+            using var searcher = new ManagementObjectSearcher(
+                new ManagementScope(Scope),
+                new ObjectQuery("SELECT InstanceID, ElementName "
+                                + "FROM Msvm_EthernetPortAllocationSettingData"));
+
+            using var collection = searcher.Get();
+            var results = collection.Cast<ManagementBaseObject>().ToList();
+            try
+            {
+                return results.Map(r => (InstanceId: (string)r["InstanceID"], ElementName: (string)r["ElementName"]))
+                    .ToSeq();
+            }
+            finally
+            {
+                DisposeAll(results);
+            }
+        })).ToEither(e => Error.New("Could not get data for the Hyper-V network adapters.", e))
+        from portNames in data
+            .Filter(t => !t.InstanceId.StartsWith("Microsoft:Definition"))
+            .Map(t => from adapterId in ExtractAdapterId(t.InstanceId)
+                      select (AdapterId: adapterId, PortName: t.ElementName))
+            .SequenceSerial()
+        select portNames;
+
     /// <inheritdoc/>
     public EitherAsync<Error, Seq<string>> GetAdapterIds(string portName) =>
         from _ in guard(IsValidPortName(portName),
