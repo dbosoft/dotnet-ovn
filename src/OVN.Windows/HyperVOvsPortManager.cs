@@ -50,7 +50,7 @@ public sealed partial class HyperVOvsPortManager(
                 Error.New($"The Hyper-V network adapter ID '{adapterId}' is invalid."))
             .ToEitherAsync()
         from adapterInfo in GetAdapterInfo(adapterId)
-        let portName = adapterInfo.Map(i => i.ElementName)
+        let portName = adapterInfo.Map(i => i.ElementName ?? "")
         select portName;
 
     public EitherAsync<Error, Seq<(string AdapterId, string PortName)>> GetPortNames() =>
@@ -65,8 +65,10 @@ public sealed partial class HyperVOvsPortManager(
             var results = collection.Cast<ManagementBaseObject>().ToList();
             try
             {
-                return results.Map(r => (InstanceId: (string)r["InstanceID"], ElementName: (string)r["ElementName"]))
-                    .ToSeq();
+                return results
+                    .Map(r => (InstanceId: (string)r["InstanceID"], ElementName: (string)r["ElementName"] ?? ""))
+                    // Invoke ToList() to force eager evaluation of the LINQ query
+                    .ToList().ToSeq();
             }
             finally
             {
@@ -74,6 +76,7 @@ public sealed partial class HyperVOvsPortManager(
             }
         })).ToEither(e => Error.New("Could not get data for the Hyper-V network adapters.", e))
         from portNames in data
+            // Filter out default settings which do not represent actual adapters
             .Filter(t => !t.InstanceId.StartsWith("Microsoft:Definition"))
             .Map(t => from adapterId in ExtractAdapterId(t.InstanceId)
                       select (AdapterId: adapterId, PortName: t.ElementName))
@@ -244,8 +247,7 @@ public sealed partial class HyperVOvsPortManager(
     }
 
     private static bool IsValidPortName(string portName) =>
-        !string.IsNullOrWhiteSpace(portName)
-        && PortNameRegex().IsMatch(portName);
+        notEmpty(portName) && PortNameRegex().IsMatch(portName);
 
     private static void DisposeAll(IList<ManagementBaseObject> managementObjects)
     {

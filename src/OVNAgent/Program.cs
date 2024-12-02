@@ -1,7 +1,5 @@
-﻿
-
-using System.CommandLine;
-using System.Diagnostics;
+﻿using System.CommandLine;
+using System.CommandLine.Parsing;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.OSCommands.OVN;
@@ -11,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
-
+using YamlDotNet.Serialization.NamingConventions;
 
 var logLevelOptions = new System.CommandLine.Option<LogLevel>("--logLevel", () => LogLevel.Information);
 var nodeTypeOptions = new System.CommandLine.Option<NodeType>("--nodes", () => NodeType.AllInOne );
@@ -47,8 +45,55 @@ removeServiceCommand.SetHandler((l, n) => ManageServiceCommand(false, l, n), log
 
 serviceCommand.AddCommand(removeServiceCommand);
 
+#if WINDOWS
 
-return await rootCommand.InvokeAsync(args);
+var hyperVCommand = new Command("hyperv", "Hyper-V commands");
+rootCommand.Add(hyperVCommand);
+
+var adapterIdArgument = new Argument<string>("adapterId", "Hyper-V network adapter ID");
+var portNameArgument = new Argument<string>("portName", "OVS port name");
+
+var hyperVAdapterCommand = new Command("adapter", "Hyper-V OVS port name commands");
+hyperVCommand.AddCommand(hyperVAdapterCommand);
+
+var hyperVAdapterGetCommand = new Command("get", "get adapter ID");
+hyperVAdapterCommand.AddCommand(hyperVAdapterGetCommand);
+hyperVAdapterGetCommand.AddArgument(portNameArgument);
+hyperVAdapterGetCommand.SetHandler(GetAdapterId, portNameArgument);
+
+var hyperVPortNameCommand = new Command("portname", "Hyper-V OVS port name commands");
+hyperVCommand.AddCommand(hyperVPortNameCommand);
+
+var hyperVPortNameGetCommand = new Command("get", "get port name");
+hyperVPortNameCommand.AddCommand(hyperVPortNameGetCommand);
+hyperVPortNameGetCommand.AddArgument(adapterIdArgument);
+hyperVPortNameGetCommand.SetHandler(GetPortName, adapterIdArgument);
+
+var hyperVPortNameListCommand = new Command("list", "list port names");
+hyperVPortNameCommand.AddCommand(hyperVPortNameListCommand);
+hyperVPortNameListCommand.SetHandler(ListPortNames);
+
+var hyperVPortNameSetCommand = new Command("set", "set port name");
+hyperVPortNameCommand.AddCommand(hyperVPortNameSetCommand);
+hyperVPortNameSetCommand.AddArgument(adapterIdArgument);
+hyperVPortNameSetCommand.AddArgument(portNameArgument);
+hyperVPortNameSetCommand.SetHandler(SetPortName, adapterIdArgument, portNameArgument);
+
+#endif
+
+if (args.Length > 0) 
+    return await rootCommand.InvokeAsync(args);
+
+// Extremely simple REPL environment
+while (true)
+{
+    Console.Write("OVNAgent > ");
+    string? cmd = Console.ReadLine();
+    if (string.IsNullOrEmpty(cmd))
+        return 0;
+    
+    await rootCommand.InvokeAsync(CommandLineStringSplitter.Instance.Split(cmd).ToArray());
+}
 
 static string BuildServiceName(NodeType nodeType)
 {
@@ -95,7 +140,7 @@ static Task RunCommand(LogLevel logLevel, NodeType nodeType)
 static async Task ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
 {
     var serializer = new DeserializerBuilder()
-//        .WithNamingConvention(CamelCaseNamingConvention.Instance)
+        .WithNamingConvention(UnderscoredNamingConvention.Instance)
         .Build();
 
     using var yamlReader = netplanFile.OpenText();
@@ -123,8 +168,6 @@ static async Task ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
         {
             host.Services.GetRequiredService<ILogger<NetworkPlanRealizer>>().LogError(l.Message);
         });
-    
-    
 }
 
 
@@ -153,14 +196,92 @@ static async Task ManageServiceCommand(bool install, LogLevel logLevel, NodeType
     _ = await serviceManager.EnsureServiceStopped(CancellationToken.None)
         .Bind(_ => serviceManager.RemoveService(CancellationToken.None))
         .IfLeft(l => l.Throw());
-
 }
+
+#if WINDOWS
+
+static async Task<int> GetAdapterId(string portName)
+{
+    using var portManager = new HyperVOvsPortManager();
+    var result = await portManager.GetAdapterIds(portName);
+
+    return result.Match(
+        Right: adapterIds =>
+        {
+            if (adapterIds.Length > 1)
+            {
+                Console.WriteLine($"Multiple adapters found for port name '{portName}'.");
+                return -1;
+            }
+
+            adapterIds.Iter(p => Console.WriteLine(p));
+            return 0;
+        },
+        Left: error =>
+        {
+            Console.WriteLine(ErrorUtils.PrintError(error));
+            return -1;
+        });
+}
+
+static async Task<int> GetPortName(string adapterId)
+{
+    using var portManager = new HyperVOvsPortManager();
+    var result = await portManager.GetPortName(adapterId);
+
+    return result.Match(
+        Right: portName =>
+        {
+            portName.IfSome(n => Console.WriteLine(n));
+            return 0;
+        },
+        Left: error =>
+        {
+            Console.WriteLine(ErrorUtils.PrintError(error));
+            return -1;
+        });
+}
+
+static async Task<int> ListPortNames()
+{
+    using var portManager = new HyperVOvsPortManager();
+    var result = await portManager.GetPortNames();
+
+    return result.Match(
+        Right: portNames =>
+        {
+            portNames.Iter(p => Console.WriteLine($"{p.AdapterId} - {p.PortName}"));
+            return 0;
+        },
+        Left: error =>
+        {
+            Console.WriteLine(ErrorUtils.PrintError(error));
+            return -1;
+        });
+}
+
+
+static async Task<int> SetPortName(string adapterId, string portName)
+{
+    using var portManager = new HyperVOvsPortManager();
+    var result = await portManager.SetPortName(adapterId, portName);
+
+    return result.Match(
+        Right: _ => 0,
+        Left: error =>
+        {
+            Console.WriteLine(ErrorUtils.PrintError(error));
+            return -1;
+        });
+}
+
+#endif
 
 static void AddOVNCore(IServiceCollection services)
 {
     services.AddSingleton<ISysEnvironment, SystemEnvironment>();
+    services.AddSingleton<IOvsSettings, LocalOVSWithOVNSettings>();
     services.AddSingleton<IOVNSettings, LocalOVSWithOVNSettings>();
-   
 }
 
 /// <summary>
