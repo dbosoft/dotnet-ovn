@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Dbosoft.OVN</RootNamespace>
@@ -9,8 +9,8 @@
 
     <ItemGroup>
         <PackageReference Include="IPNetwork2" Version="3.0.667" />
-        <PackageReference Include="JetBrains.Annotations" Version="2023.3.0" />
-        <PackageReference Include="LanguageExt.Core" Version="4.4.0" />
+        <PackageReference Include="JetBrains.Annotations" Version="2024.3.0" />
+        <PackageReference Include="LanguageExt.Core" Version="4.4.9" />
     </ItemGroup>
 
 </Project>
