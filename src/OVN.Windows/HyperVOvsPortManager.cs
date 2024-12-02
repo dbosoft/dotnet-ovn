@@ -1,16 +1,14 @@
 ﻿using System.Diagnostics;
 using System.Management;
-using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using LanguageExt;
 using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
 
-namespace Dbosoft.OVN;
+namespace Dbosoft.OVN.Windows;
 
 /// <inheritdoc cref="IHyperVOvsPortManager"/>
-[SupportedOSPlatform("windows")]
 public sealed partial class HyperVOvsPortManager(
     TimeSpan timeOut,
     TimeSpan pollingInterval)
@@ -45,14 +43,17 @@ public sealed partial class HyperVOvsPortManager(
     // via the IDisposable interface (e.g. with a using statement).
 
     /// <inheritdoc/>
-    public EitherAsync<Error, Option<string>> GetPortName(string adapterId) =>
+    public EitherAsync<Error, string> GetPortName(string adapterId) =>
         from _ in guard(IsValidAdapterId(adapterId),
                 Error.New($"The Hyper-V network adapter ID '{adapterId}' is invalid."))
             .ToEitherAsync()
         from adapterInfo in GetAdapterInfo(adapterId)
-        let portName = adapterInfo.Map(i => i.ElementName ?? "")
+        from validAdapterInfo in adapterInfo.ToEitherAsync(
+            Error.New($"The Hyper-V network adapter '{adapterId}' does not exist."))
+        let portName = validAdapterInfo.ElementName ?? ""
         select portName;
 
+    /// <inheritdoc/>
     public EitherAsync<Error, Seq<(string AdapterId, string PortName)>> GetPortNames() =>
         from data in TryAsync(Task.Run(() =>
         {
@@ -121,7 +122,7 @@ public sealed partial class HyperVOvsPortManager(
             Error.New($"The Hyper-V network adapter '{adapterId}' does not exist."))
         from _2 in guard(IsValidPortName(portName),
             Error.New($"The OVS port name '{portName}' is invalid."))
-        from jobPath in TryAsync(Task.Run(() =>
+        from jobPath in AffMaybe<Option<string>>(async () => await Task.Run(() =>
         {
             ManagementObject? adapterData = null;
             ManagementBaseObject? parameters = null;
@@ -143,9 +144,9 @@ public sealed partial class HyperVOvsPortManager(
                 var returnValue = (uint)result["ReturnValue"];
                 return returnValue switch
                 {
-                    0 => Option<string>.None,
+                    0 => FinSucc(Option<string>.None),
                     4096 => Some((string)result["Job"]),
-                    _ => throw Error.New($"ModifyResourceSettings failed with result '{ConvertReturnValue(returnValue)}'"),
+                    _ => Error.New($"ModifyResourceSettings failed with result '{ConvertReturnValue(returnValue)}'"),
                 };
             }
             finally
@@ -154,7 +155,8 @@ public sealed partial class HyperVOvsPortManager(
                 parameters?.Dispose();
                 result?.Dispose();
             }
-        })).ToEither(e => Error.New($"Could not set the OVS port name of the adapter '{adapterId}'.", e))
+        })).MapFail(e => Error.New($"Could not set the OVS port name of the adapter '{adapterId}'.", e))
+            .Run().AsTask().Map(r => r.ToEither()).ToAsync()
         from _4 in jobPath.Map(WaitForJob).SequenceSerial()
         from reportedPortName in GetPortName(adapterId)
         from _5 in guard(reportedPortName == portName,
@@ -193,7 +195,7 @@ public sealed partial class HyperVOvsPortManager(
         select portName;
 
     private EitherAsync<Error, Unit> WaitForJob(string jobPath) =>
-        TryAsync(async () =>
+        AffMaybe<Unit>(async () =>
         {
             var stopwatch = Stopwatch.StartNew();
             var job = new ManagementObject(jobPath);
@@ -207,8 +209,8 @@ public sealed partial class HyperVOvsPortManager(
                 }
 
                 if (!IsJobCompleted((ushort)job["JobState"]))
-                    throw Error.New("The job did not complete successfully within the allotted time."
-                                    + $"The last reported state was {ConvertJobState((ushort)job["JobState"])}.");
+                    return Error.New("The job did not complete successfully within the allotted time."
+                                     + $"The last reported state was {ConvertJobState((ushort)job["JobState"])}.");
 
                 return unit;
             }
@@ -216,7 +218,8 @@ public sealed partial class HyperVOvsPortManager(
             {
                 job.Dispose();
             }
-        }).ToEither(e => Error.New($"Failed to wait for the completion of the job '{jobPath}'.", e));
+        }).MapFail(e => Error.New($"Failed to wait for the completion of the job '{jobPath}'.", e))
+            .Run().AsTask().Map(r => r.ToEither()).ToAsync();
 
     private static EitherAsync<Error, string> ExtractAdapterId(
         string instanceId) =>

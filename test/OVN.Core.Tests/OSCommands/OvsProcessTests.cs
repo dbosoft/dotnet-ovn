@@ -74,7 +74,7 @@ public class OvsProcessTests
     [Fact]
     public async Task WaitForExit_throws_without_process()
     {
-        var mockEnv = new Mock<ISysEnvironment>();
+        var mockEnv = new Mock<ISystemEnvironment>();
         using var ovsProcess = new OVSProcess(
             mockEnv.Object,
             new OvsFile("bin", "test", true));

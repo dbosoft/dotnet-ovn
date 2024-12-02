@@ -11,21 +11,28 @@ public class OVSProcess : IDisposable
     private readonly string _arguments;
     private readonly OvsFile _exeFile;
     private readonly List<Action<string?>> _messageHandlers = new();
-    private readonly ISysEnvironment _syEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
     private IProcess? _startedProcess;
     private bool _canBeStarted = true;
     private bool _canBeRedirected = true;
-    public OVSProcess(ISysEnvironment syEnv, OvsFile exeFile, string arguments = "")
+    
+    public OVSProcess(
+        ISystemEnvironment systemEnvironment,
+        OvsFile exeFile,
+        string arguments = "")
     {
-        _syEnv = syEnv;
+        _systemEnvironment = systemEnvironment;
         _exeFile = exeFile;
         _arguments = arguments;
     }
     
-    public OVSProcess(ISysEnvironment syEnv,  OvsFile exeFile, int processId)
+    public OVSProcess(
+        ISystemEnvironment systemEnvironment,
+        OvsFile exeFile,
+        int processId)
     {
-        _syEnv = syEnv;
-        _startedProcess = _syEnv.CreateProcess(processId);
+        _systemEnvironment = systemEnvironment;
+        _startedProcess = _systemEnvironment.CreateProcess(processId);
         _canBeStarted = false;
         _exeFile = exeFile;
         _canBeRedirected = false;
@@ -47,10 +54,10 @@ public class OVSProcess : IDisposable
         if (!_canBeStarted)
             throw new InvalidOperationException("This process was already started.");
         
-        _startedProcess = _syEnv.CreateProcess();
+        _startedProcess = _systemEnvironment.CreateProcess();
         //build.StartInfo.WorkingDirectory = "";
         _startedProcess.StartInfo.Arguments = _arguments;
-        _startedProcess.StartInfo.FileName = _syEnv.FileSystem.ResolveOvsFilePath(_exeFile, false);
+        _startedProcess.StartInfo.FileName = _systemEnvironment.FileSystem.ResolveOvsFilePath(_exeFile, false);
 
         _startedProcess.StartInfo.UseShellExecute = false;
         _startedProcess.StartInfo.RedirectStandardOutput = true;
@@ -77,6 +84,7 @@ public class OVSProcess : IDisposable
         });
     }
 
+    // TODO fix me should this really be async?
     private async void ProcessMessageAsync(string? data)
     {
         await Task.Factory.StartNew(() =>

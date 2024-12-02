@@ -6,10 +6,13 @@ namespace Dbosoft.OVN.OSCommands.OVN;
 public class OVNControllerProcess : DemonProcessBase
 {
     private readonly OVNControllerSettings _settings;
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
 
-    public OVNControllerProcess(ISysEnvironment sysEnv, OVNControllerSettings settings, ILogger logger)
-        : base(sysEnv,
+    public OVNControllerProcess(
+        ISystemEnvironment systemEnvironment,
+        OVNControllerSettings settings,
+        ILogger logger)
+        : base(systemEnvironment,
             OVNCommands.OVNController,
             new OvsFile("/var/run/ovn", "ovn-controller.ctl"),
             new OvsFile("/var/log/ovn", "ovn-controller.log"),
@@ -18,14 +21,14 @@ public class OVNControllerProcess : DemonProcessBase
             settings.AllowAttach,
             logger)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _settings = settings;
         NoControlFileArgument = true;
     }
 
     protected override string BuildArguments()
     {
-        var ovsDbConnection = _settings.OvsDbConnection.GetCommandString(_sysEnv.FileSystem, false);
+        var ovsDbConnection = _settings.OvsDbConnection.GetCommandString(_systemEnvironment.FileSystem, false);
         var baseArguments = base.BuildArguments();
 
         var sb = new StringBuilder();

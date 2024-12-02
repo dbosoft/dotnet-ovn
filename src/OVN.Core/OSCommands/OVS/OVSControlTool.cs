@@ -8,12 +8,14 @@ namespace Dbosoft.OVN.OSCommands.OVS;
 public class OVSControlTool : OVSTool
 {
     private readonly OvsDbConnection _dbConnection;
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
 
-    public OVSControlTool(ISysEnvironment sysEnv, OvsDbConnection dbConnection) : base(sysEnv,
-        OVSCommands.VSwitchControl)
+    public OVSControlTool(
+        ISystemEnvironment systemEnvironment,
+        OvsDbConnection dbConnection)
+        : base(systemEnvironment, OVSCommands.VSwitchControl)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _dbConnection = dbConnection;
     }
 
@@ -21,7 +23,7 @@ public class OVSControlTool : OVSTool
     {
         var baseArguments = base.BuildArguments(command);
         var sb = new StringBuilder();
-        sb.Append($"--db=\"{_dbConnection.GetCommandString(_sysEnv.FileSystem, false)}\"");
+        sb.Append($"--db=\"{_dbConnection.GetCommandString(_systemEnvironment.FileSystem, false)}\"");
         sb.Append(' ');
         sb.Append(baseArguments);
         return sb.ToString();
@@ -41,7 +43,7 @@ public class OVSControlTool : OVSTool
     {
         var sb = new StringBuilder();
         sb.Append(
-            $"-- set open . external-ids:ovn-remote=\"{sbDBConnection.GetCommandString(_sysEnv.FileSystem, false)}\" ");
+            $"-- set open . external-ids:ovn-remote=\"{sbDBConnection.GetCommandString(_systemEnvironment.FileSystem, false)}\" ");
         sb.Append($"-- set open . external-ids:ovn-encap-type={encapType} ");
         sb.Append($"-- set open . external-ids:ovn-encap-ip={encapIp ?? IPAddress.Loopback} ");
         sb.Append($"-- set open . external-ids:system-id={chassisName} ");

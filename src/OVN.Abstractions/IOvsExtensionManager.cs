@@ -1,7 +1,9 @@
+using LanguageExt;
+using LanguageExt.Common;
+
 namespace Dbosoft.OVN;
 
 public interface IOvsExtensionManager
 {
-    bool IsExtensionEnabled();
-
+    EitherAsync<Error, bool> IsExtensionEnabled();
 }

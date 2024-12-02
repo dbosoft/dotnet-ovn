@@ -22,7 +22,7 @@ public class ProcessWrapper : IProcess
     {
         _process = process;
         process.OutputDataReceived += OnOutputDataReceived;
-        process.ErrorDataReceived+=OnErrorDataReceived;
+        process.ErrorDataReceived += OnErrorDataReceived;
         _logger = logger;
     }
 

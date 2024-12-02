@@ -21,14 +21,14 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
     private readonly OvsFile _exeFile;
     private readonly ILogger _logger;
 
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
     private OVSProcess? _ovsProcess;
     protected bool NoControlFileArgument = false;
     private bool _isStopping = false;
     private bool _allowAttached = false;
     
     protected DemonProcessBase(
-        ISysEnvironment sysEnv,
+        ISystemEnvironment systemEnvironment,
         OvsFile exeFile,
         OvsFile controlFile,
         OvsFile logFile,
@@ -37,7 +37,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         bool allowAttached,
         ILogger logger)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _exeFile = exeFile;
         _controlFile = controlFile;
         _logFile = logFile;
@@ -63,12 +63,12 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
     protected virtual string BuildArguments()
     {
-        var controlFileFullPath = _sysEnv.FileSystem.ResolveOvsFilePath(_controlFile);
-        var logFileFullName = _sysEnv.FileSystem.ResolveOvsFilePath(_logFile);
-        var pidFileFullName = Path.ChangeExtension(_sysEnv.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
-        _sysEnv.FileSystem.EnsurePathForFileExists(_controlFile);
-        _sysEnv.FileSystem.EnsurePathForFileExists(pidFileFullName);
-        _sysEnv.FileSystem.EnsurePathForFileExists(_logFile);
+        var controlFileFullPath = _systemEnvironment.FileSystem.ResolveOvsFilePath(_controlFile);
+        var logFileFullName = _systemEnvironment.FileSystem.ResolveOvsFilePath(_logFile);
+        var pidFileFullName = Path.ChangeExtension(_systemEnvironment.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
+        _systemEnvironment.FileSystem.EnsurePathForFileExists(_controlFile);
+        _systemEnvironment.FileSystem.EnsurePathForFileExists(pidFileFullName);
+        _systemEnvironment.FileSystem.EnsurePathForFileExists(_logFile);
 
         var sb = new StringBuilder();
         
@@ -95,7 +95,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         var arguments = BuildArguments();
         var sb = new StringBuilder();
         
-        sb.Append($"\"{_sysEnv.FileSystem.ResolveOvsFilePath(_exeFile, false)}\" ");
+        sb.Append($"\"{_systemEnvironment.FileSystem.ResolveOvsFilePath(_exeFile, false)}\" ");
         sb.Append("--service --service-monitor ");
         sb.Append(arguments);
 
@@ -108,18 +108,18 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         {
             if (_ovsProcess is { IsRunning: true }) return Unit.Default;
             
-             var pidFileFullName = Path.ChangeExtension(_sysEnv.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
+             var pidFileFullName = Path.ChangeExtension(_systemEnvironment.FileSystem.ResolveOvsFilePath(_controlFile), "pid");
 
             OVSProcess? orphanedDemon = default;
-            if (_sysEnv.FileSystem.FileExists(pidFileFullName))
+            if (_systemEnvironment.FileSystem.FileExists(pidFileFullName))
             {
                 _logger.LogDebug("Existing pid file found. Trying to take control of orphaned demon");
 
                 try
                 {
-                    var pidString = _sysEnv.FileSystem.ReadFileAsString(pidFileFullName);
+                    var pidString = _systemEnvironment.FileSystem.ReadFileAsString(pidFileFullName);
                     var pid = Convert.ToInt32(pidString);
-                    orphanedDemon = new OVSProcess(_sysEnv, _exeFile, pid);
+                    orphanedDemon = new OVSProcess(_systemEnvironment, _exeFile, pid);
                     if (!orphanedDemon.IsRunning)
                         orphanedDemon = null;
                 }
@@ -138,7 +138,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                 );
 
                 _ovsProcess = orphanedDemon;
-                var appControl = new OVSAppControl(_sysEnv, _controlFile);
+                var appControl = new OVSAppControl(_systemEnvironment, _controlFile);
                 await appControl.SetLogging(_logging, cancelSource.Token).IfLeft(l =>
                 {
                     _logger.LogDebug(
@@ -150,7 +150,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                 return Unit.Default;
             }
             
-            if (_sysEnv.FileSystem.FileExists(_controlFile))
+            if (_systemEnvironment.FileSystem.FileExists(_controlFile))
             {
                 using var internalTokenSource = new CancellationTokenSource(5000);
                 using var cancelSource = CancellationTokenSource.CreateLinkedTokenSource(
@@ -160,7 +160,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
                 _logger.LogDebug("Existing control file found. Trying to stop orphaned demon.");
                 
-                var appControl = new OVSAppControl(_sysEnv, _controlFile);
+                var appControl = new OVSAppControl(_systemEnvironment, _controlFile);
                 await appControl.StopApp(cancelSource.Token).IfLeft(l =>
                 {
                     _logger.LogDebug(
@@ -188,7 +188,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
             var arguments = BuildArguments();
             _logger.LogTrace("Arguments for demon process {ovsFile}: {arguments}", _exeFile.Name, arguments);
-            _ovsProcess = new OVSProcess(_sysEnv, _exeFile, arguments);
+            _ovsProcess = new OVSProcess(_systemEnvironment, _exeFile, arguments);
             _ovsProcess.AddMessageHandler(msg =>
             {
                 if (string.IsNullOrWhiteSpace(msg))
@@ -278,8 +278,8 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
         try
         {
             IAppControl appCtrl = _isOvn
-                ? new OVNAppControl(_sysEnv, _controlFile)
-                : new OVSAppControl(_sysEnv, _controlFile);
+                ? new OVNAppControl(_systemEnvironment, _controlFile)
+                : new OVSAppControl(_systemEnvironment, _controlFile);
 
             var internalTokenSource =
                 new CancellationTokenSource(2000);
@@ -344,8 +344,8 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                 return true;
 
             IAppControl appControl = _isOvn 
-                ? new OVNAppControl(_sysEnv, _controlFile) 
-                : new OVSAppControl(_sysEnv, _controlFile);
+                ? new OVNAppControl(_systemEnvironment, _controlFile) 
+                : new OVSAppControl(_systemEnvironment, _controlFile);
             
             // check alive version check should never user parent timeout as it may already timed out
             var checkCancelSource = new CancellationTokenSource(2000);

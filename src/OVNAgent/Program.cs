@@ -3,8 +3,12 @@ using System.CommandLine.Parsing;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.OSCommands.OVN;
+#if WINDOWS
+using Dbosoft.OVN.Windows;
+#endif
 using Dbosoft.OVNAgent;
 using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -53,10 +57,10 @@ rootCommand.Add(hyperVCommand);
 var adapterIdArgument = new Argument<string>("adapterId", "Hyper-V network adapter ID");
 var portNameArgument = new Argument<string>("portName", "OVS port name");
 
-var hyperVAdapterCommand = new Command("adapter", "Hyper-V OVS port name commands");
+var hyperVAdapterCommand = new Command("adapter", "Hyper-V network adapter commands");
 hyperVCommand.AddCommand(hyperVAdapterCommand);
 
-var hyperVAdapterGetCommand = new Command("get", "get adapter ID");
+var hyperVAdapterGetCommand = new Command("get", "get network adapter ID");
 hyperVAdapterCommand.AddCommand(hyperVAdapterGetCommand);
 hyperVAdapterGetCommand.AddArgument(portNameArgument);
 hyperVAdapterGetCommand.SetHandler(GetAdapterId, portNameArgument);
@@ -102,12 +106,11 @@ static string BuildServiceName(NodeType nodeType)
 
 static Task RunCommand(LogLevel logLevel, NodeType nodeType)
 {
-    
     var host = Host.CreateDefaultBuilder()
         .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = TimeSpan.FromSeconds(15))
         .UseWindowsService(cfg => cfg.ServiceName = BuildServiceName(nodeType))
         .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
-         .ConfigureServices(services =>
+        .ConfigureServices(services =>
         {
             AddOVNCore(services);
             
@@ -116,28 +119,24 @@ static Task RunCommand(LogLevel logLevel, NodeType nodeType)
                 services.AddHostedNode<OVNDatabaseNode>();
             }
 
-            if (nodeType is not (NodeType.AllInOne or NodeType.OVNCentral or NodeType.OVNController)) return;
+            if (nodeType is not (NodeType.AllInOne or NodeType.OVNCentral or NodeType.OVNController))
+                return;
             
             services.AddHostedNode<NetworkControllerNode>();
-            
-            
-            if (nodeType is NodeType.AllInOne or NodeType.Chassis)
-            { 
-                services.AddHostedNode<OVSDbNode>();
-                services.AddHostedNode<OVSSwitchNode>();
-                services.AddHostedNode<OVNChassisNode>();
-                
-            }
 
-
+            if (nodeType is not (NodeType.AllInOne or NodeType.Chassis))
+                return;
+             
+            services.AddHostedNode<OVSDbNode>();
+            services.AddHostedNode<OVSSwitchNode>();
+            services.AddHostedNode<OVNChassisNode>();
         })
         .Build();
 
     return host.RunAsync();
 }
 
-
-static async Task ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
+static async Task<int> ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
 {
     var serializer = new DeserializerBuilder()
         .WithNamingConvention(UnderscoredNamingConvention.Instance)
@@ -156,30 +155,33 @@ static async Task ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
             services.AddSingleton(
                 sp => new NetworkPlanRealizer(
                     new OVNControlTool(
-                        sp.GetRequiredService<ISysEnvironment>(),
+                        sp.GetRequiredService<ISystemEnvironment>(),
                         sp.GetRequiredService<IOVNSettings>().NorthDBConnection),
                     sp.GetRequiredService<ILogger<NetworkPlanRealizer>>()));
         })
         .Build();
 
-    await host.Services.GetRequiredService<NetworkPlanRealizer>()
-        .ApplyNetworkPlan(netplan)
-        .IfLeft(l =>
+    var result = await host.Services.GetRequiredService<NetworkPlanRealizer>()
+        .ApplyNetworkPlan(netplan);
+
+    return result.Match(
+        Right: _ => 0,
+        Left: error =>
         {
-            host.Services.GetRequiredService<ILogger<NetworkPlanRealizer>>().LogError(l.Message);
+            Console.WriteLine(ErrorUtils.PrintError(
+                Error.New("Failed to apply network plan.", error)));
+            return -1;
         });
 }
 
-
 static async Task ManageServiceCommand(bool install, LogLevel logLevel, NodeType nodeType)
 {
-    
     var host = Host.CreateDefaultBuilder()
         .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
         .ConfigureServices(AddOVNCore)
         .Build();
 
-    var serviceManager = host.Services.GetRequiredService<ISysEnvironment>().GetServiceManager(
+    var serviceManager = host.Services.GetRequiredService<ISystemEnvironment>().GetServiceManager(
         BuildServiceName(nodeType));
 
     var command = $"\"{Environment.ProcessPath}\" run --nodes {nodeType} ";
@@ -232,7 +234,7 @@ static async Task<int> GetPortName(string adapterId)
     return result.Match(
         Right: portName =>
         {
-            portName.IfSome(n => Console.WriteLine(n));
+            Console.WriteLine(portName);
             return 0;
         },
         Left: error =>
@@ -279,7 +281,7 @@ static async Task<int> SetPortName(string adapterId, string portName)
 
 static void AddOVNCore(IServiceCollection services)
 {
-    services.AddSingleton<ISysEnvironment, SystemEnvironment>();
+    services.AddSingleton<ISystemEnvironment, SystemEnvironment>();
     services.AddSingleton<IOvsSettings, LocalOVSWithOVNSettings>();
     services.AddSingleton<IOVNSettings, LocalOVSWithOVNSettings>();
 }

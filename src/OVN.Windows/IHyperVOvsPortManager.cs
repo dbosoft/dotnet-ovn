@@ -1,7 +1,7 @@
 ﻿using LanguageExt;
 using LanguageExt.Common;
 
-namespace Dbosoft.OVN;
+namespace Dbosoft.OVN.Windows;
 
 /// <summary>
 /// This manager assists with managing OVS port on Hyper-V.
@@ -12,8 +12,14 @@ public interface IHyperVOvsPortManager : IDisposable
     /// Returns the OVS port name which is assigned to the Hyper-V
     /// network adapter with the given <paramref name="adapterId"/>.
     /// </summary>
-    EitherAsync<Error, Option<string>> GetPortName(
+    EitherAsync<Error, string> GetPortName(
         string adapterId);
+
+    /// <summary>
+    /// Returns a list of all Hyper-V network adapters and their
+    /// OVS port names.
+    /// </summary>
+    EitherAsync<Error, Seq<(string AdapterId, string PortName)>> GetPortNames();
 
     /// <summary>
     /// Returns the IDs of the Hyper-V network adapters which are
