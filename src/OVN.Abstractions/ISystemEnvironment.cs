@@ -8,7 +8,7 @@ namespace Dbosoft.OVN;
 public interface ISystemEnvironment
 {
     /// <summary>
-    /// Provides an abstraction of the file system.s
+    /// Provides an abstraction of the file system.
     /// </summary>
     IFileSystem FileSystem { get; }
 
@@ -27,7 +27,7 @@ public interface ISystemEnvironment
 
     /// <summary>
     /// Returns an OVS extension manager which can be used
-    /// to check the availability of OVS kernel extensions.
+    /// to check the availability of the OVS kernel extensions.
     /// </summary>
     IOvsExtensionManager GetOvsExtensionManager();
 }

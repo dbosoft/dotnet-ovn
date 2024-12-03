@@ -4,7 +4,7 @@ using LanguageExt.Common;
 namespace Dbosoft.OVN.Windows;
 
 /// <summary>
-/// This manager assists with managing OVS port on Hyper-V.
+/// This manager assists with managing OVS ports in Hyper-V.
 /// </summary>
 public interface IHyperVOvsPortManager : IDisposable
 {

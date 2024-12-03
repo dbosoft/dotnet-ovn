@@ -6,7 +6,7 @@ using static LanguageExt.Prelude;
 
 namespace Dbosoft.OVN.Windows;
 
-public class WindowsOvsExtensionManager(
+internal class WindowsOvsExtensionManager(
     string extensionName)
     : IOvsExtensionManager
 {
@@ -29,7 +29,7 @@ public class WindowsOvsExtensionManager(
             {
                 DisposeAll(extensions);
             }
-        })).IfFail(false);
+        })).ToEither();
 
     private static void DisposeAll(
         IList<ManagementBaseObject> managementObjects)

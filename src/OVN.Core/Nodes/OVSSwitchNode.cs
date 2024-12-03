@@ -59,6 +59,7 @@ public class OVSSwitchNode : DemonNodeBase
         from _1 in RightAsync<Error, Unit>(unit)
         let extensionManager = _systemEnvironment.GetOvsExtensionManager()
         from isExtensionEnabled in extensionManager.IsExtensionEnabled()
+            .BindLeft(_ => RightAsync<Error, bool>(false))
         from _2 in isExtensionEnabled
             ? base.Start(cancellationToken)
                 .MapLeft(l =>
@@ -75,14 +76,15 @@ public class OVSSwitchNode : DemonNodeBase
         from _1 in RightAsync<Error, Unit>(unit)
         let extensionManager = _systemEnvironment.GetOvsExtensionManager()
         from isExtensionEnabled in extensionManager.IsExtensionEnabled()
+            .BindLeft(_ => RightAsync<Error, bool>(false))
         from _2 in isExtensionEnabled
             ? base.EnsureAlive(checkResponse, cancellationToken)
             : from _1 in Optional(_vSwitchDProcess)
-                             .Map(p => p.Stop(false, cancellationToken))
-                             .SequenceSerial()
+                 .Map(p => p.Stop(false, cancellationToken))
+                 .SequenceSerial()
               from _2 in Optional(_fallBackvSwitchDProcess)
-                             .Map(p => p.Stop(false, cancellationToken))
-                             .SequenceSerial()
+                 .Map(p => p.Stop(false, cancellationToken))
+                 .SequenceSerial()
               select unit
         select unit;
 }

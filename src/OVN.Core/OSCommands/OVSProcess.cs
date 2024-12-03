@@ -84,7 +84,6 @@ public class OVSProcess : IDisposable
         });
     }
 
-    // TODO fix me should this really be async?
     private async void ProcessMessageAsync(string? data)
     {
         await Task.Factory.StartNew(() =>
