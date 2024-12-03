@@ -17,13 +17,13 @@ public class NetworkControllerNode : DemonNodeBase
     // runs: OVNNorthboundDB, NorthD
     // connects to: other NetworkControllers (DB Cluster), OVNDatabaseNode
 
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
     private OVSDBProcess? _northDBProcess;
 
-    public NetworkControllerNode(ISysEnvironment sysEnv,
+    public NetworkControllerNode(ISystemEnvironment systemEnvironment,
         IOVNSettings ovnSettings, ILoggerFactory loggerFactory)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _ovnSettings = ovnSettings;
         _loggerFactory = loggerFactory;
         _logger = _loggerFactory.CreateLogger<NetworkControllerNode>();
@@ -31,7 +31,7 @@ public class NetworkControllerNode : DemonNodeBase
 
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
-        yield return _northDBProcess = new OVSDBProcess(_sysEnv,
+        yield return _northDBProcess = new OVSDBProcess(_systemEnvironment,
             new OVSDbSettings(
                 _ovnSettings.NorthDBConnection,
                 new OvsFile("etc/ovn", "ovn_nb.db"),
@@ -44,7 +44,7 @@ public class NetworkControllerNode : DemonNodeBase
                 false),
             _loggerFactory.CreateLogger<OVSDBProcess>());
 
-        yield return new NorthDProcess(_sysEnv,
+        yield return new NorthDProcess(_systemEnvironment,
             new NorthDSettings(
                 _ovnSettings.NorthDBConnection,
                 _ovnSettings.SouthDBConnection,
@@ -72,7 +72,7 @@ public class NetworkControllerNode : DemonNodeBase
         var timeout = new CancellationTokenSource(10000);
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
-        var ovnControl = new OVNControlTool(_sysEnv, _ovnSettings.NorthDBConnection);
+        var ovnControl = new OVNControlTool(_systemEnvironment, _ovnSettings.NorthDBConnection);
         return ovnControl.EnsureChassisInGroup("local", "local", 10,
             cancellationToken: cts.Token);
     }
@@ -82,7 +82,7 @@ public class NetworkControllerNode : DemonNodeBase
         var timeout = new CancellationTokenSource(new TimeSpan(0,1,0));
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
-        var ovnControl = new OVNControlTool(_sysEnv, _ovnSettings.NorthDBConnection);
+        var ovnControl = new OVNControlTool(_systemEnvironment, _ovnSettings.NorthDBConnection);
         return ovnControl.InitDb(cts.Token);
     }
 
@@ -96,7 +96,7 @@ public class NetworkControllerNode : DemonNodeBase
         {
             _logger.LogTrace("OVN network controller node - waiting for north database to be started.");
 
-            return await _ovnSettings.NorthDBConnection.WaitForDbSocket(_sysEnv,cts.Token).MapAsync(r =>
+            return await _ovnSettings.NorthDBConnection.WaitForDbSocket(_systemEnvironment,cts.Token).MapAsync(r =>
             {
                 if (!r)
                     _logger.LogWarning(

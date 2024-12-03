@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OVN.Core.Tests", "test\OVN.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OVNAgent", "src\OVNAgent\OVNAgent.csproj", "{022109FB-CA15-4926-AE42-90B4C35CD5A7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OVN.Windows", "src\OVN.Windows\OVN.Windows.csproj", "{19E88AFC-25A8-45A2-8F45-FD5A4BC9883B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,16 +61,20 @@ Global
 		{022109FB-CA15-4926-AE42-90B4C35CD5A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{022109FB-CA15-4926-AE42-90B4C35CD5A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{022109FB-CA15-4926-AE42-90B4C35CD5A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19E88AFC-25A8-45A2-8F45-FD5A4BC9883B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19E88AFC-25A8-45A2-8F45-FD5A4BC9883B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19E88AFC-25A8-45A2-8F45-FD5A4BC9883B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19E88AFC-25A8-45A2-8F45-FD5A4BC9883B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {0FDDB177-FC3D-4D1E-BE62-EEF24847FB47}
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C59D1A52-ED62-485C-8D53-D247E64AFDF8} = {F3C9BF77-FF83-4BE3-8E8F-06A0C65CF5D3}
 		{E765A6A4-ADE6-46E1-B1FC-BEBC362897F1} = {F3C9BF77-FF83-4BE3-8E8F-06A0C65CF5D3}
 		{A4AADA77-425D-4E63-816D-6FDC21A40A94} = {F3C9BF77-FF83-4BE3-8E8F-06A0C65CF5D3}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0FDDB177-FC3D-4D1E-BE62-EEF24847FB47}
 	EndGlobalSection
 EndGlobal

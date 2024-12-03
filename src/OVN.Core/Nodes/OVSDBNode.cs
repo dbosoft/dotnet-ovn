@@ -18,16 +18,16 @@ public class OVSDbNode : DemonNodeBase
     // runs: OVSDB, VSwitchD, OVNController
     // connects to OVNDatabaseNode
 
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
     private readonly IOvsSettings _ovsSettings;
     private OVSDBProcess? _ovsdbProcess;
 
     public OVSDbNode(
-        ISysEnvironment sysEnv,
+        ISystemEnvironment systemEnvironment,
         IOvsSettings ovsSettings,
         ILoggerFactory loggerFactory)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _ovsSettings = ovsSettings;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<OVSDbNode>();
@@ -35,7 +35,7 @@ public class OVSDbNode : DemonNodeBase
 
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
-        _ovsdbProcess = new OVSDBProcess(_sysEnv,
+        _ovsdbProcess = new OVSDBProcess(_systemEnvironment,
             new OVSDbSettings(
                 LocalOVSConnection,
                 new OvsFile("etc/openvswitch", "ovs.db"),
@@ -69,7 +69,7 @@ public class OVSDbNode : DemonNodeBase
         {
             _logger.LogTrace("OVS db node - waiting for ovs database to be started.");
 
-            return await LocalOVSConnection.WaitForDbSocket(_sysEnv,cts.Token).MapAsync(r =>
+            return await LocalOVSConnection.WaitForDbSocket(_systemEnvironment,cts.Token).MapAsync(r =>
             {
                 if (!r)
                     _logger.LogWarning("OVS db node - failed to wait for ovs connection before timeout");
@@ -88,7 +88,7 @@ public class OVSDbNode : DemonNodeBase
         var timeout = new CancellationTokenSource(new TimeSpan(0,1,0));
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
-        var ovsControl = new OVSControlTool(_sysEnv, LocalOVSConnection);
+        var ovsControl = new OVSControlTool(_systemEnvironment, LocalOVSConnection);
         return ovsControl.InitDb(cts.Token);
     }
 }

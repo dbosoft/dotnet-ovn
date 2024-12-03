@@ -12,12 +12,12 @@ public class OVSTool: IOVSDBTool
 {
 
     private static readonly Random Random = new();
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
     private readonly OvsFile _toolFile;
 
-    protected OVSTool(ISysEnvironment sysEnv, OvsFile toolFile)
+    protected OVSTool(ISystemEnvironment systemEnvironment, OvsFile toolFile)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _toolFile = toolFile;
     }
 
@@ -28,7 +28,7 @@ public class OVSTool: IOVSDBTool
 
     protected EitherAsync<Error, string> RunCommandWithResponse(string command, CancellationToken cancellationToken = default)
     {
-        return Prelude.use(new OVSProcess(_sysEnv, _toolFile, BuildArguments(command)), 
+        return Prelude.use(new OVSProcess(_systemEnvironment, _toolFile, BuildArguments(command)), 
             ovsProcess =>  ovsProcess.Start().ToAsync()
             .Bind(p =>
                 p.WaitForExitWithResponse(cancellationToken)).ToEither(l => Error.New(l))
@@ -37,7 +37,7 @@ public class OVSTool: IOVSDBTool
     
     protected EitherAsync<Error, int> RunCommand(string command, bool softWait = false, CancellationToken cancellationToken = default)
     {
-         return Prelude.use(new OVSProcess(_sysEnv, _toolFile, BuildArguments(command)), 
+         return Prelude.use(new OVSProcess(_systemEnvironment, _toolFile, BuildArguments(command)), 
             ovsProcess => 
                 ovsProcess.Start().ToAsync()
                 .Bind(p =>

@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFrameworks>net8.0;net8.0-windows</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <AssemblyName>OVNAgent</AssemblyName>
@@ -22,5 +22,9 @@
 
     <ItemGroup>
         <ProjectReference Include="..\OVN.Hosting\OVN.Hosting.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="$(TargetFramework.EndsWith('-windows'))">
+        <ProjectReference Include="..\OVN.Windows\OVN.Windows.csproj" />
     </ItemGroup>
 </Project>

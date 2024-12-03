@@ -34,7 +34,10 @@ public static class OvsDbConnectionExtensions
         return $"{passivePrefix}{portType}:{portAndAddress}";
     }
     
-    public static async Task<Either<Error, bool>> WaitForDbSocket(this OvsDbConnection connection, ISysEnvironment sysEnv, CancellationToken cancellationToken)
+    public static async Task<Either<Error, bool>> WaitForDbSocket(
+        this OvsDbConnection connection,
+        ISystemEnvironment systemEnvironment,
+        CancellationToken cancellationToken)
     {
         return await Prelude.TryAsync(async () =>
         {
@@ -42,7 +45,7 @@ public static class OvsDbConnectionExtensions
             {
                 if (connection.PipeFile != null)
                 {
-                    if (sysEnv.FileSystem.FileExists(connection.PipeFile))
+                    if (systemEnvironment.FileSystem.FileExists(connection.PipeFile))
                         return true;
                 }
                 else

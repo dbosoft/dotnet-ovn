@@ -19,13 +19,13 @@ public class OVNChassisNode : DemonNodeBase
     // runs: OVSDB, VSwitchD, OVNController
     // connects to OVNDatabaseNode
 
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
 
-    public OVNChassisNode(ISysEnvironment sysEnv,
+    public OVNChassisNode(ISystemEnvironment systemEnvironment,
         IOVNSettings ovnSettings,
         ILoggerFactory loggerFactory)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _ovnSettings = ovnSettings;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<OVNChassisNode>();
@@ -34,7 +34,7 @@ public class OVNChassisNode : DemonNodeBase
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
         
-        yield return new OVNControllerProcess(_sysEnv,
+        yield return new OVNControllerProcess(_systemEnvironment,
             new OVNControllerSettings(LocalOVSConnection, _ovnSettings.Logging, false),
             _loggerFactory.CreateLogger<OVNControllerProcess>());
     }
@@ -54,7 +54,7 @@ public class OVNChassisNode : DemonNodeBase
         var timeout = new CancellationTokenSource(new TimeSpan(0,5,0));
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
-        var ovsControl = new OVSControlTool(_sysEnv, LocalOVSConnection);
+        var ovsControl = new OVSControlTool(_systemEnvironment, LocalOVSConnection);
         return ovsControl.ConfigureOVN(_ovnSettings.SouthDBConnection, "local",
             cancellationToken: cts.Token);
     }
@@ -68,7 +68,7 @@ public class OVNChassisNode : DemonNodeBase
         {
             _logger.LogTrace("OVN chassis node - waiting for ovs database to be started.");
 
-            return await LocalOVSConnection.WaitForDbSocket(_sysEnv,cts.Token).MapAsync(r =>
+            return await LocalOVSConnection.WaitForDbSocket(_systemEnvironment,cts.Token).MapAsync(r =>
             {
                 if (!r)
                     _logger.LogWarning("OVN chassis node - failed to wait for ovs connection before timeout");
