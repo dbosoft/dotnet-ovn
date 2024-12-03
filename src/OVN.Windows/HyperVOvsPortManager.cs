@@ -160,7 +160,7 @@ public sealed partial class HyperVOvsPortManager(
         from _4 in jobPath.Map(WaitForJob).SequenceSerial()
         from reportedPortName in GetPortName(adapterId)
         from _5 in guard(reportedPortName == portName,
-            Error.New($"The OVS port name was not properly set for the adapter '{adapterId}'"))
+            Error.New($"The OVS port name has not been properly set for the adapter '{adapterId}'"))
             .ToEitherAsync()
         select unit;
 

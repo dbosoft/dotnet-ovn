@@ -1,5 +1,7 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Diagnostics;
+using System.Reflection;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.OSCommands.OVN;
@@ -85,10 +87,14 @@ hyperVPortNameSetCommand.SetHandler(SetPortName, adapterIdArgument, portNameArgu
 
 #endif
 
-if (args.Length > 0) 
+if (args.Length > 0)
     return await rootCommand.InvokeAsync(args);
 
 // Extremely simple REPL environment
+var entryAssembly = Assembly.GetEntryAssembly()!;
+var fileVersionInfo = FileVersionInfo.GetVersionInfo(entryAssembly.Location);
+var productVersion = fileVersionInfo.ProductVersion ?? "unknown";
+Console.WriteLine($"OVN Agent {productVersion} (--help for help, Ctrl+C to exit)");
 while (true)
 {
     Console.Write("OVNAgent > ");

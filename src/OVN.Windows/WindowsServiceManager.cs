@@ -16,10 +16,10 @@ internal class WindowsServiceManager(
     public EitherAsync<Error, bool> ServiceExists() =>
         use(GetServiceController(),
             serviceController =>
-                from actualServiceName in Eff(() => serviceController.ServiceName).ToAff()
+                from actualServiceName in Eff(() => serviceController.ServiceName)
                 select actualServiceName == serviceName)
-            .IfFail(false)
-            .Run().AsTask().Map(r => r.ToEither()).ToAsync();
+            .IfFail(_ => false)
+            .Run().ToEither().ToAsync();
 
     public EitherAsync<Error, string> GetServiceCommand() =>
         EffMaybe(() =>
@@ -32,7 +32,7 @@ internal class WindowsServiceManager(
             return key.GetValue("ImagePath") is string value
                 ? FinSucc(value)
                 : Error.New($"The service command of '{serviceName}' is invalid.");
-        }).ToAff().Run().AsTask().Map(r => r.ToEither()).ToAsync();
+        }).Run().ToEither().ToAsync();
 
     public EitherAsync<Error, Unit> CreateService(
         string displayName,
@@ -115,7 +115,7 @@ internal class WindowsServiceManager(
                     }
 
                     if (serviceController.Status == ServiceControllerStatus.Running)
-                        return Unit.Default;
+                        return unit;
                 }
 
                 throw new OperationCanceledException("Failed to start service before operation was cancelled");
@@ -131,7 +131,7 @@ internal class WindowsServiceManager(
                     return unit;
 
                 if (serviceController.Status != ServiceControllerStatus.StopPending)
-                    serviceController.Start();
+                    serviceController.Stop();
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
