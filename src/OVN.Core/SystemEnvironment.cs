@@ -21,7 +21,7 @@ public class SystemEnvironment : ISystemEnvironment
     /// </summary>
     public SystemEnvironment(ILoggerFactory loggerFactory)
     {
-        if (OperatingSystem.IsWindows())
+        if (OperatingSystem.IsWindows() && (GetType() == typeof(SystemEnvironment)))
             throw new PlatformNotSupportedException("Use the Dbosoft.OVN.Windows package");
 
         _loggerFactory = loggerFactory;

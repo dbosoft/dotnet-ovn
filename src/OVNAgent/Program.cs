@@ -38,6 +38,8 @@ netplanCommand.AddCommand(applyCommand);
 var serviceCommand = new Command("service", "service commands");
 rootCommand.Add(serviceCommand);
 
+#if WINDOWS
+
 var installServiceCommand = new Command("install", "install OVN as service");
 installServiceCommand.AddOption(nodeTypeOptions);
 installServiceCommand.SetHandler((l, n) => ManageServiceCommand(true, l, n), logLevelOptions, nodeTypeOptions );
@@ -48,8 +50,6 @@ removeServiceCommand.AddOption(nodeTypeOptions);
 removeServiceCommand.SetHandler((l, n) => ManageServiceCommand(false, l, n), logLevelOptions, nodeTypeOptions );
 
 serviceCommand.AddCommand(removeServiceCommand);
-
-#if WINDOWS
 
 var hyperVCommand = new Command("hyperv", "Hyper-V commands");
 rootCommand.Add(hyperVCommand);
@@ -174,6 +174,8 @@ static async Task<int> ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
         });
 }
 
+#if WINDOWS
+
 static async Task ManageServiceCommand(bool install, LogLevel logLevel, NodeType nodeType)
 {
     var host = Host.CreateDefaultBuilder()
@@ -199,8 +201,6 @@ static async Task ManageServiceCommand(bool install, LogLevel logLevel, NodeType
         .Bind(_ => serviceManager.RemoveService(CancellationToken.None))
         .IfLeft(l => l.Throw());
 }
-
-#if WINDOWS
 
 static async Task<int> GetAdapterId(string portName)
 {
@@ -281,7 +281,11 @@ static async Task<int> SetPortName(string adapterId, string portName)
 
 static void AddOVNCore(IServiceCollection services)
 {
+#if WINDOWS
+    services.AddSingleton<ISystemEnvironment, WindowsSystemEnvironment>();
+#else
     services.AddSingleton<ISystemEnvironment, SystemEnvironment>();
+#endif
     services.AddSingleton<IOvsSettings, LocalOVSWithOVNSettings>();
     services.AddSingleton<IOVNSettings, LocalOVSWithOVNSettings>();
 }
