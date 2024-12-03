@@ -96,60 +96,70 @@ internal class WindowsServiceManager(
         CancellationToken cancellationToken) =>
         use(GetServiceController(),
             serviceController => Aff(async () => await Task.Factory.StartNew(() =>
-            {
-                if (serviceController.Status is ServiceControllerStatus.Running)
-                    return Unit.Default;
-
-                if (serviceController.Status != ServiceControllerStatus.StartPending)
-                    serviceController.Start();
-
-                while (!cancellationToken.IsCancellationRequested)
                 {
-                    try
+                    if (serviceController.Status is ServiceControllerStatus.Running)
+                        return Unit.Default;
+
+                    if (serviceController.Status != ServiceControllerStatus.StartPending)
+                        serviceController.Start();
+
+                    while (!cancellationToken.IsCancellationRequested)
                     {
-                        serviceController.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 1));
-                    }
-                    catch (System.ServiceProcess.TimeoutException)
-                    {
-                        // ignored
+                        try
+                        {
+                            serviceController.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 1));
+                        }
+                        catch (System.ServiceProcess.TimeoutException)
+                        {
+                            // ignored
+                        }
+
+                        if (serviceController.Status == ServiceControllerStatus.Running)
+                            return unit;
                     }
 
-                    if (serviceController.Status == ServiceControllerStatus.Running)
-                        return unit;
-                }
-
-                throw new OperationCanceledException("Failed to start service before operation was cancelled");
-            }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Current)))
+                    throw new OperationCanceledException("Failed to start service before operation was cancelled");
+                },
+                cancellationToken,
+                // DenyChildAttach is default for Task.Run
+                // LongRunning because we perform synchronous polling
+                TaskCreationOptions.DenyChildAttach | TaskCreationOptions.LongRunning,
+                TaskScheduler.Default)))
             .Run().AsTask().Map(r => r.ToEither()).ToAsync();
 
     public EitherAsync<Error, Unit> EnsureServiceStopped(
         CancellationToken cancellationToken) =>
         use(GetServiceController(),
             serviceController => Aff(async () => await Task.Factory.StartNew(() =>
-            {
-                if (serviceController.Status is ServiceControllerStatus.Stopped)
-                    return unit;
-
-                if (serviceController.Status != ServiceControllerStatus.StopPending)
-                    serviceController.Stop();
-
-                while (!cancellationToken.IsCancellationRequested)
                 {
-                    try
-                    {
-                        serviceController.WaitForStatus(ServiceControllerStatus.Stopped, new TimeSpan(0, 0, 1));
-                    }
-                    catch (System.ServiceProcess.TimeoutException)
-                    {
-                        // ignored
-                    }
-
-                    if (serviceController.Status == ServiceControllerStatus.Stopped)
+                    if (serviceController.Status is ServiceControllerStatus.Stopped)
                         return unit;
-                }
 
-                throw new OperationCanceledException("Failed to stop service before operation was cancelled");
-            }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Current)))
+                    if (serviceController.Status != ServiceControllerStatus.StopPending)
+                        serviceController.Stop();
+
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            serviceController.WaitForStatus(ServiceControllerStatus.Stopped, new TimeSpan(0, 0, 1));
+                        }
+                        catch (System.ServiceProcess.TimeoutException)
+                        {
+                            // ignored
+                        }
+
+                        if (serviceController.Status == ServiceControllerStatus.Stopped)
+                            return unit;
+                    }
+
+                    throw new OperationCanceledException("Failed to stop service before operation was cancelled");
+                },
+                cancellationToken,
+                // DenyChildAttach is default for Task.Run
+                // LongRunning because we perform synchronous polling
+                TaskCreationOptions.DenyChildAttach | TaskCreationOptions.LongRunning,
+                TaskScheduler.Default)))
             .Run().AsTask().Map(r => r.ToEither()).ToAsync();
 
     public EitherAsync<Error, Unit> UpdateService(
