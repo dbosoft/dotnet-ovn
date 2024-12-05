@@ -6,10 +6,13 @@ namespace Dbosoft.OVN.OSCommands.OVN;
 public class NorthDProcess : DemonProcessBase
 {
     private readonly NorthDSettings _settings;
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
 
-    public NorthDProcess(ISysEnvironment sysEnv, NorthDSettings settings, ILogger logger)
-        : base(sysEnv,
+    public NorthDProcess(
+        ISystemEnvironment systemEnvironment,
+        NorthDSettings settings,
+        ILogger logger)
+        : base(systemEnvironment,
             OVNCommands.NorthboundDemon,
             new OvsFile("/var/run/ovn", "ovn-northd.ctl"),
             new OvsFile("/var/log/ovn", "ovn-northd.log"),
@@ -18,14 +21,14 @@ public class NorthDProcess : DemonProcessBase
             settings.AllowAttach,
             logger)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _settings = settings;
     }
 
     protected override string BuildArguments()
     {
-        var northDbConnection = _settings.NorthDbConnection.GetCommandString(_sysEnv.FileSystem, false);
-        var southDbConnection = _settings.SouthDBConnection.GetCommandString(_sysEnv.FileSystem, false);
+        var northDbConnection = _settings.NorthDbConnection.GetCommandString(_systemEnvironment.FileSystem, false);
+        var southDbConnection = _settings.SouthDBConnection.GetCommandString(_systemEnvironment.FileSystem, false);
 
         var baseArguments = base.BuildArguments();
 

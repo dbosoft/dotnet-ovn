@@ -9,12 +9,14 @@ namespace Dbosoft.OVN.OSCommands.OVN;
 public class OVNControlTool : OVSTool
 {
     private readonly OvsDbConnection _dbConnection;
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
 
-    public OVNControlTool(ISysEnvironment sysEnv, OvsDbConnection dbConnection) : base(sysEnv,
-        OVNCommands.NorthboundControl)
+    public OVNControlTool(
+        ISystemEnvironment systemEnvironment,
+        OvsDbConnection dbConnection)
+        : base(systemEnvironment, OVNCommands.NorthboundControl)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _dbConnection = dbConnection;
     }
 
@@ -22,7 +24,7 @@ public class OVNControlTool : OVSTool
     {
         var baseArguments = base.BuildArguments(command);
         var sb = new StringBuilder();
-        sb.Append($"--db=\"{_dbConnection.GetCommandString(_sysEnv.FileSystem, false)}\"");
+        sb.Append($"--db=\"{_dbConnection.GetCommandString(_systemEnvironment.FileSystem, false)}\"");
         sb.Append(' ');
         sb.Append(baseArguments);
         return sb.ToString();

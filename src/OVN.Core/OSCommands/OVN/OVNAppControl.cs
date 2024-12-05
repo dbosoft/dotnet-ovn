@@ -7,11 +7,14 @@ namespace Dbosoft.OVN.OSCommands.OVS;
 public class OVNAppControl : OVSTool, IAppControl
 {
     private readonly OvsFile _controlFile;
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
 
-    public OVNAppControl(ISysEnvironment sysEnv, OvsFile controlFile) : base(sysEnv, OVNCommands.AppControl)
+    public OVNAppControl(
+        ISystemEnvironment systemEnvironment,
+        OvsFile controlFile)
+        : base(systemEnvironment, OVNCommands.AppControl)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _controlFile = controlFile;
     }
 
@@ -27,7 +30,7 @@ public class OVNAppControl : OVSTool, IAppControl
 
     protected override string BuildArguments(string command)
     {
-        var controlFilePath = _sysEnv.FileSystem.ResolveOvsFilePath(_controlFile, false);
+        var controlFilePath = _systemEnvironment.FileSystem.ResolveOvsFilePath(_controlFile, false);
 
         return $"--target=\"{controlFilePath}\" {command}";
     }

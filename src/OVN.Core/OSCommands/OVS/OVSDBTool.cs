@@ -8,15 +8,16 @@ namespace Dbosoft.OVN.OSCommands.OVS;
 /// </summary>
 public class OVSDBTool : OVSTool
 {
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
 
     /// <summary>
     /// creates ovs tool instance for ovsdb-tool
     /// </summary>
-    /// <param name="sysEnv"></param>
-    public OVSDBTool(ISysEnvironment sysEnv) : base(sysEnv, OVSCommands.DBTool)
+    /// <param name="systemEnvironment"></param>
+    public OVSDBTool(ISystemEnvironment systemEnvironment)
+        : base(systemEnvironment, OVSCommands.DBTool)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
     }
 
     /// <summary>
@@ -27,8 +28,8 @@ public class OVSDBTool : OVSTool
     /// <returns></returns>
     public EitherAsync<Error, Unit> CreateDBFile(OvsFile dbFile, OvsFile schemaFile)
     {
-        var dbFilePath = _sysEnv.FileSystem.ResolveOvsFilePath(dbFile);
-        var schemaPath = _sysEnv.FileSystem.ResolveOvsFilePath(schemaFile);
+        var dbFilePath = _systemEnvironment.FileSystem.ResolveOvsFilePath(dbFile);
+        var schemaPath = _systemEnvironment.FileSystem.ResolveOvsFilePath(schemaFile);
 
         var command = $"create \"{dbFilePath}\" \"{schemaPath}\"";
         return RunCommand(command).Map(_ => Unit.Default);
