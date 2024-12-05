@@ -235,12 +235,12 @@ static async Task<int> GetAdapterId(string portName)
 static async Task<int> GetPortName(string adapterId)
 {
     using var portManager = new HyperVOvsPortManager();
-    var result = await portManager.GetPortName(adapterId);
+    var result = await portManager.GetConfiguredPortName(adapterId);
 
     return result.Match(
         Right: portName =>
         {
-            Console.WriteLine(portName);
+            portName.IfSome(n => Console.WriteLine(n));
             return 0;
         },
         Left: error =>
