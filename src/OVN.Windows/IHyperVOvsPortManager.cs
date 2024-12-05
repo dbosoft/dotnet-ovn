@@ -12,7 +12,27 @@ public interface IHyperVOvsPortManager : IDisposable
     /// Returns the OVS port name which is assigned to the Hyper-V
     /// network adapter with the given <paramref name="adapterId"/>.
     /// </summary>
+    /// <remarks>
+    /// Consider using <see cref="GetConfiguredPortName"/> if you want
+    /// to check that a port name has been explicitly configured with
+    /// <see cref="SetPortName"/>.
+    /// </remarks>
     EitherAsync<Error, string> GetPortName(
+        string adapterId);
+
+    /// <summary>
+    /// Returns the OVS port name which is assigned to the Hyper-V network
+    /// adapter with the given <paramref name="adapterId"/>. This method
+    /// returns <see cref="OptionNone"/> if the port name has not been
+    /// explicitly configured.
+    /// </summary>
+    /// <remarks>
+    /// Hyper-V populates the corresponding field with a default value.
+    /// This method detects if the value was not set explicitly (e.g.
+    /// it does not start with <c>ovs_</c>) and then considers the port
+    /// name as not configured and returns <see cref="OptionNone"/>.
+    /// </remarks>
+    EitherAsync<Error, Option<string>> GetConfiguredPortName(
         string adapterId);
 
     /// <summary>
@@ -36,7 +56,8 @@ public interface IHyperVOvsPortManager : IDisposable
     /// <summary>
     /// Sets the OVS port name of the Hyper-V network adapter with
     /// the given <paramref name="adapterId"/> to the given
-    /// <paramref name="portName"/>.
+    /// <paramref name="portName"/>. The <paramref name="portName"/>
+    /// must start with <c>ovs_</c>.
     /// </summary>
     /// <remarks>
     /// It is possible that Hyper-V starts a job to apply the port name.

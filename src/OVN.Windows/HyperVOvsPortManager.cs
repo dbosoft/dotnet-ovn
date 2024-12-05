@@ -22,6 +22,7 @@ public sealed partial class HyperVOvsPortManager(
     [GeneratedRegex("^[a-zA-Z0-9-_]+$")]
     private static partial Regex PortNameRegex();
     private const string Scope = @"root\virtualization\v2";
+    private const string PortNamePrefix = "ovs_";
 
     private bool _disposed;
     private readonly Lazy<ManagementObject> _vmms = new(
@@ -52,6 +53,11 @@ public sealed partial class HyperVOvsPortManager(
             Error.New($"The Hyper-V network adapter '{adapterId}' does not exist."))
         let portName = validAdapterInfo.ElementName ?? ""
         select portName;
+
+    /// <inheritdoc/>
+    public EitherAsync<Error, Option<string>> GetConfiguredPortName(string adapterId) =>
+        from portName in GetPortName(adapterId)
+        select Optional(portName).Filter(IsValidPortName).Filter(p => p.StartsWith(PortNamePrefix));
 
     /// <inheritdoc/>
     public EitherAsync<Error, Seq<(string AdapterId, string PortName)>> GetPortNames() =>
@@ -120,9 +126,11 @@ public sealed partial class HyperVOvsPortManager(
         from adapterInfo in GetAdapterInfo(adapterId)
         from validAdapterInfo in adapterInfo.ToEitherAsync(
             Error.New($"The Hyper-V network adapter '{adapterId}' does not exist."))
-        from _2 in guard(IsValidPortName(portName),
+        from _1 in guard(IsValidPortName(portName),
             Error.New($"The OVS port name '{portName}' is invalid."))
-        from jobPath in AffMaybe<Option<string>>(async () => await Task.Run(() =>
+        from _2 in guard(portName.StartsWith(PortNamePrefix),
+            Error.New($"The OVS port name must start with '{PortNamePrefix}'."))
+        from jobPath in AffMaybe(async () => await Task.Run(() =>
         {
             ManagementObject? adapterData = null;
             ManagementBaseObject? parameters = null;
