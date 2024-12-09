@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Net;
 using System.Runtime.InteropServices;
 using Dbosoft.OVN.OSCommands;
 using JetBrains.Annotations;
@@ -13,45 +12,41 @@ namespace Dbosoft.OVN;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [PublicAPI]
-public class SystemEnvironment : ISysEnvironment
+public class SystemEnvironment : ISystemEnvironment
 {
     private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
-    /// creates a new environment.
+    /// Creates a new environment.
     /// </summary>
-    /// <param name="loggerFactory">Logger factory</param>
     public SystemEnvironment(ILoggerFactory loggerFactory)
     {
+        if (OperatingSystem.IsWindows() && (GetType() == typeof(SystemEnvironment)))
+            throw new PlatformNotSupportedException("Use the Dbosoft.OVN.Windows package");
+
         _loggerFactory = loggerFactory;
     }
 
-    /// <param name="processId"></param>
     /// <inheritdoc />
-    public virtual IProcess CreateProcess(int processId=0)
+    public virtual IProcess CreateProcess(int processId = 0)
     {
-        if(processId == 0)
+        if (processId == 0)
             return new ProcessWrapper(new Process(), _loggerFactory.CreateLogger<ProcessWrapper>());
 
         var process = Process.GetProcessById(processId);
         return new ProcessWrapper(process, _loggerFactory.CreateLogger<ProcessWrapper>());
-
     }
 
-    public IServiceManager GetServiceManager(string serviceName)
+    /// <inheritdoc />
+    public virtual IServiceManager GetServiceManager(string serviceName)
     {
-        if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return new WindowsServiceManager(serviceName, this);
-
         throw new PlatformNotSupportedException();
     }
 
-    public IOvsExtensionManager GetOvsExtensionManager()
+    /// <inheritdoc />
+    public virtual IOvsExtensionManager GetOvsExtensionManager()
     {
-        if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return new WMIOvsExtensionManager("dbosoft Open vSwitch Extension");
-
-        throw new PlatformNotSupportedException();
+        return new OvsExtensionManager();
     }
 
     /// <inheritdoc />

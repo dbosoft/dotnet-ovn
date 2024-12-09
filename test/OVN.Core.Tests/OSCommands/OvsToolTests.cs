@@ -360,7 +360,7 @@ public class OvsToolTests
     
   private class DummyTool : OVSTool
     {
-       public DummyTool(ISysEnvironment sysEnv) : base(sysEnv, new OvsFile("", "puff", true))
+       public DummyTool(ISystemEnvironment systemEnvironment) : base(systemEnvironment, new OvsFile("", "puff", true))
        {
        }
 

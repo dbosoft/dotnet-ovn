@@ -11,12 +11,22 @@ namespace Dbosoft.OVN.OSCommands.OVS;
 public class OVSDBProcess : DemonProcessBase
 {
     private readonly OVSDbSettings _dbSettings;
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
 
-    public OVSDBProcess(ISysEnvironment sysEnv, OVSDbSettings dbSettings, ILogger logger) :
-        base(sysEnv, OVSCommands.DBServer, dbSettings.ControlFile, dbSettings.LogFile, dbSettings.LoggingSettings, false, dbSettings.AllowAttach, logger)
+    public OVSDBProcess(
+        ISystemEnvironment systemEnvironment,
+        OVSDbSettings dbSettings,
+        ILogger logger)
+        : base(systemEnvironment,
+            OVSCommands.DBServer,
+            dbSettings.ControlFile,
+            dbSettings.LogFile,
+            dbSettings.LoggingSettings,
+            false,
+            dbSettings.AllowAttach,
+            logger)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _dbSettings = dbSettings;
     }
 
@@ -24,11 +34,11 @@ public class OVSDBProcess : DemonProcessBase
     {
         var baseArguments = base.BuildArguments();
 
-        var dbFileFullPath = _sysEnv.FileSystem.ResolveOvsFilePath(_dbSettings.DBFile);
+        var dbFileFullPath = _systemEnvironment.FileSystem.ResolveOvsFilePath(_dbSettings.DBFile);
         var sb = new StringBuilder();
         sb.Append($"\"{dbFileFullPath}\"");
         sb.Append(' ');
-        sb.Append($"--remote=\"{_dbSettings.Connection.GetCommandString(_sysEnv.FileSystem, true)}\"");
+        sb.Append($"--remote=\"{_dbSettings.Connection.GetCommandString(_systemEnvironment.FileSystem, true)}\"");
         sb.Append(' ');
         sb.Append(baseArguments);
         return sb.ToString();
@@ -42,12 +52,12 @@ public class OVSDBProcess : DemonProcessBase
 
     public EitherAsync<Error, bool> EnsureDBFileCreated()
     {
-        var dbFileFullPath = _sysEnv.FileSystem.ResolveOvsFilePath(_dbSettings.DBFile);
-        _sysEnv.FileSystem.EnsurePathForFileExists(dbFileFullPath);
+        var dbFileFullPath = _systemEnvironment.FileSystem.ResolveOvsFilePath(_dbSettings.DBFile);
+        _systemEnvironment.FileSystem.EnsurePathForFileExists(dbFileFullPath);
 
-        if (_sysEnv.FileSystem.FileExists(dbFileFullPath)) return false;
+        if (_systemEnvironment.FileSystem.FileExists(dbFileFullPath)) return false;
 
-        var dbTool = new OVSDBTool(_sysEnv);
+        var dbTool = new OVSDBTool(_systemEnvironment);
         return dbTool.CreateDBFile(_dbSettings.DBFile, _dbSettings.SchemaFile)
             .Map(_ => true);
     }

@@ -9,17 +9,17 @@ namespace Dbosoft.OVN.TestTools;
 
 public static class OvsMocks
 {
-    public static Mock<ISysEnvironment> SetupEnvForOvsTool(
+    public static Mock<ISystemEnvironment> SetupEnvForOvsTool(
         ProcessStartInfo startInfo, string outputString = "", string errorString = "", int exitCode = 0)
     {
         var res = SetupEnvForOvsToolWithProcess(startInfo, outputString, errorString, exitCode);
         return res.Item1;
     }
     
-    public static (Mock<ISysEnvironment> SysEnv, Mock<IProcess> Process) SetupEnvForOvsToolWithProcess(
+    public static (Mock<ISystemEnvironment> SysEnv, Mock<IProcess> Process) SetupEnvForOvsToolWithProcess(
         ProcessStartInfo startInfo, string outputString = "", string errorString = "", int exitCode = 0)
     {
-        var mockEnv = new Mock<ISysEnvironment>();
+        var mockEnv = new Mock<ISystemEnvironment>();
         var processMock = new Mock<IProcess>();
 
         var outputStreamReader = new StreamReader(

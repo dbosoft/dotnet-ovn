@@ -4,6 +4,8 @@ using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 
+using static LanguageExt.Prelude;
+
 namespace Dbosoft.OVN.Nodes;
 
 public class OVSSwitchNode : DemonNodeBase
@@ -16,7 +18,7 @@ public class OVSSwitchNode : DemonNodeBase
     // runs: VSwitchD
     // connects to OVSDbNode
 
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
     private readonly IOvsSettings _ovsSettings;
     private readonly ILogger _logger;
 
@@ -24,11 +26,11 @@ public class OVSSwitchNode : DemonNodeBase
     private VSwitchDProcess? _fallBackvSwitchDProcess;
 
     public OVSSwitchNode(
-        ISysEnvironment sysEnv,
+        ISystemEnvironment systemEnvironment,
         IOvsSettings ovsSettings,
         ILoggerFactory loggerFactory)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _ovsSettings = ovsSettings;
         _loggerFactory = loggerFactory;
         _logger = _loggerFactory.CreateLogger<OVSSwitchNode>();
@@ -36,7 +38,7 @@ public class OVSSwitchNode : DemonNodeBase
 
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
-        _vSwitchDProcess = new VSwitchDProcess(_sysEnv,
+        _vSwitchDProcess = new VSwitchDProcess(_systemEnvironment,
             new VSwitchDSettings(LocalOVSConnection, _ovsSettings.Logging, true),
             false,
             _loggerFactory.CreateLogger<VSwitchDProcess>());
@@ -44,32 +46,45 @@ public class OVSSwitchNode : DemonNodeBase
         yield return _vSwitchDProcess;
         Thread.Sleep(1000);
         
-        _fallBackvSwitchDProcess = new VSwitchDProcess(_sysEnv,
+        _fallBackvSwitchDProcess = new VSwitchDProcess(_systemEnvironment,
             new VSwitchDSettings(LocalOVSConnection, _ovsSettings.Logging, true),
             true,
             _loggerFactory.CreateLogger<VSwitchDProcess>());
         
         yield return _fallBackvSwitchDProcess;
-        
     }
-    public override EitherAsync<Error, Unit> Start(CancellationToken cancellationToken = default)
-    {
-        var extensionManager = _sysEnv.GetOvsExtensionManager();
-        
-        if(extensionManager.IsExtensionEnabled()) 
-            base.Start(cancellationToken).IfLeft(l => _logger.LogError("Failed to start vswitch demon. Error: {@error}", l));
 
-        return Unit.Default;
-    }
-    
-    public override EitherAsync<Error, Unit> EnsureAlive(bool checkResponse, CancellationToken cancellationToken = default)
-    {
-        var extensionManager = _sysEnv.GetOvsExtensionManager();
-        return !extensionManager.IsExtensionEnabled() 
-            ? _vSwitchDProcess?.Stop(false, cancellationToken)
-                .Bind(_ => _fallBackvSwitchDProcess?.Stop(false, cancellationToken) ?? Unit.Default )
-              ?? Unit.Default
-            : base.EnsureAlive(checkResponse, cancellationToken);
-    }
-    
+    public override EitherAsync<Error, Unit> Start(
+        CancellationToken cancellationToken = default) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let extensionManager = _systemEnvironment.GetOvsExtensionManager()
+        from isExtensionEnabled in extensionManager.IsExtensionEnabled()
+            .BindLeft(_ => RightAsync<Error, bool>(false))
+        from _2 in isExtensionEnabled
+            ? base.Start(cancellationToken)
+                .MapLeft(l =>
+                {
+                    _logger.LogError(l, "Failed to start vswitch daemon.");
+                    return l;
+                })
+            : RightAsync<Error, Unit>(unit)
+        select unit;
+
+    public override EitherAsync<Error, Unit> EnsureAlive(
+        bool checkResponse,
+        CancellationToken cancellationToken = default) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let extensionManager = _systemEnvironment.GetOvsExtensionManager()
+        from isExtensionEnabled in extensionManager.IsExtensionEnabled()
+            .BindLeft(_ => RightAsync<Error, bool>(false))
+        from _2 in isExtensionEnabled
+            ? base.EnsureAlive(checkResponse, cancellationToken)
+            : from _1 in Optional(_vSwitchDProcess)
+                 .Map(p => p.Stop(false, cancellationToken))
+                 .SequenceSerial()
+              from _2 in Optional(_fallBackvSwitchDProcess)
+                 .Map(p => p.Stop(false, cancellationToken))
+                 .SequenceSerial()
+              select unit
+        select unit;
 }

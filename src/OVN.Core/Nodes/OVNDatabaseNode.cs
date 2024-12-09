@@ -12,20 +12,20 @@ public class OVNDatabaseNode : DemonNodeBase
 
     // runs: OVNSouthboundDB
     // connects to: other OVNDatabaseNodes (DB cluster)
-    private readonly ISysEnvironment _sysEnv;
+    private readonly ISystemEnvironment _systemEnvironment;
 
-    public OVNDatabaseNode(ISysEnvironment sysEnv,
+    public OVNDatabaseNode(ISystemEnvironment systemEnvironment,
         IOVNSettings ovnSettings,
         ILoggerFactory loggerFactory)
     {
-        _sysEnv = sysEnv;
+        _systemEnvironment = systemEnvironment;
         _ovnSettings = ovnSettings;
         _loggerFactory = loggerFactory;
     }
 
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
-        yield return new OVSDBProcess(_sysEnv,
+        yield return new OVSDBProcess(_systemEnvironment,
             new OVSDbSettings(
                 _ovnSettings.SouthDBConnection,
                 new OvsFile("etc/ovn", "ovn_sb.db"),
