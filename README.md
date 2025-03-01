@@ -16,7 +16,7 @@ This repository contains a .NET management library for [OVN](https://github.com/
 
 **.NET**
 
-The library requires .NET 6.0 or higher.
+The library requires .NET 8.0 or higher.
 
 Supported platforms of core library: Windows and Linux.
 Supported platforms for hosting: Windows
