@@ -11,8 +11,10 @@ public record PlannedRouterPort(string RouterName) : OVSEntity, IOVSEntityWithNa
         {
             { "name", OVSValue<string>.Metadata() },
             { "mac", OVSValue<string>.Metadata() },
+            { "peer", OVSValue<string>.Metadata() },
             { "networks", OVSSet<string>.Metadata() },
             { "ha_chassis_group", OVSSet<Guid>.Metadata() },
+            { "options", OVSMap<string>.Metadata() },
         };
 
     public string? MacAddress
@@ -42,5 +44,17 @@ public record PlannedRouterPort(string RouterName) : OVSEntity, IOVSEntityWithNa
     {
         get => GetValue<string>("name");
         init => SetValue("name", value);
+    }
+
+    public string? Peer
+    {
+        get => GetValue<string>("peer");
+        init => SetValue("peer", value);
+    }
+
+    public Map<string, string> Options
+    {
+        get => GetMap<string>("options");
+        init => SetMap("options", value);
     }
 }
