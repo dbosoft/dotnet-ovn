@@ -13,11 +13,29 @@ public interface IHyperVOvsPortManager : IDisposable
     /// network adapter with the given <paramref name="adapterId"/>.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// This method will fail if the corresponding adapter information
+    /// is not available in Hyper-V. Consider using
+    /// <see cref="GetPortNameSafe"/> when you have just created the
+    /// adapter.
+    /// </para>
+    /// <para>
     /// Consider using <see cref="GetConfiguredPortName"/> if you want
     /// to check that a port name has been explicitly configured with
     /// <see cref="SetPortName"/>.
+    /// </para>
     /// </remarks>
     EitherAsync<Error, string> GetPortName(
+        string adapterId);
+
+    /// <summary>
+    /// Returns the OVS port name which is assigned to the Hyper-V
+    /// network adapter with the given <paramref name="adapterId"/>.
+    /// Returns <see cref="OptionNone"/> if the adapter information
+    /// cannot be fetched from Hyper-V. This sometimes happens
+    /// immediately after the adapter has been created in Hyper-V.
+    /// </summary>
+    EitherAsync<Error, Option<string>> GetPortNameSafe(
         string adapterId);
 
     /// <summary>
