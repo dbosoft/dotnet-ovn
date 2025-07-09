@@ -118,7 +118,7 @@ public class OVSTool: IOVSDBTool
     }
 
     /// <inheritdoc />
-    public EitherAsync<Error, T> GetRecord<T>(
+    public EitherAsync<Error, Option<T>> GetRecord<T>(
         string tableName,
         string rowId,
         IEnumerable<string>? columns = default,
@@ -126,7 +126,8 @@ public class OVSTool: IOVSDBTool
         CancellationToken cancellationToken = default) where T : OVSTableRecord, new()
     {
         var sb = new StringBuilder();
-        sb.Append("--format json");
+        sb.Append("--if-exists");
+        sb.Append(" --format json");
 
         if (columns != null)
             sb.Append($" --columns={ColumnsListToCommandString(columns)}");
@@ -135,8 +136,7 @@ public class OVSTool: IOVSDBTool
 
         return RunCommandWithResponse(sb.ToString(), cancellationToken)
             .Bind(r => MapResponse<T>(r, additionalFields))
-            .Bind(e =>
-                e.HeadOrLeft(Error.New(Errors.SequenceEmpty)).ToAsync());
+            .Map(e => e.HeadOrNone());
     }
 
     /// <inheritdoc />

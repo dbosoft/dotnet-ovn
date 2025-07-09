@@ -43,7 +43,8 @@ public interface IOVSDBTool
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Reads a record from database table and returns it as <see cref="OVSTableRecord"/>. 
+    /// Reads a record from database table and returns it as <see cref="OVSTableRecord"/>.
+    /// Returns <see cref="OptionNone"/> when the record does not exist.
     /// </summary>
     /// <param name="tableName">table name</param>
     /// <param name="rowId">UUID or name column if supported by table</param>
@@ -52,7 +53,7 @@ public interface IOVSDBTool
     /// <param name="cancellationToken"></param>
     /// <typeparam name="T">Type of entity</typeparam>
     /// <returns>created entity</returns>
-    EitherAsync<Error, T> GetRecord<T>(
+    EitherAsync<Error, Option<T>> GetRecord<T>(
         string tableName,
         string rowId,
         IEnumerable<string>? columns = default,
