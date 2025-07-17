@@ -44,14 +44,7 @@ public sealed partial class HyperVOvsPortManager(
     // via the IDisposable interface (e.g. with a using statement).
 
     /// <inheritdoc/>
-    public EitherAsync<Error, string> GetPortName(string adapterId) =>
-        from portName in GetPortNameSafe(adapterId)
-        from validPortName in portName.ToEitherAsync(
-            Error.New($"The Hyper-V network adapter '{adapterId}' does not exist."))
-        select validPortName;
-
-    /// <inheritdoc/>
-    public EitherAsync<Error, Option<string>> GetPortNameSafe(string adapterId) =>
+    public EitherAsync<Error, Option<string>> GetPortName(string adapterId) =>
         from _ in guard(IsValidAdapterId(adapterId),
                 Error.New($"The Hyper-V network adapter ID '{adapterId}' is invalid."))
             .ToEitherAsync()
@@ -62,7 +55,7 @@ public sealed partial class HyperVOvsPortManager(
     /// <inheritdoc/>
     public EitherAsync<Error, Option<string>> GetConfiguredPortName(string adapterId) =>
         from portName in GetPortName(adapterId)
-        select Optional(portName).Filter(IsValidPortName).Filter(p => p.StartsWith(PortNamePrefix));
+        select portName.Filter(IsValidPortName).Filter(p => p.StartsWith(PortNamePrefix));
 
     /// <inheritdoc/>
     public EitherAsync<Error, Seq<(string AdapterId, string PortName)>> GetPortNames() =>
@@ -70,7 +63,7 @@ public sealed partial class HyperVOvsPortManager(
         {
             using var searcher = new ManagementObjectSearcher(
                 new ManagementScope(Scope),
-                new ObjectQuery("SELECT InstanceID, ElementName "
+                new ObjectQuery("SELECT * "
                                 + "FROM Msvm_EthernetPortAllocationSettingData"));
 
             using var collection = searcher.Get();

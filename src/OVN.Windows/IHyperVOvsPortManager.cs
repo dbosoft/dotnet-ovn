@@ -11,13 +11,15 @@ public interface IHyperVOvsPortManager : IDisposable
     /// <summary>
     /// Returns the OVS port name which is assigned to the Hyper-V
     /// network adapter with the given <paramref name="adapterId"/>.
+    /// Returns <see cref="OptionNone"/> if the adapter does not exist.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This method will fail if the corresponding adapter information
-    /// is not available in Hyper-V. Consider using
-    /// <see cref="GetPortNameSafe"/> when you have just created the
-    /// adapter.
+    /// This method might sometimes return <see cref="OptionNone"/>
+    /// even if the adapter exists. This happens immediately after
+    /// the adapter has been created in Hyper-V. The adapter exists
+    /// but Hyper-V does not return the required adapter information
+    /// yet.
     /// </para>
     /// <para>
     /// Consider using <see cref="GetConfiguredPortName"/> if you want
@@ -25,24 +27,14 @@ public interface IHyperVOvsPortManager : IDisposable
     /// <see cref="SetPortName"/>.
     /// </para>
     /// </remarks>
-    EitherAsync<Error, string> GetPortName(
-        string adapterId);
-
-    /// <summary>
-    /// Returns the OVS port name which is assigned to the Hyper-V
-    /// network adapter with the given <paramref name="adapterId"/>.
-    /// Returns <see cref="OptionNone"/> if the adapter information
-    /// cannot be fetched from Hyper-V. This sometimes happens
-    /// immediately after the adapter has been created in Hyper-V.
-    /// </summary>
-    EitherAsync<Error, Option<string>> GetPortNameSafe(
+    EitherAsync<Error, Option<string>> GetPortName(
         string adapterId);
 
     /// <summary>
     /// Returns the OVS port name which is assigned to the Hyper-V network
     /// adapter with the given <paramref name="adapterId"/>. This method
     /// returns <see cref="OptionNone"/> if the port name has not been
-    /// explicitly configured.
+    /// explicitly configured or the adapter does not exist.
     /// </summary>
     /// <remarks>
     /// Hyper-V populates the corresponding field with a default value.
