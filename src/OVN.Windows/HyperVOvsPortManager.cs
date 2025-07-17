@@ -63,7 +63,7 @@ public sealed partial class HyperVOvsPortManager(
         {
             using var searcher = new ManagementObjectSearcher(
                 new ManagementScope(Scope),
-                new ObjectQuery("SELECT * "
+                new ObjectQuery("SELECT InstanceID, ElementName "
                                 + "FROM Msvm_EthernetPortAllocationSettingData"));
 
             using var collection = searcher.Get();
