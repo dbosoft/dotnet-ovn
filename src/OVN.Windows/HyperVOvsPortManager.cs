@@ -44,20 +44,18 @@ public sealed partial class HyperVOvsPortManager(
     // via the IDisposable interface (e.g. with a using statement).
 
     /// <inheritdoc/>
-    public EitherAsync<Error, string> GetPortName(string adapterId) =>
+    public EitherAsync<Error, Option<string>> GetPortName(string adapterId) =>
         from _ in guard(IsValidAdapterId(adapterId),
                 Error.New($"The Hyper-V network adapter ID '{adapterId}' is invalid."))
             .ToEitherAsync()
         from adapterInfo in GetAdapterInfo(adapterId)
-        from validAdapterInfo in adapterInfo.ToEitherAsync(
-            Error.New($"The Hyper-V network adapter '{adapterId}' does not exist."))
-        let portName = validAdapterInfo.ElementName ?? ""
+        let portName = adapterInfo.Map(a => a.ElementName ?? "")
         select portName;
 
     /// <inheritdoc/>
     public EitherAsync<Error, Option<string>> GetConfiguredPortName(string adapterId) =>
         from portName in GetPortName(adapterId)
-        select Optional(portName).Filter(IsValidPortName).Filter(p => p.StartsWith(PortNamePrefix));
+        select portName.Filter(IsValidPortName).Filter(p => p.StartsWith(PortNamePrefix));
 
     /// <inheritdoc/>
     public EitherAsync<Error, Seq<(string AdapterId, string PortName)>> GetPortNames() =>
@@ -177,7 +175,7 @@ public sealed partial class HyperVOvsPortManager(
         from _ in guard(IsValidAdapterId(adapterId),
                 Error.New($"The Hyper-V network adapter ID '{adapterId}' is invalid."))
             .ToEitherAsync()
-        from portName in TryAsync(Task.Run(() =>
+        from adapterInfo in TryAsync(Task.Run(() =>
         {
             using var searcher = new ManagementObjectSearcher(
                 new ManagementScope(Scope),
@@ -200,7 +198,7 @@ public sealed partial class HyperVOvsPortManager(
                 DisposeAll(results);
             }
         })).ToEither(e => Error.New($"Could not get data for the Hyper-V network adapter '{adapterId}'.", e))
-        select portName;
+        select adapterInfo;
 
     private EitherAsync<Error, Unit> WaitForJob(string jobPath) =>
         AffMaybe<Unit>(async () =>

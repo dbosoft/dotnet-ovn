@@ -11,20 +11,30 @@ public interface IHyperVOvsPortManager : IDisposable
     /// <summary>
     /// Returns the OVS port name which is assigned to the Hyper-V
     /// network adapter with the given <paramref name="adapterId"/>.
+    /// Returns <see cref="OptionNone"/> if the adapter does not exist.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// This method might sometimes return <see cref="OptionNone"/>
+    /// even if the adapter exists. This happens immediately after
+    /// the adapter has been created in Hyper-V. The adapter exists
+    /// but Hyper-V does not return the required adapter information
+    /// yet.
+    /// </para>
+    /// <para>
     /// Consider using <see cref="GetConfiguredPortName"/> if you want
     /// to check that a port name has been explicitly configured with
     /// <see cref="SetPortName"/>.
+    /// </para>
     /// </remarks>
-    EitherAsync<Error, string> GetPortName(
+    EitherAsync<Error, Option<string>> GetPortName(
         string adapterId);
 
     /// <summary>
     /// Returns the OVS port name which is assigned to the Hyper-V network
     /// adapter with the given <paramref name="adapterId"/>. This method
     /// returns <see cref="OptionNone"/> if the port name has not been
-    /// explicitly configured.
+    /// explicitly configured or the adapter does not exist.
     /// </summary>
     /// <remarks>
     /// Hyper-V populates the corresponding field with a default value.
