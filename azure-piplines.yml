@@ -15,9 +15,13 @@ steps:
   fetchDepth: 0
   clean: true
 
-- task: UseGitVersion@5
+- task: gitversion/setup@3.1.11
+  displayName: Install GitVersion
   inputs:
-    versionSpec: '5.11.*'
+    versionSpec: '5.11.x'
+      
+- task: gitversion/execute@3.1.11
+  displayName: Execute GitVersion
 
 - task: DotNetCoreCLI@2
   displayName: dotnet build
