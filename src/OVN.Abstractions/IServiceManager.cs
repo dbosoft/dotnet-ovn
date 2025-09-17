@@ -8,7 +8,14 @@ public interface IServiceManager
     EitherAsync<Error, bool> ServiceExists();
     
     EitherAsync<Error, string> GetServiceCommand();
-    
+
+    /// <summary>
+    /// Creates a new service with the given settings.
+    /// </summary>
+    /// <remarks>
+    /// The service is not started automatically. Use
+    /// <see cref="EnsureServiceStarted"/> to start it.
+    /// </remarks>
     EitherAsync<Error, Unit> CreateService(
         string displayName,
         string command,
@@ -21,6 +28,12 @@ public interface IServiceManager
     
     EitherAsync<Error, Unit> EnsureServiceStopped(CancellationToken cancellationToken);
     
+    /// <summary>
+    /// Updates the executable path of the service.
+    /// </summary>
+    /// <remarks>
+    /// The service must be stopped and restarted separately.
+    /// </remarks>
     EitherAsync<Error, Unit> UpdateService(string command, CancellationToken cancellationToken);
 
     EitherAsync<Error, Unit> SetRecoveryOptions(

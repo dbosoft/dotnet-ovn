@@ -177,8 +177,6 @@ internal class WindowsServiceManager(
             key.SetValue("ImagePath", command);
             return unit;
         }).ToAff().Run().AsTask().Map(r => r.ToEither()).ToAsync()
-        from _2 in EnsureServiceStopped(cancellationToken)
-        from _3 in EnsureServiceStarted(cancellationToken)
         select unit;
 
     public EitherAsync<Error, Unit> SetRecoveryOptions(
