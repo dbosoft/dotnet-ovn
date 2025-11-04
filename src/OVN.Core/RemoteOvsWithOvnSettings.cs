@@ -1,24 +1,27 @@
+﻿using System.Net;
 using Dbosoft.OVN.Logging;
 using LanguageExt;
-using System.Net;
 
 namespace Dbosoft.OVN;
 
-/// <summary>
-/// Settings for full location installation of both OVS and OVN.
-/// </summary>
-public class LocalOVSWithOVNSettings : IOVNSettings, IOvsSettings
+public class RemoteOvsWithOvnSettings : IOVNSettings, IOvsSettings
 {
     /// <summary>
     /// Creates default settings.
     /// </summary>
-    public LocalOVSWithOVNSettings()
+    public RemoteOvsWithOvnSettings(
+        OvsDbConnection southDbConnection,
+        string chassisName,
+        IPAddress? encapIp,
+        Map<string, string> bridgeMappings = default)
     {
         NorthDBConnection = new OvsDbConnection(
             // ReSharper disable StringLiteralTypo
             new OvsFile("/var/run/ovn", "ovnnb_db.sock"));
-        SouthDBConnection = new OvsDbConnection(
-            new OvsFile("/var/run/ovn", "ovnsb_db.sock"));
+        SouthDBConnection = southDbConnection;
+        ChassisName = chassisName;
+        EncapId = encapIp;
+        BridgeMappings = bridgeMappings;
         // ReSharper restore StringLiteralTypo
     }
 
@@ -31,9 +34,9 @@ public class LocalOVSWithOVNSettings : IOVNSettings, IOvsSettings
     /// <inheritdoc cref="IOvsSettings.Logging" />
     public OvsLoggingSettings Logging { get; set; } = new();
 
-    public string ChassisName => "local";
+    public string ChassisName { get; }
 
-    public IPAddress? EncapId => null;
+    public IPAddress? EncapId { get; }
 
-    public Map<string, string> BridgeMappings => default;
+    public Map<string, string> BridgeMappings { get; }
 }
