@@ -1,4 +1,6 @@
+using System.Net;
 using Dbosoft.OVN.Logging;
+using LanguageExt;
 
 namespace Dbosoft.OVN;
 
@@ -16,6 +18,12 @@ public interface IOVNSettings
     /// Connection to Southbound DB.
     /// </summary>
     public OvsDbConnection SouthDBConnection { get; }
+
+    public string ChassisName { get; }
+
+    public IPAddress? EncapId { get; }
+
+    Map<string, string> BridgeMappings { get; }
 
     /// <summary>
     /// The settings for the logging.

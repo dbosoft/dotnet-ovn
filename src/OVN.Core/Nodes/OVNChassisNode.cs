@@ -55,7 +55,11 @@ public class OVNChassisNode : DemonNodeBase
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
         var ovsControl = new OVSControlTool(_systemEnvironment, LocalOVSConnection);
-        return ovsControl.ConfigureOVN(_ovnSettings.SouthDBConnection, "local",
+        return ovsControl.ConfigureOVN(
+            _ovnSettings.SouthDBConnection,
+            _ovnSettings.ChassisName,
+            encapIp: _ovnSettings.EncapId,
+            bridgeMappings: _ovnSettings.BridgeMappings,
             cancellationToken: cts.Token);
     }
     

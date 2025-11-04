@@ -1,7 +1,11 @@
+using System.Data;
 using System.Net;
 using System.Text;
+using Dbosoft.OVN.Model;
 using LanguageExt;
 using LanguageExt.Common;
+
+using static LanguageExt.Prelude;
 
 namespace Dbosoft.OVN.OSCommands.OVS;
 
@@ -54,4 +58,23 @@ public class OVSControlTool : OVSTool
 
         return RunCommand(sb.ToString(), true, cancellationToken).Map(_ => Unit.Default);
     }
+
+    public EitherAsync<Error, OVSTableRecord> GetOVSTable(CancellationToken cancellationToken) =>
+        from optionalRecord in GetRecord<OVSTableRecord>("open", ".", cancellationToken: cancellationToken)
+        from ovsRecord in optionalRecord.ToEitherAsync(Error.New("The OVS configuration table does not exist."))
+        select ovsRecord;
+
+    public EitherAsync<Error, Unit> UpdateBridgeMapping(
+        string bridgeMappings,
+        CancellationToken cancellationToken) =>
+        from ovsRecord in GetOVSTable(cancellationToken)
+        let externalIds = ovsRecord.ExternalIds
+            .Remove("ovn-bridge-mappings")
+            .Add("ovn-bridge-mappings", bridgeMappings)
+        from _ in UpdateRecord("open", ".",
+            Map<string, IOVSField>(),
+            Map<string, IOVSField>(("external_ids", OVSMap<string>.New(externalIds))),
+            Seq<string>(),
+            cancellationToken)
+        select Unit.Default;
 }

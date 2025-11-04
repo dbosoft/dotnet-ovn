@@ -12,16 +12,6 @@ public record ChassisGroup : OVSTableRecord, IOVSEntityWithName
         };
     
     public string? Name => GetValue<string>("name");
+
     public Seq<Guid>? Chassis => GetSet<Guid>("ha_chassis");
-}
-
-public record Chassis : OVSTableRecord
-{
-    public new static readonly IDictionary<string, OVSFieldMetadata>
-        Columns = new Dictionary<string, OVSFieldMetadata>(OVSTableRecord.Columns)
-        {
-            { "chassis_name", OVSValue<string>.Metadata() },
-        };
-    
-
 }
