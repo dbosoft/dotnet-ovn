@@ -67,7 +67,7 @@ public static class NetworkPlanParser
             IDictionary<object, object> routerValues)
         {
             if (!routerValues.ContainsKey("name") || routerValues["name"] is not string routerName)
-                throw new InvalidDataException("switch name is required.");
+                throw new InvalidDataException("router name is required.");
 
             networkPlan = networkPlan.AddRouter(routerName);
 
