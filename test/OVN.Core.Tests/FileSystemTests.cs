@@ -12,13 +12,13 @@ public class FileSystemTests
     
     [InlineData("var", "test.sock", false, true, "WINDOWS", "C:/ProgramData/openvswitch/var/test.sock" )]
     [InlineData("var/ovstest", "test.sock", false, true, "WINDOWS", "C:/ProgramData/openvswitch/var/ovstest/test.sock" )]
-    [InlineData("usr/bin", "test", true, true, "WINDOWS", "c:/openvswitch/usr/bin/test.exe" )]
-    [InlineData("usr/sbin", "test", true, true, "WINDOWS", "c:/openvswitch/usr/sbin/test.exe" )]
+    [InlineData("usr/bin", "test", true, true, "WINDOWS", "C:/openvswitch/usr/bin/test.exe" )]
+    [InlineData("usr/sbin", "test", true, true, "WINDOWS", "C:/openvswitch/usr/sbin/test.exe" )]
     
-    [InlineData("var", "test.sock", false, false, "WINDOWS", "C:\\ProgramData\\openvswitch\\var\\test.sock" )]
-    [InlineData("var/ovstest", "test.sock", false, false, "WINDOWS", "C:\\ProgramData\\openvswitch\\var\\ovstest\\test.sock" )]
-    [InlineData("usr/bin", "test", true, false, "WINDOWS", "c:\\openvswitch\\usr\\bin\\test.exe" )]
-    [InlineData("usr/sbin", "test", true, false, "WINDOWS", "c:\\openvswitch\\usr\\sbin\\test.exe" )]
+    [InlineData("var", "test.sock", false, false, "WINDOWS", @"C:\ProgramData\openvswitch\var\test.sock" )]
+    [InlineData("var/ovstest", "test.sock", false, false, "WINDOWS", @"C:\ProgramData\openvswitch\var\ovstest\test.sock" )]
+    [InlineData("usr/bin", "test", true, false, "WINDOWS", @"C:\openvswitch\usr\bin\test.exe" )]
+    [InlineData("usr/sbin", "test", true, false, "WINDOWS", @"C:\openvswitch\usr\sbin\test.exe" )]
 
     
     public void OvsFile_is_resolved_to_expected_path(string path, string name, bool isExe, bool platformNeutral, string platform, string expectedPath)

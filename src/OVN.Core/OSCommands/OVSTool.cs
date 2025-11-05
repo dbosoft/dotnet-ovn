@@ -114,7 +114,7 @@ public class OVSTool: IOVSDBTool
             sb.Append($" -- clear {tableName} {rowId} {ColumnsListToCommandString(toClear).Replace(',', ' ')}");
 
 
-        return RunCommand(sb.ToString(), false, cancellationToken).Map(_ => Unit.Default);
+        return RunCommandWithResponse(sb.ToString(), cancellationToken).Map(_ => Unit.Default);
     }
 
     /// <inheritdoc />
@@ -148,7 +148,7 @@ public class OVSTool: IOVSDBTool
         var sb = new StringBuilder();
         sb.Append($"destroy {tableName} {rowId}");
 
-        return RunCommand(sb.ToString(), false, cancellationToken)
+        return RunCommandWithResponse(sb.ToString(), cancellationToken)
             .Map(_ => Unit.Default);
     }
 
@@ -163,7 +163,7 @@ public class OVSTool: IOVSDBTool
         var sb = new StringBuilder();
         sb.Append($"remove {tableName} {rowId} {column} {value}");
 
-        return RunCommand(sb.ToString(),false, cancellationToken)
+        return RunCommandWithResponse(sb.ToString(), cancellationToken)
             .Map(_ => Unit.Default);
     }
 

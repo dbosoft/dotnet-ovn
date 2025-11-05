@@ -308,6 +308,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                             "Demon {ovsFile}:{controlFile}: graceful stop failed - process will be killed",
                             _exeFile.Name, _controlFile.Name);
                         _ovsProcess?.Kill();
+                        // TODO Wait for exit again? Kill is actually async
                     }
 
                     _ovsProcess?.Dispose();

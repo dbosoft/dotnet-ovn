@@ -33,7 +33,17 @@ public interface IProcess : IDisposable
     /// See <see cref="Process.HasExited"/>
     /// </summary>
     bool HasExited { get; }
-    
+
+    /// <summary>
+    /// See <see cref="Process.StandardOutput"/>
+    /// </summary>
+    StreamReader StandardOutput { get; }
+
+    /// <summary>
+    /// See <see cref="Process.StandardError"/>
+    /// </summary>
+    StreamReader StandardError { get; }
+
     /// <summary>
     /// See <see cref="Process.OutputDataReceived"/>
     /// </summary>

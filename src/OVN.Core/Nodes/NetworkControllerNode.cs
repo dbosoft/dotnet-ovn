@@ -31,17 +31,13 @@ public class NetworkControllerNode : DemonNodeBase
 
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
-        yield return _northDBProcess = new OVSDBProcess(_systemEnvironment,
-            new OVSDbSettings(
-                _ovnSettings.NorthDBConnection,
-                new OvsFile("etc/ovn", "ovn_nb.db"),
-                // ReSharper disable StringLiteralTypo
-                new OvsFile("usr/share/ovn", "ovn-nb.ovsschema"),
-                // ReSharper restore StringLiteralTypo
-                _ctlFile,
-                new OvsFile("var/log/ovn", "ovn-nb.log"),
-                _ovnSettings.Logging,
-                false),
+        yield return _northDBProcess = new OVSDBProcess(
+            _systemEnvironment,
+            OVSDBSettingsBuilder.ForNorthbound()
+                .WithDbConnection(_ovnSettings.NorthDBConnection)
+                .WithLogging(_ovnSettings.Logging)
+                .AllowAttach(false)
+                .Build(),
             _loggerFactory.CreateLogger<OVSDBProcess>());
 
         yield return new NorthDProcess(_systemEnvironment,

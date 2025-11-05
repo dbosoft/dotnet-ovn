@@ -60,7 +60,7 @@ public class SystemEnvironment : ISystemEnvironment
         yield return OSPlatform.FreeBSD;
     }
 
-    private static OSPlatform GetPlatform()
+    protected static OSPlatform GetPlatform()
     {
         return EnumeratePlatforms().First(RuntimeInformation.IsOSPlatform);
     }

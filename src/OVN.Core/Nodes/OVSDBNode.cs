@@ -9,8 +9,7 @@ namespace Dbosoft.OVN.Nodes;
 
 public class OVSDbNode : DemonNodeBase
 {
-    private static readonly OvsDbConnection LocalOVSConnection
-        = new(new OvsFile("/var/run/openvswitch", "db.sock"));
+    private static readonly OvsDbConnection LocalOVSConnection = LocalConnections.Switch;
 
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
@@ -35,23 +34,17 @@ public class OVSDbNode : DemonNodeBase
 
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
-        _ovsdbProcess = new OVSDBProcess(_systemEnvironment,
-            new OVSDbSettings(
-                LocalOVSConnection,
-                new OvsFile("etc/openvswitch", "ovs.db"),
-                // ReSharper disable StringLiteralTypo
-                new OvsFile("usr/share/openvswitch", "vswitch.ovsschema"),
-                // ReSharper restore StringLiteralTypo
-                new OvsFile("var/run/openvswitch", "ovs-db.ctl"),
-                new OvsFile("var/log/openvswitch", "ovs-db.log"),
-                _ovsSettings.Logging,
-                true),
+        _ovsdbProcess = new OVSDBProcess(
+            _systemEnvironment,
+            OVSDBSettingsBuilder.ForSwitch()
+                .WithDbConnection(LocalOVSConnection)
+                .WithLogging(_ovsSettings.Logging)
+                .AllowAttach(true)
+                .Build(),
             _loggerFactory.CreateLogger<OVSDBProcess>());
 
         yield return _ovsdbProcess;
-        
     }
-
 
     protected override EitherAsync<Error, Unit> OnProcessStarted(DemonProcessBase process,
         CancellationToken cancellationToken)

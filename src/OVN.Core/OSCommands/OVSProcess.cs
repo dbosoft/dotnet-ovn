@@ -78,8 +78,11 @@ public class OVSProcess : IDisposable
         return Prelude.Try(() =>
         {
             _startedProcess.Start();
-            _startedProcess.BeginOutputReadLine();
-            _startedProcess.BeginErrorReadLine();
+            if (_messageHandlers.Count > 0)
+            {
+                _startedProcess.BeginOutputReadLine();
+                _startedProcess.BeginErrorReadLine();
+            }
             return this;
         });
     }
@@ -156,19 +159,23 @@ public class OVSProcess : IDisposable
             if (_startedProcess == null)
                 throw new IOException("Process not started");
 
-            if(!_canBeRedirected)
+            if (!_canBeRedirected)
                 throw new IOException("Process was attached and output cannot be redirected.");
-            
+
+
+            var outputs = await Task.WhenAll(_startedProcess.StandardOutput.ReadToEndAsync(),
+                _startedProcess.StandardError.ReadToEndAsync());
+            // TODO Fix the output streaming by using streams
             var outputBuilder = new StringBuilder();
             _startedProcess.OutputDataReceived += (_, o) =>
             {
                 if (o.Data != null)
-                    outputBuilder.Append(o.Data);
+                    outputBuilder.AppendLine(o.Data);
             };
             _startedProcess.ErrorDataReceived += (_, o) =>
             {
                 if(o.Data!=null)
-                    outputBuilder.Append(o.Data);
+                    outputBuilder.AppendLine(o.Data);
             };
 
             // ReSharper disable once MethodSupportsCancellation
