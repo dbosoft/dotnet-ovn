@@ -36,7 +36,7 @@ public class OVSDbNode : DemonNodeBase
     {
         _ovsdbProcess = new OVSDBProcess(
             _systemEnvironment,
-            OVSDBSettingsBuilder.ForSwitch()
+            OVSDbSettingsBuilder.ForSwitch()
                 .WithDbConnection(LocalOVSConnection)
                 .WithLogging(_ovsSettings.Logging)
                 .AllowAttach(true)

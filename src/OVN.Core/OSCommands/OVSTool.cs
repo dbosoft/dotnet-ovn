@@ -77,16 +77,16 @@ public class OVSTool: IOVSDBTool
         OVSParentReference? reference = default,
         CancellationToken cancellationToken = default)
     {
+        var id = _systemEnvironment.GuidGenerator.GenerateGuid().ToString("D");
+
         var sb = new StringBuilder();
-
-        if (reference != null)
-            sb.Append(" -- --id=@ref ");
-
+        
+        sb.Append($"-- --id={id} ");
         sb.Append($"create {tableName} ");
         sb.Append(ColumnsValuesToCommandString(columns, true));
 
         if (reference.HasValue)
-            sb.Append($" -- add {reference.Value.TableName} {reference.Value.RowId} {reference.Value.RefColumn} @ref");
+            sb.Append($" -- add {reference.Value.TableName} {reference.Value.RowId} {reference.Value.RefColumn} {id}");
 
         return RunCommandWithResponse(sb.ToString(), cancellationToken);
     }

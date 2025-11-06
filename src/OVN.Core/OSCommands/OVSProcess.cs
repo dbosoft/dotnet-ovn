@@ -162,55 +162,30 @@ public class OVSProcess : IDisposable
             if (!_canBeRedirected)
                 throw new IOException("Process was attached and output cannot be redirected.");
 
+            try
+            {
+                // Read both outputs in parallel. This is necessary to avoid deadlocks.
+                var outputs = await Task.WhenAll(
+                    _startedProcess.StandardOutput.ReadToEndAsync(cancellationToken),
+                    _startedProcess.StandardError.ReadToEndAsync(cancellationToken));
 
-            var outputs = await Task.WhenAll(_startedProcess.StandardOutput.ReadToEndAsync(),
-                _startedProcess.StandardError.ReadToEndAsync());
-            // TODO Fix the output streaming by using streams
-            var outputBuilder = new StringBuilder();
-            _startedProcess.OutputDataReceived += (_, o) =>
-            {
-                if (o.Data != null)
-                    outputBuilder.AppendLine(o.Data);
-            };
-            _startedProcess.ErrorDataReceived += (_, o) =>
-            {
-                if(o.Data!=null)
-                    outputBuilder.AppendLine(o.Data);
-            };
+                await _startedProcess.WaitForExit(cancellationToken);
 
-            // ReSharper disable once MethodSupportsCancellation
-            var waitForExit = _startedProcess.WaitForExit();
- 
-            await Task.WhenAny(WaitForCancellation(cancellationToken), waitForExit)
-                .ConfigureAwait(false);
-            
-            if (!_startedProcess.HasExited)
-            {
-               _startedProcess.Kill();
-                throw new TimeoutException(
-                    $"Process {_exeFile.Name} has not exited before timeout.");
+                if (_startedProcess.ExitCode == 0)
+                {
+                    // Only return the standard output on success as the output is processed further.
+                    return outputs[0].TrimEnd();
+                }
+                
+                var output = string.Join("\n", outputs.Where(s => !string.IsNullOrWhiteSpace(s)));
+                throw new IOException($"Process {_exeFile.Name} failed with code {_startedProcess.ExitCode}. Output:\n{output}");
             }
-
-            var output = outputBuilder.ToString();
-
-            if (_startedProcess.ExitCode != 0)
-                throw new IOException(
-                    $"Process {_exeFile.Name} failed with code {_startedProcess.ExitCode}. \nOutput: {output}");
-
-            return output.TrimEnd().TrimEnd('\n', '\r');
+            catch (OperationCanceledException)
+            {
+                _startedProcess.Kill();
+                throw new TimeoutException($"Process {_exeFile.Name} has not exited before timeout.");
+            }
         });
-    }
-
-    private async Task WaitForCancellation(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            //
-        }
     }
 
     public void AddMessageHandler(Action<string?> messageHandler)

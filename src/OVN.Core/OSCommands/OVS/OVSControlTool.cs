@@ -31,7 +31,7 @@ public class OVSControlTool : OVSTool
 
     public EitherAsync<Error, Unit> InitDb(CancellationToken cancellationToken = default)
     {
-        return RunCommand(" --no-wait init", true, cancellationToken).Map(_ => Unit.Default);
+        return RunCommand("--no-wait init", true, cancellationToken).Map(_ => Unit.Default);
     }
 
     public EitherAsync<Error, Unit> ConfigureOVN(
@@ -39,9 +39,11 @@ public class OVSControlTool : OVSTool
         string chassisName,
         IPAddress? encapIp = null,
         string encapType = "geneve",
+        bool noWait = false,
         CancellationToken cancellationToken = default)
     {
         var sb = new StringBuilder();
+        if (noWait) sb.Append(" --no-wait ");
         sb.Append(
             $"-- set open . external-ids:ovn-remote=\"{sbDBConnection.GetCommandString(_systemEnvironment.FileSystem, false)}\" ");
         sb.Append($"-- set open . external-ids:ovn-encap-type={encapType} ");

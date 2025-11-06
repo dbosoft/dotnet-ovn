@@ -23,69 +23,80 @@ public abstract class OvsDbTestBase : IAsyncLifetime
     protected readonly ISystemEnvironment SystemEnvironment;
 
     private OVSDBProcess _ovsDbProcess = null!;
-    protected readonly OvsDbConnection DbConnection = LocalConnections.Northbound;
+    private readonly OVSDbSettings _dbSettings;
 
-    protected OvsDbTestBase(ITestOutputHelper testOutputHelper)
+    protected OvsDbTestBase(
+        ITestOutputHelper testOutputHelper,
+        OVSDbSettings dbSettings)
     {
         _loggerFactory = LoggerFactory.Create(builder => builder
             .AddProvider(new XUnitLoggerProvider(testOutputHelper, new XUnitLoggerOptions()))
-            .SetMinimumLevel(LogLevel.Trace));
+            .SetMinimumLevel(LogLevel.Debug));
 
+        
         SystemEnvironment = new TestSystemEnvironment(_loggerFactory, _dataDirectoryPath);
+        this._dbSettings = dbSettings;
     }
 
     public virtual async Task InitializeAsync()
     {
-        // TODO Improve
         if (Directory.Exists(_dataDirectoryPath))
-            throw new InvalidOperationException("The directory already exists!");
+            // Should not happen as we use a random directory name
+            Assert.Fail($"The data directory '{_dataDirectoryPath}' already exists.");
+
+        var serverExecutable = SystemEnvironment.FileSystem.ResolveOvsFilePath(OVSCommands.DBServer);
+        if(!File.Exists(serverExecutable))
+            Assert.Fail("OVN is not installed.");
 
         Directory.CreateDirectory(_dataDirectoryPath);
 
         _ovsDbProcess = new OVSDBProcess(
             SystemEnvironment,
-            OVSDBSettingsBuilder.ForNorthbound()
-                .WithDbConnection(DbConnection)
-                .Build(),
+            _dbSettings,
             _loggerFactory.CreateLogger<OVSDBProcess>());
 
-        (await InitializeDatabase()).ThrowIfLeft();
+        (await StartDatabase()).ThrowIfLeft();
     }
 
-    private EitherAsync<Error, Unit> InitializeDatabase() =>
+    private EitherAsync<Error, Unit> StartDatabase() =>
         from _1 in _ovsDbProcess.Start()
-        from _2 in DbConnection.WaitForDbSocket(SystemEnvironment, CancellationToken.None).ToAsync()
+        from _2 in _dbSettings.Connection.WaitForDbSocket(SystemEnvironment, CancellationToken.None).ToAsync()
+        from _3 in InitializeDatabase()
         select unit;
 
-    protected async Task<string> DumpDatabase(string databaseName)
-    {
-        var ovsDbClientTool = new OVSDbClientTool(SystemEnvironment, DbConnection);
-        var result = (await ovsDbClientTool.DumpDatabase(databaseName)).ThrowIfLeft();
-        var json = $"[\n{result.Replace("}\n", "},\n").Replace("}\r\n", "},\r\n")}\n]";
-        return json;
-    }
+    protected abstract EitherAsync<Error, Unit> InitializeDatabase();
 
     protected async Task VerifyDatabase(string databaseName)
     {
-        var json = await DumpDatabase(databaseName);
-        await VerifyJson(json);
+        var ovsDbClientTool = new OVSDbClientTool(SystemEnvironment, _dbSettings.Connection);
+        var dump = (await ovsDbClientTool.PrintDatabase(databaseName)).ThrowIfLeft();
+        var settings = new VerifySettings();
+        settings.ScrubInlineGuids();
+        settings.AddScrubber(sb => sb.Replace(_dataDirectoryPath.Replace(@"\", @"\\"), "{OvsDataDirectory}"));
+        await Verify(dump, settings);
     }
 
     public async Task DisposeAsync()
     {
         (await _ovsDbProcess.Stop(true, CancellationToken.None)).ThrowIfLeft();
-    }
-
-    private static string PrepareTempDirectory()
-    {
-        string path;
-        do
+        
+        var attempts = 0;
+        while(true)
         {
-            path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        } while (Directory.Exists(path));
+            try
+            {
+                Directory.Delete(_dataDirectoryPath, true);
+                return;
+            }
+            catch
+            {
+                if (attempts > 10)
+                    throw;
 
-        Directory.CreateDirectory(path);
-
-        return path;
+                attempts++;
+                await Task.Delay(50);
+            }
+        }
+        
     }
 }

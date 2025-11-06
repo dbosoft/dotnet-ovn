@@ -27,7 +27,7 @@ public class OVNDatabaseNode : DemonNodeBase
     {
         yield return new OVSDBProcess(
             _systemEnvironment,
-            OVSDBSettingsBuilder.ForSouthbound()
+            OVSDbSettingsBuilder.ForSouthbound()
                 .WithDbConnection(_ovnSettings.SouthDBConnection)
                 .WithLogging(_ovnSettings.Logging)
                 .AllowAttach(false)

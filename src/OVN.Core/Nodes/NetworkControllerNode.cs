@@ -33,7 +33,7 @@ public class NetworkControllerNode : DemonNodeBase
     {
         yield return _northDBProcess = new OVSDBProcess(
             _systemEnvironment,
-            OVSDBSettingsBuilder.ForNorthbound()
+            OVSDbSettingsBuilder.ForNorthbound()
                 .WithDbConnection(_ovnSettings.NorthDBConnection)
                 .WithLogging(_ovnSettings.Logging)
                 .AllowAttach(false)

@@ -52,6 +52,9 @@ public class SystemEnvironment : ISystemEnvironment
     /// <inheritdoc />
     public virtual IFileSystem FileSystem => new DefaultFileSystem(GetPlatform());
 
+    /// <inheritdoc />
+    public virtual IGuidGenerator GuidGenerator { get; } = new DefaultGuidGenerator();
+
     private static IEnumerable<OSPlatform> EnumeratePlatforms()
     {
         yield return OSPlatform.Windows;

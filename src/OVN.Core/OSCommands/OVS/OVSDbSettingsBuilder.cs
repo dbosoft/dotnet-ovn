@@ -7,31 +7,31 @@ using Dbosoft.OVN.Logging;
 
 namespace Dbosoft.OVN.OSCommands.OVS;
 
-public abstract class OVSDBSettingsBuilder
+public abstract class OVSDbSettingsBuilder
 {
     protected OvsDbConnection? _dbConnection;
     protected OvsLoggingSettings _loggingSettings = new OvsLoggingSettings();
     protected bool _allowAttach;
 
-    public static OVSDBSettingsBuilder ForNorthbound() => new NorthboundDbSettingsBuilder();
+    public static OVSDbSettingsBuilder ForNorthbound() => new NorthboundDbSettingsBuilder();
 
-    public static OVSDBSettingsBuilder ForSouthbound() => new SouthboundDbSettingsBuilder();
+    public static OVSDbSettingsBuilder ForSouthbound() => new SouthboundDbSettingsBuilder();
 
-    public static OVSDBSettingsBuilder ForSwitch() => new SwitchDbSettingsBuilder();
+    public static OVSDbSettingsBuilder ForSwitch() => new SwitchDbSettingsBuilder();
 
-    public OVSDBSettingsBuilder WithDbConnection(OvsDbConnection dbConnection)
+    public OVSDbSettingsBuilder WithDbConnection(OvsDbConnection dbConnection)
     {
         _dbConnection = dbConnection;
         return this;
     }
 
-    public OVSDBSettingsBuilder AllowAttach(bool allow)
+    public OVSDbSettingsBuilder AllowAttach(bool allow)
     {
         _allowAttach = allow;
         return this;
     }
 
-    public OVSDBSettingsBuilder WithLogging(OvsLoggingSettings loggingSettings)
+    public OVSDbSettingsBuilder WithLogging(OvsLoggingSettings loggingSettings)
     {
         _loggingSettings = loggingSettings;
         return this;
@@ -39,7 +39,7 @@ public abstract class OVSDBSettingsBuilder
 
     public abstract OVSDbSettings Build();
 
-    private class NorthboundDbSettingsBuilder : OVSDBSettingsBuilder
+    private class NorthboundDbSettingsBuilder : OVSDbSettingsBuilder
     {
         public override OVSDbSettings Build()
         {
@@ -54,7 +54,7 @@ public abstract class OVSDBSettingsBuilder
         }
     }
 
-    private class SouthboundDbSettingsBuilder : OVSDBSettingsBuilder
+    private class SouthboundDbSettingsBuilder : OVSDbSettingsBuilder
     {
         public override OVSDbSettings Build()
         {
@@ -69,7 +69,7 @@ public abstract class OVSDBSettingsBuilder
         }
     }
 
-    private class SwitchDbSettingsBuilder : OVSDBSettingsBuilder
+    private class SwitchDbSettingsBuilder : OVSDbSettingsBuilder
     {
         public override OVSDbSettings Build()
         {

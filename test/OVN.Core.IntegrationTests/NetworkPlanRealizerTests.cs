@@ -1,20 +1,12 @@
-﻿using Dbosoft.OVN.OSCommands;
-using Dbosoft.OVN.OSCommands.OVN;
-using Dbosoft.OVN.OSCommands.OVS;
+﻿using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 namespace Dbosoft.OVN.Core.IntegrationTests;
 
-public class ProjectPlanRealizerTests(
+public class NetworkPlanRealizerTests(
     ITestOutputHelper testOutputHelper)
-    : OvsDbTestBase(testOutputHelper)
+    : OvnControlToolTestBase(testOutputHelper)
 {
     [Fact]
     public async Task ApplyNetworkPlan_NewPlan_IsSuccessful()
@@ -32,20 +24,9 @@ public class ProjectPlanRealizerTests(
                 "02:00:00:00:00:02",
                 IPAddress.Parse("192.0.2.2"));
 
-        var controlTool = new OVNControlTool(SystemEnvironment, DbConnection);
-        (await controlTool.InitDb()).ThrowIfLeft();
+        await ApplyNetworkPlan(networkPlan);
 
-        var ovsDbClientTool = new OVSDbClientTool(SystemEnvironment, DbConnection);
-        var databases = (await ovsDbClientTool.ListDatabases()).ThrowIfLeft();
-
-        var s = DbConnection.GetCommandString(SystemEnvironment.FileSystem, false);
-
-        var realizer = new NetworkPlanRealizer(controlTool, NullLogger.Instance);
-
-        (await realizer.ApplyNetworkPlan(networkPlan)).ThrowIfLeft();
-
-        var content = await DumpDatabase("OVN_Northbound");
-        await VerifyJson(content);
+        await VerifyDatabase();
     }
 
     [Fact]
@@ -84,23 +65,10 @@ public class ProjectPlanRealizerTests(
         await VerifyDatabase();
     }
 
-    public override async Task InitializeAsync()
-    {
-        await base.InitializeAsync();
-        var controlTool = new OVNControlTool(SystemEnvironment, DbConnection);
-        (await controlTool.InitDb()).ThrowIfLeft();
-    }
-
     private async Task ApplyNetworkPlan(NetworkPlan networkPlan)
     {
-        var controlTool = new OVNControlTool(SystemEnvironment, DbConnection);
-        var realizer = new NetworkPlanRealizer(controlTool, NullLogger.Instance);
+        var realizer = new NetworkPlanRealizer(ControlTool, NullLogger.Instance);
 
         (await realizer.ApplyNetworkPlan(networkPlan)).ThrowIfLeft();
-    }
-
-    private async Task VerifyDatabase()
-    {
-        await VerifyDatabase("OVN_Northbound");
     }
 }

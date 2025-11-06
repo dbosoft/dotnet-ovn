@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using LanguageExt;
+﻿using LanguageExt;
 using LanguageExt.Common;
 
 namespace Dbosoft.OVN.OSCommands.OVS;
@@ -26,16 +20,10 @@ public class OVSDbClientTool : OVSTool
         _dbConnection = dbConnection;
     }
 
-    public EitherAsync<Error, string> ListDatabases(
-        CancellationToken cancellationToken = default) =>
-        RunCommandWithResponse(
-            $"list-dbs {_dbConnection.GetCommandString(_systemEnvironment.FileSystem, false)}",
-            cancellationToken);
-
-    public EitherAsync<Error, string> DumpDatabase(
+    public EitherAsync<Error, string> PrintDatabase(
         string databaseName,
         CancellationToken cancellationToken = default) =>
         RunCommandWithResponse(
-            $"dump --format=json {_dbConnection.GetCommandString(_systemEnvironment.FileSystem, false)} {databaseName}",
+            $"dump {_dbConnection.GetCommandString(_systemEnvironment.FileSystem, false)} {databaseName}",
             cancellationToken);
 }

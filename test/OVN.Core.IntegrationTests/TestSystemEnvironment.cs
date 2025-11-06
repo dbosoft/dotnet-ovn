@@ -13,4 +13,6 @@ public class TestSystemEnvironment(
     : SystemEnvironment(loggerFactory)
 {
     public override IFileSystem FileSystem => new TestFileSystem(GetPlatform(), dataDirectoryPath);
+
+    public override IGuidGenerator GuidGenerator { get; } = new CombGuidGenerator();
 }
