@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using LanguageExt;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit.Abstractions;
 
@@ -11,18 +12,7 @@ public class NetworkPlanRealizerTests(
     [Fact]
     public async Task ApplyNetworkPlan_NewPlan_IsSuccessful()
     {
-        var networkPlan = new NetworkPlan("test-project")
-            .AddSwitch("switch-1")
-            .AddNetworkPort(
-                "switch-1",
-                "switch-1-port-1",
-                "02:00:00:00:00:01",
-                IPAddress.Parse("192.0.2.1"))
-            .AddNetworkPort(
-                "switch-1",
-                "switch-1-port-2",
-                "02:00:00:00:00:02",
-                IPAddress.Parse("192.0.2.2"));
+        var networkPlan = CreateNetworkPlan();
 
         await ApplyNetworkPlan(networkPlan);
 
@@ -32,33 +22,48 @@ public class NetworkPlanRealizerTests(
     [Fact]
     public async Task ApplyNetworkPlan_UpdatedPlan_IsSuccessful()
     {
-        var initialPlan = new NetworkPlan("test-project")
-            .AddSwitch("switch-1")
-            .AddNetworkPort(
-                "switch-1",
-                "switch-1-port-1",
-                "02:00:00:00:00:01",
-                IPAddress.Parse("192.0.2.1"))
-            .AddNetworkPort(
-                "switch-1",
-                "switch-1-port-2",
-                "02:00:00:00:00:02",
-                IPAddress.Parse("192.0.2.2"));
-
-        await ApplyNetworkPlan(initialPlan);
+        await ApplyNetworkPlan(CreateNetworkPlan());
 
         var updatedPlan = new NetworkPlan("test-project")
+            .AddRouter("router-1")
+            .AddRouterPort(
+                "provider-switch-1",
+                "router-1",
+                "02:00:00:00:00:01",
+                IPAddress.Parse("192.0.2.101"),
+                IPNetwork2.Parse("192.0.2.0/24"),
+                chassisGroup: "test")
+            .AddRouterPort(
+                "switch-2",
+                "router-1",
+                "02:00:00:00:00:02",
+                IPAddress.Parse("198.51.100.1"),
+                IPNetwork2.Parse("198.51.100.0/24"))
+            .AddNATRule(
+                "router-1",
+                "snat",
+                IPAddress.Parse("192.0.2.100"),
+                "02:00:00:00:00:03",
+                "198.51.100.0/24")
+            .AddSwitch("provider-switch-1")
+            .AddExternalNetworkPort("provider-switch-1", "extern", 5)
             .AddSwitch("switch-2")
             .AddNetworkPort(
                 "switch-2",
                 "switch-2-port-1",
-                "02:00:00:00:00:01",
-                IPAddress.Parse("192.0.2.1"))
+                "02:01:00:00:00:01",
+                IPAddress.Parse("198.51.100.100"),
+                dhcpOptionsV4: "dhcp-1")
             .AddNetworkPort(
                 "switch-2",
                 "switch-2-port-2",
-                "02:00:00:00:00:02",
-                IPAddress.Parse("192.0.2.2"));
+                "02:01:00:00:00:02",
+                IPAddress.Parse("198.51.100.101"),
+                dhcpOptionsV4: "dhcp-1")
+            .AddDHCPOptions(
+                "dhcp-1",
+                IPNetwork2.Parse("198.51.100.0/24"),
+                Prelude.Empty);
 
         await ApplyNetworkPlan(updatedPlan);
 
@@ -71,4 +76,46 @@ public class NetworkPlanRealizerTests(
 
         (await realizer.ApplyNetworkPlan(networkPlan)).ThrowIfLeft();
     }
+
+    private NetworkPlan CreateNetworkPlan() =>
+        new NetworkPlan("test-project")
+            .AddRouter("router-1")
+            .AddRouterPort(
+                "provider-switch-1",
+                "router-1",
+                "02:00:00:00:00:01",
+                IPAddress.Parse("192.0.2.100"),
+                IPNetwork2.Parse("192.0.2.0/24"),
+                chassisGroup: "local")
+            .AddRouterPort(
+                "switch-1",
+                "router-1",
+                "02:00:00:00:00:02",
+                IPAddress.Parse("198.51.100.1"),
+                IPNetwork2.Parse("198.51.100.0/24"))
+            .AddNATRule(
+                "router-1",
+                "snat",
+                IPAddress.Parse("192.0.2.100"),
+                "02:00:00:00:00:03",
+                "198.51.100.0/24")
+            .AddSwitch("provider-switch-1")
+                .AddExternalNetworkPort("provider-switch-1", "extern", 5)
+                .AddSwitch("switch-1")
+                .AddNetworkPort(
+                "switch-1",
+                "switch-1-port-1",
+                "02:01:00:00:00:01",
+            IPAddress.Parse("198.51.100.100"),
+            dhcpOptionsV4: "dhcp-1")
+            .AddNetworkPort(
+                "switch-1",
+                "switch-1-port-2",
+                "02:01:00:00:00:02",
+            IPAddress.Parse("198.51.100.101"),
+            dhcpOptionsV4: "dhcp-1")
+            .AddDHCPOptions(
+                "dhcp-1",
+            IPNetwork2.Parse("198.51.100.0/24"),
+            Prelude.Empty);
 }

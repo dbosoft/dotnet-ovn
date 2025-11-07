@@ -71,32 +71,13 @@ public abstract class OvsDbTestBase : IAsyncLifetime
         var ovsDbClientTool = new OVSDbClientTool(SystemEnvironment, _dbSettings.Connection);
         var dump = (await ovsDbClientTool.PrintDatabase(databaseName)).ThrowIfLeft();
         var settings = new VerifySettings();
-        settings.ScrubInlineGuids();
-        settings.AddScrubber(sb => sb.Replace(_dataDirectoryPath.Replace(@"\", @"\\"), "{OvsDataDirectory}"));
+        settings.AddScrubber(FixedLengthGuidScrubber.ReplaceGuids);
+        settings.AddScrubber(sb => { sb.Replace(_dataDirectoryPath.Replace(@"\", @"\\"), "{OvsDataDirectory}"); });
         await Verify(dump, settings);
     }
 
     public async Task DisposeAsync()
     {
         (await _ovsDbProcess.Stop(true, CancellationToken.None)).ThrowIfLeft();
-        
-        var attempts = 0;
-        while(true)
-        {
-            try
-            {
-                Directory.Delete(_dataDirectoryPath, true);
-                return;
-            }
-            catch
-            {
-                if (attempts > 10)
-                    throw;
-
-                attempts++;
-                await Task.Delay(50);
-            }
-        }
-        
     }
 }

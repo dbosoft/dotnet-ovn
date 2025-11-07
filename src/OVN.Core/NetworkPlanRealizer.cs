@@ -122,7 +122,7 @@ public class NetworkPlanRealizer
             var found = planned.Filter(p => p.Name != null && realized.ContainsKey(p.Name));
             var notFound = planned - found;
 
-            return notFound.Values.OrderBy(v => v.Name).ToSeq().Map(p =>
+            return notFound.Values.OrderBy(v => v.Name).Map(p =>
             {
                 OVSParentReference? reference = null;
                 if (p is IHasParentReference hasReference) reference = hasReference.GetParentReference();
