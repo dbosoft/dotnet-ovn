@@ -338,7 +338,10 @@ public class NetworkPlanRealizer
             from switchPorts in RemoveEntitiesNotPlanned(OVNTableNames.LogicalSwitchPort, existingSwitchPorts,
                 networkPlan.PlannedSwitchPorts)
             from existingRouterPorts in FindRecordsOfNetworkPlan<LogicalRouterPort>(OVNTableNames.LogicalRouterPort,
-                LogicalRouterPort.Columns)
+                LogicalRouterPort.Columns).Map(m => m.Values.ToSeq()
+                    .AddParentReferences(routers.Values.ToSeq())
+                    .Map(p => (p.Id, p))
+                    .ToHashMap())
             from routerPorts in RemoveEntitiesNotPlanned(OVNTableNames.LogicalRouterPort, existingRouterPorts,
                 networkPlan.PlannedRouterPorts)
             from existingStaticRoutes in FindRecordsOfNetworkPlan<LogicalRouterStaticRoute>(
