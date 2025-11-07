@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Dbosoft.OVN.OSCommands;
 using Dbosoft.OVN.TestTools;
+using LanguageExt;
 using Moq;
 
 namespace Dbosoft.OVN.Core.Tests.OSCommands;
@@ -53,22 +54,25 @@ public class OvsProcessTests
     }
 
     [Fact]
-    public void Process_will_be_killed()
+    public async Task Process_will_be_killed()
     {
         var processStartInfo = new ProcessStartInfo();
         var (mockEnv, mockProcess) = OvsMocks.SetupEnvForOvsToolWithProcess(processStartInfo);
         mockProcess.Setup(x=>x.Kill()).Verifiable();
-
+        mockProcess.Setup(x => x.WaitForExit(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
 
         using var ovsProcess = new OVSProcess(
             mockEnv.Object,
             new OvsFile("bin", "test", true),
             "testarg1 testarg2");
         // ReSharper disable once AccessToDisposedClosure
-        ovsProcess.Start().Bind(_ => ovsProcess.Kill).Match(
-            _ => { mockProcess.Verify(); },
-            f => throw f
-        );
+        await ovsProcess.Start().Map(_ => Unit.Default).ToAsync()
+            .Bind(_ => ovsProcess.KillAsync())
+            .Match(
+                _ => { mockProcess.Verify(); },
+                f => throw f);
     }
 
     [Fact]

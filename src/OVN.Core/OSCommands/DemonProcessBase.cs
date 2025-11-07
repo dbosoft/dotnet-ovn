@@ -178,7 +178,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     if (waitResult.IsFaulted)
                     {
                         _logger.LogWarning("Demon {ovsFile}:{controlFile}: Failed to stop a orphaned demon on same pid file. Killing orphaned demon.", _exeFile.Name, _controlFile.Name);
-                        orphanedDemon.Kill().IfFail(_ =>
+                        _ = await orphanedDemon.KillAsync().IfFail(_ =>
                         {
                             _logger.LogError("Demon {ovsFile}:{controlFile}: Failed to kill a orphaned demon on same pid file.", _exeFile.Name, _controlFile.Name);
                         });
@@ -300,15 +300,16 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                             return Unit.Default;
                         });
                 })
-                .MapLeft(l =>
+                .MapLeftAsync(async l =>
                 {
                     if (_ovsProcess.IsRunning && ensureNodeStopped)
                     {
                         _logger.LogInformation(
                             "Demon {ovsFile}:{controlFile}: graceful stop failed - process will be killed",
                             _exeFile.Name, _controlFile.Name);
-                        _ovsProcess?.Kill();
-                        // TODO Wait for exit again? Kill is actually async
+                        
+                        if (_ovsProcess is not null)
+                            await _ovsProcess.KillAsync();
                     }
 
                     _ovsProcess?.Dispose();
@@ -365,13 +366,12 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
                     _exeFile.Name, _controlFile.Name);
 
                 //not possible to contact process, kill it and restart
-                _ = _ovsProcess.Kill()
-                    .IfFail(e =>
-                    {
-                        _logger.LogDebug(e, "{ovsFile}:{controlFile}: Failed to kill process.", _exeFile.Name,
-                            _controlFile.Name);
-                        return Unit.Default;
-                    });
+                _ = await _ovsProcess.KillAsync().IfFail(e =>
+                {
+                    _logger.LogDebug(e, "{ovsFile}:{controlFile}: Failed to kill process.", _exeFile.Name,
+                        _controlFile.Name);
+                    return Unit.Default;
+                });
 
 
                 return canRestart ? await Start(cancellationToken).Map(_ => true) : false;

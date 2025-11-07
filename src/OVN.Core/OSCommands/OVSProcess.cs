@@ -206,10 +206,18 @@ public class OVSProcess : IDisposable
         Dispose(false);
     }
 
-    public Try<Unit> Kill => 
-        Prelude.Try(() =>
+    public TryAsync<Unit> KillAsync() => 
+        Prelude.TryAsync(async () =>
         {
-            _startedProcess?.Kill();
+            if(_startedProcess is null)
+                return Unit.Default;
+            
+            _startedProcess.Kill();
+            
+            // Kill() itself is async.
+            using var cts = new CancellationTokenSource(5000);
+            await _startedProcess.WaitForExit(cts.Token);
+
             return Unit.Default;
         });
     
