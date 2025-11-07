@@ -72,7 +72,6 @@ public abstract class OvsDbTestBase : IAsyncLifetime
         var dump = (await ovsDbClientTool.PrintDatabase(databaseName)).ThrowIfLeft();
         var settings = new VerifySettings();
         settings.AddScrubber(FixedLengthGuidScrubber.ReplaceGuids);
-        settings.AddScrubber(sb => { sb.Replace(_dataDirectoryPath.Replace(@"\", @"\\"), "{OvsDataDirectory}"); });
         await Verify(dump, settings);
     }
 

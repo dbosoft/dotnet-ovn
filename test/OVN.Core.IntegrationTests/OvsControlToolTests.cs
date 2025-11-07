@@ -10,7 +10,7 @@ public class OvsControlToolTests(
     public async Task ConfigureOVN_WithLocalSettings_IsSuccessful()
     {
         var either = await ControlTool.ConfigureOVN(
-            LocalConnections.Southbound,
+            new OvsDbConnection("203.0.113.1", 6641),
             "local",
             noWait: true);
         either.ThrowIfLeft();
