@@ -8,8 +8,18 @@ public readonly record struct OVSValue<T>(T Value) : IOVSField where T : notnull
         return Value switch
         {
             string => $"{columnName}{spacer}\"\\\"{Value}\\\"\"",
-            Guid guid => $"{columnName}{spacer}\"{guid.ToString("D")}\"",
-            _ => $"{columnName}{spacer}{Value}"
+            Guid guid => $"{columnName}{spacer}\"{guid:D}\"",
+            _ => $"{columnName}{spacer}{Value}",
+        };
+    }
+
+    public string GetColumnKeyValue(string columnName, string keyName, bool setMode)
+    {
+        return Value switch
+        {
+            string => $"{columnName}:{keyName}=\"\\\"{Value}\\\"\"",
+            Guid guid => $"{columnName}:{keyName}=\"{guid:D}\"",
+            _ => $"{columnName}:{keyName}={Value}",
         };
     }
 
@@ -18,8 +28,8 @@ public readonly record struct OVSValue<T>(T Value) : IOVSField where T : notnull
         return Value switch
         {
             string => $"{columnName}{option}\"\\\"{Value}\\\"\"",
-            Guid guid => $"{columnName}{option}\"{guid.ToString("D")}\"",
-            _ => $"{columnName}{option}{Value}"
+            Guid guid => $"{columnName}{option}\"{guid:D}\"",
+            _ => $"{columnName}{option}{Value}",
         };
     }
 

@@ -43,6 +43,25 @@ public interface IOVSDBTool
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates the specified keys in the specified column of a
+    /// database record. The column must be of type map.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="tableName">The name of the table</param>
+    /// <param name="rowId">UUID or name column if supported by table</param>
+    /// <param name="columnName">The name of the column</param>
+    /// <param name="values">Map of key-value pairs to update</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    EitherAsync<Error, Unit> UpdateColumnKeyValues<T>(
+        string tableName,
+        string rowId,
+        string columnName,
+        Map<string, OVSValue<T>> values,
+        CancellationToken cancellationToken = default)
+        where T : notnull;
+
+    /// <summary>
     /// Reads a record from database table and returns it as <see cref="OVSTableRecord"/>.
     /// Returns <see cref="OptionNone"/> when the record does not exist.
     /// </summary>

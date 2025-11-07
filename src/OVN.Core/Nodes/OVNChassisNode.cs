@@ -45,7 +45,6 @@ public class OVNChassisNode : DemonNodeBase
     {
         return WaitForDbSocket(cancellationToken)
             .Bind(_ => ConfigureController(cancellationToken));
-
     }
 
     private EitherAsync<Error, Unit> ConfigureController(CancellationToken cancellationToken)
@@ -59,7 +58,6 @@ public class OVNChassisNode : DemonNodeBase
             _ovnSettings.SouthDBConnection,
             _ovnSettings.ChassisName,
             encapIp: _ovnSettings.EncapId,
-            bridgeMappings: _ovnSettings.BridgeMappings,
             cancellationToken: cts.Token);
     }
     
