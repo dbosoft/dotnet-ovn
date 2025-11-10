@@ -11,7 +11,8 @@ public static class ChassisPlanParser
 {
     public static ChassisPlan ParseYaml(IDictionary<object, object> yamlData)
     {
-        var plan = new ChassisPlan();
+
+        var plan = new ChassisPlan("");
         return plan;
     }
 }

@@ -116,6 +116,21 @@ public class OVSTool: IOVSDBTool
     }
 
     /// <inheritdoc />
+    public EitherAsync<Error, Unit> UpdateColumnKeyValues<T>(
+        string tableName,
+        string rowId,
+        string columnName,
+        Map<string, OVSValue<T>> values,
+        CancellationToken cancellationToken = default)
+        where T : notnull
+    {
+        var command = $"-- set {tableName} {rowId} "
+                      + string.Join(" ", values.ToSeq().Map(kvp => kvp.Value.GetColumnKeyValue(columnName, kvp.Key, true)));
+
+        return RunCommandWithResponse(command, cancellationToken).Map(_ => Unit.Default);
+    }
+
+    /// <inheritdoc />
     public EitherAsync<Error, Option<T>> GetRecord<T>(
         string tableName,
         string rowId,

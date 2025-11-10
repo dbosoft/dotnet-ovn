@@ -12,11 +12,6 @@ public record PlannedChassis(string ChassisGroupName) : OVSEntity, IOVSEntityWit
             { "priority", OVSValue<short>.Metadata() },
         };
 
-    public OVSParentReference? GetParentReference()
-    {
-        return new OVSParentReference(OVNTableNames.ChassisGroups, ChassisGroupName, "ha_chassis");
-    }
-
     public string? Name
     {
         get => GetValue<string>("chassis_name");
@@ -27,5 +22,10 @@ public record PlannedChassis(string ChassisGroupName) : OVSEntity, IOVSEntityWit
     {
         get => GetValue<short>("priority");
         init => SetValue("priority", value);
+    }
+
+    public OVSParentReference GetParentReference()
+    {
+        return new OVSParentReference(OVNTableNames.ChassisGroups, ChassisGroupName, "ha_chassis");
     }
 }
