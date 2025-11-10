@@ -1,6 +1,8 @@
 using JetBrains.Annotations;
 using LanguageExt;
 
+using static LanguageExt.Prelude;
+
 namespace Dbosoft.OVN.Model.OVN;
 
 [PublicAPI]
@@ -25,11 +27,11 @@ public record LogicalRouterPort : OVSTableRecord, IOVSEntityWithName, IHasParent
 
     public Guid? ParentId => GetValue<Guid>("__parentId");
 
-    public OVSParentReference? GetParentReference()
+    public OVSParentReference GetParentReference()
     {
-        if (!ParentId.HasValue) return null;
-
-        return new OVSParentReference(OVNTableNames.LogicalRouter,
-            ParentId.Value.ToString("D"), "Ports");
+        return new OVSParentReference(
+            OVNTableNames.LogicalRouter,
+            Optional(GetValue<Guid>("__parentId")).Map(i => i.ToString("D")),
+            "Ports");
     }
 }

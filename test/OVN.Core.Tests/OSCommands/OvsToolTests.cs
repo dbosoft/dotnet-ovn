@@ -85,7 +85,7 @@ public class OvsToolTests
       var ovsTool = new DummyTool(envMock.Object);
       _ = await ovsTool.CreateRecord("test_table",
           sample.ToMap(), 
-          reference, 
+          reference.ToOption(), 
           cancellationToken: CancellationToken.None)
         // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
         .Match(r =>

@@ -1,10 +1,14 @@
-﻿using System.Text;
+﻿using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dbosoft.OVN.Model;
+using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
+
+using static LanguageExt.Prelude;
 
 namespace Dbosoft.OVN.OSCommands;
 
@@ -74,22 +78,17 @@ public class OVSTool: IOVSDBTool
     public EitherAsync<Error, string> CreateRecord(
         string tableName,
         Map<string, IOVSField> columns,
-        OVSParentReference? reference = default,
-        CancellationToken cancellationToken = default)
-    {
-        var id = _systemEnvironment.GuidGenerator.GenerateGuid().ToString("D");
-
-        var sb = new StringBuilder();
-        
-        sb.Append($"-- --id={id} ");
-        sb.Append($"create {tableName} ");
-        sb.Append(ColumnsValuesToCommandString(columns, true));
-
-        if (reference.HasValue)
-            sb.Append($" -- add {reference.Value.TableName} {reference.Value.RowId} {reference.Value.RefColumn} {id}");
-
-        return RunCommandWithResponse(sb.ToString(), cancellationToken);
-    }
+        Option<OVSParentReference> reference = default,
+        CancellationToken cancellationToken = default) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let id = _systemEnvironment.GuidGenerator.GenerateGuid().ToString("D")
+        from addToParentCommand in reference.Match(
+            Some: r => from rowId in r.RowId.ToEitherAsync(Error.New("The parent row ID is missing."))
+                       select $" -- add {r.TableName} {rowId} {r.RefColumn} {id}",
+            None: () => "")
+        let command = $"-- --id={id} create {tableName} {ColumnsValuesToCommandString(columns, true)}{addToParentCommand}"
+        from result in RunCommandWithResponse(command, cancellationToken)
+        select result;
 
     /// <inheritdoc />
     public EitherAsync<Error, Unit> UpdateRecord(
@@ -135,7 +134,7 @@ public class OVSTool: IOVSDBTool
         sb.Append($" list {tableName} {rowId}");
 
         return RunCommandWithResponse(sb.ToString(), cancellationToken)
-            .Bind(r => MapResponse<T>(r, additionalFields))
+            .Bind(MapResponse<T>)
             .Map(e => e.HeadOrNone());
     }
 
@@ -168,41 +167,39 @@ public class OVSTool: IOVSDBTool
     }
 
     private static EitherAsync<Error, Seq<T>> MapResponse<T>(
-        string jsonResponse,
-        Map<Guid, Map<string, IOVSField>> additionalFields = default
-    ) where T : OVSTableRecord, new()
-    {
-        return Prelude.Try(() =>
+        string jsonResponse)
+        where T : OVSTableRecord, new() =>
+        Try(() =>
         {
-            if(string.IsNullOrWhiteSpace(jsonResponse))
-                return Prelude.RightAsync<Error, Seq<T>>(Seq<T>.Empty);
-            
+            if (string.IsNullOrWhiteSpace(jsonResponse))
+                return Seq<T>();
+
             var response = JsonSerializer.Deserialize<OVSJsonResponse>(jsonResponse);
 
-            return response == null
-                ? Prelude.LeftAsync<Error, Seq<T>>(Error.New("Failed to deserialize OVN json response"))
-                : Prelude.RightAsync<Error, Seq<T>>(response.ToOVSEntities<T>(additionalFields));
-        }).ToEitherAsync().Flatten();
-    }
+            if (response is null)
+                throw Error.New("Failed to deserialize OVN json response");
+
+            return response.ToOVSEntities<T>();
+        }).ToEitherAsync();
 
     /// <inheritdoc />
     public EitherAsync<Error, Seq<T>> FindRecords<T>(
         string tableName,
         Map<string, OVSQuery> query,
-        IEnumerable<string>? columns = default,
-        Map<Guid, Map<string, IOVSField>> additionalFields = default,
-        CancellationToken cancellationToken = default) where T : OVSTableRecord, new()
+        Seq<string> columns = default,
+        CancellationToken cancellationToken = default)
+        where T : OVSTableRecord, new()
     {
         var sb = new StringBuilder();
         sb.Append("--format json");
-        if (columns != null)
+        if (!columns.IsEmpty)
             sb.Append($" --columns={ColumnsListToCommandString(columns)}");
 
         sb.Append($" find {tableName} ");
         sb.Append(QueryCommandString(query));
 
         return RunCommandWithResponse(sb.ToString(), cancellationToken)
-            .Bind(r => MapResponse<T>(r, additionalFields));
+            .Bind(MapResponse<T>);
     }
 
     private class OVSJsonResponse
@@ -219,7 +216,7 @@ public class OVSTool: IOVSDBTool
             var columns = OVSEntityMetadata.Get(typeof(TEntity));
 
             if (Records == null || Headings == null)
-                return Seq<Map<string, IOVSField>>.Empty;
+                return Seq<Map<string, IOVSField>>();
 
             foreach (var record in Records)
             {
@@ -251,21 +248,7 @@ public class OVSTool: IOVSDBTool
             return result.ToSeq();
         }
 
-        public Seq<T> ToOVSEntities<T>(Map<Guid, Map<string, IOVSField>> additionalFields = default)
-            where T : OVSTableRecord, new()
-        {
-            var ovsEntities = ToOVSEntitiesValueMap<T>();
-            return ovsEntities
-                .Map(m =>
-                {
-                    if (!m.ContainsKey("_uuid") || m["_uuid"] is not OVSValue<Guid> idValue)
-                        return m;
-
-                    return !additionalFields.ContainsKey(idValue.Value)
-                        ? m
-                        : m.AddRange(additionalFields[idValue.Value]);
-                })
-                .Map(OVSEntity.FromValueMap<T>);
-        }
+        public Seq<T> ToOVSEntities<T>() where T : OVSTableRecord, new() =>
+            ToOVSEntitiesValueMap<T>().Map(OVSEntity.FromValueMap<T>);
     }
 }

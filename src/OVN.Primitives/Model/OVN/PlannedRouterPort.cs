@@ -35,7 +35,7 @@ public record PlannedRouterPort(string RouterName) : OVSEntity, IOVSEntityWithNa
         init => SetSet("networks", value);
     }
 
-    public OVSParentReference? GetParentReference()
+    public OVSParentReference GetParentReference()
     {
         return new OVSParentReference(OVNTableNames.LogicalRouter, RouterName, "Ports");
     }

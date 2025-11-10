@@ -59,17 +59,17 @@ _uuid external_ids options vip
 ----- ------------ ------- ---
 
 Logical_Router table
-_uuid                                copp enabled external_ids                load_balancer load_balancer_group name     nat options policies ports                                                                        static_routes
------------------------------------- ---- ------- --------------------------- ------------- ------------------- -------- --- ------- -------- ---------------------------------------------------------------------------- -------------
-Guid_0000000000000000000000000000001 []   []      {network_plan=test-project} []            []                  router-1 []  {}      []       [Guid_0000000000000000000000000000002, Guid_0000000000000000000000000000003] []
+_uuid                                copp enabled external_ids                load_balancer load_balancer_group name     nat options policies ports static_routes
+------------------------------------ ---- ------- --------------------------- ------------- ------------------- -------- --- ------- -------- ----- -------------
+Guid_0000000000000000000000000000001 []   []      {network_plan=test-project} []            []                  router-1 []  {}      []       []    []
 
 Logical_Router_Policy table
 _uuid action bfd_sessions external_ids match nexthop nexthops options priority
 ----- ------ ------------ ------------ ----- ------- -------- ------- --------
 
 Logical_Router_Port table
-_uuid                                enabled external_ids                                     gateway_chassis ha_chassis_group ipv6_prefix ipv6_ra_configs mac                 name                          networks            options peer status
------------------------------------- ------- ------------------------------------------------ --------------- ---------------- ----------- --------------- ------------------- ----------------------------- ------------------- ------- ---- ------
+_uuid enabled external_ids gateway_chassis ha_chassis_group ipv6_prefix ipv6_ra_configs mac name networks options peer status
+----- ------- ------------ --------------- ---------------- ----------- --------------- --- ---- -------- ------- ---- ------
 
 Logical_Router_Static_Route table
 _uuid bfd external_ids ip_prefix nexthop options output_port policy route_table
@@ -78,8 +78,8 @@ _uuid bfd external_ids ip_prefix nexthop options output_port policy route_table
 Logical_Switch table
 _uuid                                acls copp dns_records external_ids                                forwarding_groups load_balancer load_balancer_group name              other_config ports qos_rules
 ------------------------------------ ---- ---- ----------- ------------------------------------------- ----------------- ------------- ------------------- ----------------- ------------ ----- ---------
-Guid_0000000000000000000000000000004 []   []   []          {dns_records="", network_plan=test-project} []                []            []                  provider-switch-1 {}           []    []
-Guid_0000000000000000000000000000005 []   []   []          {dns_records="", network_plan=test-project} []                []            []                  switch-1          {}           []    []
+Guid_0000000000000000000000000000002 []   []   []          {dns_records="", network_plan=test-project} []                []            []                  provider-switch-1 {}           []    []
+Guid_0000000000000000000000000000003 []   []   []          {dns_records="", network_plan=test-project} []                []            []                  switch-1          {}           []    []
 
 Logical_Switch_Port table
 _uuid addresses dhcpv4_options dhcpv6_options dynamic_addresses enabled external_ids ha_chassis_group mirror_rules name options parent_name port_security tag tag_request type up
@@ -104,7 +104,7 @@ _uuid allowed_ext_ips exempted_ext_ips external_ids external_ip external_mac ext
 NB_Global table
 _uuid                                connections external_ids hv_cfg hv_cfg_timestamp ipsec name nb_cfg nb_cfg_timestamp options sb_cfg sb_cfg_timestamp ssl
 ------------------------------------ ----------- ------------ ------ ---------------- ----- ---- ------ ---------------- ------- ------ ---------------- ---
-Guid_0000000000000000000000000000006 []          {}           0      0                false ""   0      0                {}      0      0                []
+Guid_0000000000000000000000000000004 []          {}           0      0                false ""   0      0                {}      0      0                []
 
 Port_Group table
 _uuid acls external_ids name ports

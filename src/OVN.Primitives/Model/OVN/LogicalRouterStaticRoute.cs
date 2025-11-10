@@ -1,4 +1,7 @@
 using JetBrains.Annotations;
+using LanguageExt;
+
+using static LanguageExt.Prelude;
 
 namespace Dbosoft.OVN.Model.OVN;
 
@@ -16,16 +19,14 @@ public record LogicalRouterStaticRoute : OVSTableRecord, IOVSEntityWithName, IHa
 
     public string? Nexthop => GetValue<string>("nexthop");
 
-    private Guid? ParentId => GetValue<Guid>("__parentId");
-
     private string? RouterName => ExternalIds.ContainsKey("router_name") ? ExternalIds["router_name"] : null;
-    public OVSParentReference? GetParentReference()
+    
+    public OVSParentReference GetParentReference()
     {
-        if (!ParentId.HasValue)
-            return null;
-
-        return new OVSParentReference(OVNTableNames.LogicalRouter,
-            ParentId.GetValueOrDefault().ToString("D"), "static_routes");
+        return new OVSParentReference(
+            OVNTableNames.LogicalRouter,
+            Optional(GetValue<Guid>("__parentId")).Map(i => i.ToString("D")),
+            "static_routes");
     }
 
     public string Name =>

@@ -33,7 +33,7 @@ public record PlannedRouterStaticRoute(string RouterName) : OVSEntity, IOVSEntit
         init => SetValue("route_table", value);
     }
 
-    public OVSParentReference? GetParentReference()
+    public OVSParentReference GetParentReference()
     {
         return new OVSParentReference(OVNTableNames.LogicalRouter, RouterName, "static_routes");
     }

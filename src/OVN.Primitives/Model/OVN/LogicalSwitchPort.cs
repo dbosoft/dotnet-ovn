@@ -1,6 +1,8 @@
 using JetBrains.Annotations;
 using LanguageExt;
 
+using static LanguageExt.Prelude;
+
 namespace Dbosoft.OVN.Model.OVN;
 
 [PublicAPI]
@@ -29,12 +31,12 @@ public record LogicalSwitchPort : OVSTableRecord, IHasParentReference, IOVSEntit
 
     public Guid? ParentId => GetValue<Guid>("__parentId");
 
-    public OVSParentReference? GetParentReference()
+    public OVSParentReference GetParentReference()
     {
-        if (!ParentId.HasValue) return null;
-
-        return new OVSParentReference(OVNTableNames.LogicalSwitch,
-            ParentId.Value.ToString("D"), "Ports");
+        return new OVSParentReference(
+            OVNTableNames.LogicalSwitch,
+            Optional(GetValue<Guid>("__parentId")).Map(i => i.ToString("D")),
+            "Ports");
     }
 
     public string? Name

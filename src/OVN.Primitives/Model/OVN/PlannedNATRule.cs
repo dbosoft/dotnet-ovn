@@ -44,7 +44,7 @@ public record PlannedNATRule(string RouterName) : OVSTableRecord, IHasParentRefe
         init => SetValue("logical_port", value);
     }
 
-    public OVSParentReference? GetParentReference()
+    public OVSParentReference GetParentReference()
     {
         return new OVSParentReference(OVNTableNames.LogicalRouter,
             RouterName, "nat");

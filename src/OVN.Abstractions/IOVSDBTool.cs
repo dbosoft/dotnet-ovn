@@ -21,7 +21,7 @@ public interface IOVSDBTool
     EitherAsync<Error, string> CreateRecord(
         string tableName,
         Map<string, IOVSField> columns,
-        OVSParentReference? reference = default,
+        Option<OVSParentReference> reference = default,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -102,7 +102,6 @@ public interface IOVSDBTool
     EitherAsync<Error, Seq<T>> FindRecords<T>(
         string tableName,
         Map<string, OVSQuery> query,
-        IEnumerable<string>? columns = default,
-        Map<Guid, Map<string, IOVSField>> additionalFields = default,
+        Seq<string> columns = default,
         CancellationToken cancellationToken = default) where T : OVSTableRecord, new();
 }

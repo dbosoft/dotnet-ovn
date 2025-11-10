@@ -4,228 +4,23 @@ using Dbosoft.OVN.Model.OVN;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
+
 using static LanguageExt.Prelude;
 
 namespace Dbosoft.OVN;
 
-public class NetworkPlanRealizer
+public class NetworkPlanRealizer : PlanRealizer
 {
     private readonly ILogger _logger;
-    private readonly IOVSDBTool _ovnDBTool;
 
-    public NetworkPlanRealizer(IOVSDBTool ovnDBTool, ILogger logger)
+    public NetworkPlanRealizer(IOVSDBTool ovnDBTool, ILogger logger) : base(ovnDBTool, logger)
     {
-        _ovnDBTool = ovnDBTool;
         _logger = logger;
     }
-
 
     public EitherAsync<Error, NetworkPlan> ApplyNetworkPlan(
         NetworkPlan networkPlan, CancellationToken cancellationToken = default)
     {
-        EitherAsync<Error, HashMap<Guid, T>> FindRecordsOfNetworkPlan<T>(
-            string tableName,
-            IDictionary<string, OVSFieldMetadata> columns,
-            Map<Guid, Map<string, IOVSField>> additionalFields = default,
-            bool global = false)
-            where T : OVSTableRecord, new()
-        {
-            return _ovnDBTool.FindRecords<T>(tableName,
-                global 
-                    ? default 
-                    : CommonQueries.ExternalId("network_plan", networkPlan.Id),
-                columns.Keys,
-                additionalFields,
-                cancellationToken).Map(s =>
-            {
-                var res = s
-                    .Where(x => x.Id != Guid.Empty)
-                    .Select(x => (x.Id, x))
-                    .ToHashMap();
-
-                return res;
-            });
-        }
-
-        EitherAsync<Error, HashMap<Guid, TRecord>> FindRecordsOfNetworkPlanWithParents<TRecord, TParent>(
-            string tableName,
-            IDictionary<string, OVSFieldMetadata> columns,
-            Seq<TParent> parents,
-            Map<Guid, Map<string, IOVSField>> additionalFields = default,
-            bool global = false)
-            where TRecord : OVSTableRecord, IHasParentReference, new()
-            where TParent : OVSTableRecord, IHasOVSReferences<TRecord> =>
-            from records in FindRecordsOfNetworkPlan<TRecord>(
-                tableName, columns, additionalFields, global)
-            let result = records.Values.ToSeq()
-                .AddParentReferences(parents)
-                .Select(r => (r.Id, r))
-                .ToHashMap()
-            select result;
-
-        EitherAsync<Error, HashMap<string, TEntity>> RemoveEntitiesNotPlanned<TEntity, TPlanned>(
-            string tableName,
-            HashMap<Guid, TEntity> realized,
-            HashMap<string, TPlanned> planned)
-            where TEntity : OVSTableRecord, IOVSEntityWithName
-            where TPlanned : OVSEntity
-        {
-            //realized is still hashed with Id column catch duplicates here
-            //found will be rehashed to name
-            var foundByName = realized
-                .Filter(x => x.Name != null && planned.ContainsKey(x.Name))
-                .Values.Select(v => (v.Name ?? "", v))
-                .ToHashMap();
-
-            //and now rehash it back to Id, to find also duplicates
-            var foundById = foundByName
-                .Values.Select(v => (v.Id, v))
-                .ToHashMap();
-
-            var notFound = realized - foundById;
-
-            return notFound.Values.Map(r =>
-            {
-                OVSParentReference? reference = default;
-                if (r is IHasParentReference hasReference) reference = hasReference.GetParentReference();
-
-                if (!reference.HasValue)
-                    return _ovnDBTool.RemoveRecord(tableName, r.Id.ToString("D"), cancellationToken)
-                        .MapLeft(l =>
-                            Error.New(
-                                $"Apply network plan {networkPlan.Id}: could not remove entity {r} from table {tableName}",
-                                l));
-
-                if (reference.Value.RowId == Guid.Empty.ToString("D"))
-                    //special case - parent not found in netplan. To remove record query for parent for this record
-                    //without netplan
-                    return _ovnDBTool.FindRecords<OVSTableRecord>(
-                            reference.Value.TableName, new Map<string, OVSQuery>(new[]
-                            {
-                                (reference.Value.RefColumn, new OVSQuery(">=", new OVSValue<Guid>(r.Id)))
-                            }), cancellationToken: cancellationToken)
-                        .Bind(s => s.HeadOrLeft(Errors.SequenceEmpty).ToAsync())
-                        .Bind(parent => _ovnDBTool.RemoveColumnValue(
-                            reference.Value.TableName,
-                            parent.Id.ToString("D"),
-                            reference.Value.RefColumn,
-                            r.Id.ToString("D"),
-                            cancellationToken
-                        ))
-                        .MapLeft(e => Error.New(
-                            $"Apply network plan {networkPlan.Id}: could not remove entity reference {r} from table {tableName}.",
-                            e));
-
-                return _ovnDBTool.RemoveColumnValue(
-                    reference.Value.TableName,
-                    reference.Value.RowId,
-                    reference.Value.RefColumn,
-                    r.Id.ToString("D"),
-                    cancellationToken
-                ).MapLeft(e => Error.New(
-                    $"Apply network plan {networkPlan.Id}: could not remove entity reference {r} from table {reference.Value.TableName}.",
-                    e));
-            }).SequenceSerial().Map(_ => foundByName);
-        }
-
-        EitherAsync<Error, HashMap<string, TPlanned>> CreatePlannedEntities<TEntity, TPlanned>(
-            string tableName,
-            HashMap<string, TEntity> realized,
-            HashMap<string, TPlanned> planned)
-            where TEntity : OVSTableRecord
-            where TPlanned : OVSEntity, IOVSEntityWithName
-        {
-            var found = planned.Filter(p => p.Name != null && realized.ContainsKey(p.Name));
-            var notFound = planned - found;
-
-            return notFound.Values.OrderBy(v => v.Name).Map(p =>
-            {
-                OVSParentReference? reference = null;
-                if (p is IHasParentReference hasReference) reference = hasReference.GetParentReference();
-
-                return _ovnDBTool.CreateRecord(tableName,
-                        p.ToMap(),
-                        reference,
-                        cancellationToken)
-                    .MapLeft(l =>
-                        Error.New(
-                            $"Apply network plan {networkPlan.Id}: could not create entity {p} in table {tableName}",
-                            l));
-            }).SequenceSerial().Map(_ => found);
-        }
-
-
-        EitherAsync<Error, Unit> UpdateEntities<TEntity, TPlanned>(
-            string tableName,
-            HashMap<string, TEntity> realized, HashMap<string, TPlanned> planned)
-            where TEntity : OVSTableRecord
-            where TPlanned : OVSEntity
-        {
-            var updates = new Map<Guid, (
-                Map<string, IOVSField> AddValues,
-                Map<string, IOVSField> SetValues,
-                Seq<string> ClearValues)>();
-
-            updates = planned.Map(kv =>
-            {
-                var plannedEntity = kv.Value;
-                var plannedName = kv.Key;
-
-                var realizedEntity = realized[plannedName];
-
-                var plannedFields = plannedEntity.ToMap();
-                var realizedFields = realizedEntity.ToMap();
-
-                var set = new Dictionary<string, IOVSField>();
-                var clear = new List<string>();
-                var columns = OVSEntityMetadata.Get(typeof(TEntity));
-
-                var processedFields = new List<string> { "_uuid", "__parentId" };
-                foreach (var realizedField in realizedFields
-                             .Where(realizedField => !realizedField.Key.StartsWith("_")))
-                {
-                    if (realizedField.Value is OVSReference)
-                        continue;
-
-                    if (!plannedFields.ContainsKey(realizedField.Key))
-                    {
-                        if (!columns[realizedField.Key].NotEmpty)
-                            clear.Add(realizedField.Key);
-
-                        processedFields.Add(realizedField.Key);
-                        continue;
-                    }
-
-                    processedFields.Add(realizedField.Key);
-
-                    var plannedValue = plannedFields[realizedField.Key];
-
-
-                    if (plannedValue.Equals(realizedField.Value)) continue;
-
-                    set.Add(realizedField.Key, plannedValue);
-                }
-
-                var add = plannedFields
-                    .Where(pf => !processedFields.Contains(pf.Key)).ToDictionary(plannedField =>
-                        plannedField.Key, plannedField => plannedField.Value);
-
-                return add.Count > 0 || set.Count > 0 || clear.Count > 0
-                    ? Some((realizedEntity.Id, (add.ToMap(), set.ToMap(), clear.ToSeq())))
-                    : None;
-            }).Somes().ToMap();
-
-            return updates.Map(update =>
-            {
-                var (key, value) = update;
-
-                return _ovnDBTool.UpdateRecord(tableName, key.ToString("D"),
-                        value.AddValues, value.SetValues, value.ClearValues, cancellationToken)
-                    .MapLeft(l => Error.New(
-                        $"Apply network plan {networkPlan.Id}: could not update entity {key} in table {tableName}.",
-                        l));
-            }).SequenceSerial().Map(_ => Unit.Default);
-        }
 
         EitherAsync<Error, Stopwatch> StartStopWatch()
         {
@@ -313,41 +108,66 @@ public class NetworkPlanRealizer
 
 
         var getAndCleanupUnplannedEntities =
-            from existingDnsRecords in FindRecordsOfNetworkPlan<DnsRecords>(OVNTableNames.DnsRecords,
+            from existingDnsRecords in FindRecordsOfNetworkPlan<DnsRecords>(
+                networkPlan.Id,
+                OVNTableNames.DnsRecords,
                 DnsRecords.Columns)
-            from dnsRecords in RemoveEntitiesNotPlanned(OVNTableNames.DnsRecords, existingDnsRecords,
+            from dnsRecords in RemoveEntitiesNotPlanned(
+                OVNTableNames.DnsRecords,
+                existingDnsRecords,
                 networkPlan.PlannedDnsRecords)
-            from existingDHCPOptions in FindRecordsOfNetworkPlan<DHCPOptions>(OVNTableNames.DHCPOptions,
+            from existingDHCPOptions in FindRecordsOfNetworkPlan<DHCPOptions>(
+                networkPlan.Id,
+                OVNTableNames.DHCPOptions,
                 DHCPOptions.Columns)
             from dhcpOptions in RemoveEntitiesNotPlanned(OVNTableNames.DHCPOptions, existingDHCPOptions,
                 networkPlan.PlannedDHCPOptions)
             
-            from existingSwitches in FindRecordsOfNetworkPlan<LogicalSwitch>(OVNTableNames.LogicalSwitch,
+            from existingSwitches in FindRecordsOfNetworkPlan<LogicalSwitch>(
+                networkPlan.Id,
+                OVNTableNames.LogicalSwitch,
                 LogicalSwitch.Columns)
-            from switches in RemoveEntitiesNotPlanned(OVNTableNames.LogicalSwitch, existingSwitches,
+            from switches in RemoveEntitiesNotPlanned(
+                OVNTableNames.LogicalSwitch,
+                existingSwitches,
                 networkPlan.PlannedSwitches)
-            from existingRouters in FindRecordsOfNetworkPlan<LogicalRouter>(OVNTableNames.LogicalRouter,
+            from existingRouters in FindRecordsOfNetworkPlan<LogicalRouter>(
+                networkPlan.Id,
+                OVNTableNames.LogicalRouter,
                 LogicalRouter.Columns)
-            from routers in RemoveEntitiesNotPlanned(OVNTableNames.LogicalRouter, existingRouters,
+            from routers in RemoveEntitiesNotPlanned(
+                OVNTableNames.LogicalRouter,
+                existingRouters,
                 networkPlan.PlannedRouters)
             from existingSwitchPorts in FindRecordsOfNetworkPlanWithParents<LogicalSwitchPort, LogicalSwitch>(
+                networkPlan.Id,
                 OVNTableNames.LogicalSwitchPort,
                 LogicalSwitchPort.Columns,
                 existingSwitches.Values.ToSeq())
-            from switchPorts in RemoveEntitiesNotPlanned(OVNTableNames.LogicalSwitchPort, existingSwitchPorts,
+            from switchPorts in RemoveEntitiesNotPlanned(
+                OVNTableNames.LogicalSwitchPort,
+                existingSwitchPorts,
                 networkPlan.PlannedSwitchPorts)
             from existingRouterPorts in FindRecordsOfNetworkPlanWithParents<LogicalRouterPort, LogicalRouter>(
+                networkPlan.Id,
                 OVNTableNames.LogicalRouterPort,
                 LogicalRouterPort.Columns,
                 routers.Values.ToSeq())
-            from routerPorts in RemoveEntitiesNotPlanned(OVNTableNames.LogicalRouterPort, existingRouterPorts,
+            from routerPorts in RemoveEntitiesNotPlanned(
+                OVNTableNames.LogicalRouterPort,
+                existingRouterPorts,
                 networkPlan.PlannedRouterPorts)
             from existingStaticRoutes in FindRecordsOfNetworkPlanWithParents<LogicalRouterStaticRoute, LogicalRouter>(
-                OVNTableNames.LogicalRouterStaticRoutes, LogicalRouterStaticRoute.Columns,
+                networkPlan.Id,
+                OVNTableNames.LogicalRouterStaticRoutes,
+                LogicalRouterStaticRoute.Columns,
                 existingRouters.Values.ToSeq())
-            from staticRoutes in RemoveEntitiesNotPlanned(OVNTableNames.LogicalRouterStaticRoutes, existingStaticRoutes,
+            from staticRoutes in RemoveEntitiesNotPlanned(
+                OVNTableNames.LogicalRouterStaticRoutes,
+                existingStaticRoutes,
                 networkPlan.PlannedRouterStaticRoutes)
             from existingNATRules in FindRecordsOfNetworkPlanWithParents<NATRule, LogicalRouter>(
+                networkPlan.Id,
                 OVNTableNames.NATRules,
                 NATRule.Columns,
                 existingRouters.Values.ToSeq())
@@ -364,36 +184,73 @@ public class NetworkPlanRealizer
                 NATRules: natRules);
 
         var createAndGetUnchangedEntities = from realizedEntities in getAndCleanupUnplannedEntities
-            from unchangedDnsRecords in CreatePlannedEntities(OVNTableNames.DnsRecords, realizedEntities.DnsRecords,
-                networkPlan.PlannedDnsRecords)
+            from unchangedDnsRecords in CreatePlannedEntities(
+                networkPlan.Id,
+                OVNTableNames.DnsRecords,
+                realizedEntities.DnsRecords,
+                networkPlan.PlannedDnsRecords,
+                cancellationToken)
             //refresh DNS options and merge then into planned switches
-            from existingDnsRecords in FindRecordsOfNetworkPlan<DnsRecords>(OVNTableNames.DnsRecords,
+            from existingDnsRecords in FindRecordsOfNetworkPlan<DnsRecords>(
+                networkPlan.Id,
+                OVNTableNames.DnsRecords,
                 OVSTableRecord.Columns)
             from mappedSwitches in MapSwitchReferences(networkPlan.PlannedSwitches, existingDnsRecords)
 
-            from unchangedDHCPOptions in CreatePlannedEntities(OVNTableNames.DHCPOptions, realizedEntities.DHCPOptions,
-                networkPlan.PlannedDHCPOptions)
+            from unchangedDHCPOptions in CreatePlannedEntities(
+                networkPlan.Id,
+                OVNTableNames.DHCPOptions,
+                realizedEntities.DHCPOptions,
+                networkPlan.PlannedDHCPOptions,
+                cancellationToken)
             //refresh DHCP options and merge then into planned ports
-            from existingDHCPOptions in FindRecordsOfNetworkPlan<DHCPOptions>(OVNTableNames.DHCPOptions,
+            from existingDHCPOptions in FindRecordsOfNetworkPlan<DHCPOptions>(
+                networkPlan.Id,
+                OVNTableNames.DHCPOptions,
                 OVSTableRecord.Columns)
             
             from mappedSwitchPorts in MapSwitchPortReferences(networkPlan.PlannedSwitchPorts, existingDHCPOptions)
-            from unchangedSwitches in CreatePlannedEntities(OVNTableNames.LogicalSwitch, realizedEntities.Switches,
-                mappedSwitches)
-            from unchangedRouters in CreatePlannedEntities(OVNTableNames.LogicalRouter, realizedEntities.Routers,
-                networkPlan.PlannedRouters)
-            from unchangedSwitchPorts in CreatePlannedEntities(OVNTableNames.LogicalSwitchPort,
-                realizedEntities.SwitchPorts, mappedSwitchPorts)
+            from unchangedSwitches in CreatePlannedEntities(
+                networkPlan.Id,
+                OVNTableNames.LogicalSwitch,
+                realizedEntities.Switches,
+                mappedSwitches,
+                cancellationToken)
+            from unchangedRouters in CreatePlannedEntities(
+                networkPlan.Id,
+                OVNTableNames.LogicalRouter,
+                realizedEntities.Routers,
+                networkPlan.PlannedRouters,
+                cancellationToken)
+            from unchangedSwitchPorts in CreatePlannedEntities(
+                networkPlan.Id,
+                OVNTableNames.LogicalSwitchPort,
+                realizedEntities.SwitchPorts,
+                mappedSwitchPorts,
+                cancellationToken)
             
-            from existingChassisGroups in FindRecordsOfNetworkPlan<ChassisGroup>(OVNTableNames.ChassisGroups,
-                ChassisGroup.Columns, global: true)
+            from existingChassisGroups in FindRecords<ChassisGroup>(
+                OVNTableNames.ChassisGroups,
+                ChassisGroup.Columns)
             from mappedRouterPorts in MapRouterPortReferences(networkPlan.PlannedRouterPorts, existingChassisGroups)
-            from unchangedRouterPorts in CreatePlannedEntities(OVNTableNames.LogicalRouterPort,
-                realizedEntities.RouterPorts, mappedRouterPorts)
-            from unchangedRouterStaticRoutes in CreatePlannedEntities(OVNTableNames.LogicalRouterStaticRoutes,
-                realizedEntities.RouterStaticRoutes, networkPlan.PlannedRouterStaticRoutes)
-            from unchangedNATRules in CreatePlannedEntities(OVNTableNames.NATRules, realizedEntities.NATRules,
-                networkPlan.PlannedNATRules)
+            from unchangedRouterPorts in CreatePlannedEntities(
+                networkPlan.Id,
+                OVNTableNames.LogicalRouterPort,
+                realizedEntities.RouterPorts,
+                mappedRouterPorts,
+                cancellationToken)
+            from unchangedRouterStaticRoutes in CreatePlannedEntities(
+                networkPlan.Id,
+                OVNTableNames.LogicalRouterStaticRoutes,
+                realizedEntities.RouterStaticRoutes,
+                networkPlan.PlannedRouterStaticRoutes,
+                cancellationToken)
+            from unchangedNATRules in CreatePlannedEntities(
+                networkPlan.Id,
+                OVNTableNames.NATRules,
+                realizedEntities.NATRules,
+                networkPlan.PlannedNATRules,
+                cancellationToken)
             select (Realized: realizedEntities,
                     Planned: (
                         DnsRecords: unchangedDnsRecords,
@@ -409,24 +266,118 @@ public class NetworkPlanRealizer
         return
             from sw in StartStopWatch()
             from entities in createAndGetUnchangedEntities
-            from uDnsRecords in UpdateEntities(OVNTableNames.DnsRecords, entities.Realized.DnsRecords,
-                entities.Planned.DnsRecords)
-            from uDHCPOptions in UpdateEntities(OVNTableNames.DHCPOptions, entities.Realized.DHCPOptions,
-                entities.Planned.DHCPOptions)
-            from uSwitches in UpdateEntities(OVNTableNames.LogicalSwitch, entities.Realized.Switches,
-                entities.Planned.Switches)
-            from uRouters in UpdateEntities(OVNTableNames.LogicalRouter, entities.Realized.Routers,
-                entities.Planned.Routers)
-            from uSwitchPorts in UpdateEntities(OVNTableNames.LogicalSwitchPort, entities.Realized.SwitchPorts,
-                entities.Planned.SwitchPorts)
-            from uRouterPorts in UpdateEntities(OVNTableNames.LogicalRouterPort, entities.Realized.RouterPorts,
-                entities.Planned.RouterPorts)
-            from uRouterStaticRoutes in UpdateEntities(OVNTableNames.LogicalRouterStaticRoutes,
-                entities.Realized.RouterStaticRoutes, entities.Planned.RouterStaticRoutes)
-            from uNATRules in UpdateEntities(OVNTableNames.NATRules, entities.Realized.NATRules,
-                entities.Planned.NATRules)
+            from uDnsRecords in UpdateEntities(
+                networkPlan.Id,
+                OVNTableNames.DnsRecords,
+                entities.Realized.DnsRecords,
+                entities.Planned.DnsRecords,
+                cancellationToken)
+            from uDHCPOptions in UpdateEntities(
+                networkPlan.Id,
+                OVNTableNames.DHCPOptions,
+                entities.Realized.DHCPOptions,
+                entities.Planned.DHCPOptions,
+                cancellationToken)
+            from uSwitches in UpdateEntities(
+                networkPlan.Id,
+                OVNTableNames.LogicalSwitch,
+                entities.Realized.Switches,
+                entities.Planned.Switches,
+                cancellationToken)
+            from uRouters in UpdateEntities(
+                networkPlan.Id,
+                OVNTableNames.LogicalRouter,
+                entities.Realized.Routers,
+                entities.Planned.Routers,
+                cancellationToken)
+            from uSwitchPorts in UpdateEntities(
+                networkPlan.Id,
+                OVNTableNames.LogicalSwitchPort,
+                entities.Realized.SwitchPorts,
+                entities.Planned.SwitchPorts,
+                cancellationToken)
+            from uRouterPorts in UpdateEntities(
+                networkPlan.Id,
+                OVNTableNames.LogicalRouterPort,
+                entities.Realized.RouterPorts,
+                entities.Planned.RouterPorts,
+                cancellationToken)
+            from uRouterStaticRoutes in UpdateEntities(
+                networkPlan.Id,
+                OVNTableNames.LogicalRouterStaticRoutes,
+                entities.Realized.RouterStaticRoutes,
+                entities.Planned.RouterStaticRoutes,
+                cancellationToken)
+            from uNATRules in UpdateEntities(
+                networkPlan.Id,
+                OVNTableNames.NATRules,
+                entities.Realized.NATRules,
+                entities.Planned.NATRules,
+                cancellationToken)
             from _ in StopStopWatch(sw, () => _logger.LogTrace(
                 "networkPlan {networkPLanId}: Time to apply: {time} ms", networkPlan.Id, sw.ElapsedMilliseconds))
             select networkPlan;
     }
+
+    EitherAsync<Error, HashMap<Guid, T>> FindRecordsOfNetworkPlan<T>(
+        string networkPlanId,
+        string tableName,
+        IDictionary<string, OVSFieldMetadata> columns,
+        bool global = false,
+        CancellationToken cancellationToken = default)
+        where T : OVSTableRecord, new() =>
+        FindRecords<T>(
+            tableName,
+            columns,
+            global ? default : CommonQueries.ExternalId("network_plan", networkPlanId),
+            cancellationToken);
+
+
+    EitherAsync<Error, HashMap<Guid, TRecord>> FindRecordsOfNetworkPlanWithParents<TRecord, TParent>(
+        string networkPlanId,
+        string tableName,
+        IDictionary<string, OVSFieldMetadata> columns,
+        Seq<TParent> parents,
+        bool global = false)
+        where TRecord : OVSTableRecord, IHasParentReference, new()
+        where TParent : OVSTableRecord, IHasOVSReferences<TRecord> =>
+        from records in FindRecordsOfNetworkPlan<TRecord>(networkPlanId, tableName, columns, global)
+        let result = records.Values.ToSeq()
+            .AddParentReferences(parents)
+            .Select(r => (r.Id, r))
+            .ToHashMap()
+        select result;
+
+    private EitherAsync<Error, HashMap<string, TEntity>> RemoveEntitiesNotPlanned<TEntity, TPlanned>(
+        string networkPlanId,
+        string tableName,
+        HashMap<Guid, TEntity> realized,
+        HashMap<string, TPlanned> planned,
+        CancellationToken cancellationToken)
+        where TEntity : OVSTableRecord, IOVSEntityWithName
+        where TPlanned : OVSEntity =>
+        RemoveEntitiesNotPlanned(tableName, realized, planned, cancellationToken)
+            .MapLeft(e => Error.New($"Cannot apply network plan {networkPlanId}.", e));
+
+    EitherAsync<Error, HashMap<string, TPlanned>> CreatePlannedEntities<TEntity, TPlanned>(
+        string networkPlanId,
+        string tableName,
+        HashMap<string, TEntity> realized,
+        HashMap<string, TPlanned> planned,
+        CancellationToken cancellationToken)
+        where TEntity : OVSTableRecord
+        where TPlanned : OVSEntity, IOVSEntityWithName =>
+        CreatePlannedEntities(tableName, realized, planned, cancellationToken)
+            .MapLeft(e => Error.New($"Cannot apply network plan {networkPlanId}.", e));
+
+    EitherAsync<Error, Unit> UpdateEntities<TEntity, TPlanned>(
+        string networkPlanId,
+        string tableName,
+        HashMap<string, TEntity> realized,
+        HashMap<string, TPlanned> planned,
+        CancellationToken cancellationToken)
+        where TEntity : OVSTableRecord
+        where TPlanned : OVSEntity =>
+        UpdateEntities(tableName, realized, planned, cancellationToken)
+            .MapLeft(e => Error.New($"Cannot apply network plan {networkPlanId}.", e));
 }
