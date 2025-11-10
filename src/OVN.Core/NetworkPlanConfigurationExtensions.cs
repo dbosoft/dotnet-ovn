@@ -145,6 +145,54 @@ public static class NetworkPlanConfigurationExtensions
         return plan with { PlannedNATRules = plan.PlannedNATRules.Add(natRule.Name, natRule) };
     }
 
+    public static NetworkPlan AddSourceNATRule(
+        this NetworkPlan plan,
+        string routerName,
+        IPAddress externalIP,
+        IPNetwork2 network)
+    {
+        var natRule = new PlannedNATRule(routerName)
+        {
+            Type = "snat",
+            ExternalIP = externalIP.ToString(),
+            LogicalIP = network.ToString(),
+            ExternalIds = Map(
+                ("network_plan", plan.Id),
+                ("router_name", routerName)),
+        };
+
+        return plan with
+        {
+            PlannedNATRules = plan.PlannedNATRules.Add(natRule.Name, natRule)
+        };
+    }
+
+    public static NetworkPlan AddDestinationNATRule(
+        this NetworkPlan plan,
+        string routerName,
+        IPAddress externalIP,
+        string externalMac,
+        IPAddress logicalIP,
+        string logicalPort = "")
+    {
+        var natRule = new PlannedNATRule(routerName)
+        {
+            Type = "dnat_and_snat",
+            ExternalIP = externalIP.ToString(),
+            ExternalMAC = externalMac,
+            LogicalIP = logicalIP.ToString(),
+            LogicalPort = logicalPort,
+            ExternalIds = Map(
+                ("network_plan", plan.Id),
+                ("router_name", routerName)),
+        };
+
+        return plan with
+        {
+            PlannedNATRules = plan.PlannedNATRules.Add(natRule.Name, natRule)
+        };
+    }
+
     public static NetworkPlan AddStaticRoute(
         this NetworkPlan plan,
         string routerName,
