@@ -3,6 +3,8 @@ using LanguageExt;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit.Abstractions;
 
+using static LanguageExt.Prelude;
+
 namespace Dbosoft.OVN.Core.IntegrationTests;
 
 public class NetworkPlanRealizerTests(
@@ -10,7 +12,7 @@ public class NetworkPlanRealizerTests(
     : OvnControlToolTestBase(testOutputHelper)
 {
     [Fact]
-    public async Task ApplyNetworkPlan_NewPlan_IsSuccessful()
+    public async Task ApplyNetworkPlan_NewPlan_PlanIsApplied()
     {
         var networkPlan = CreateNetworkPlan();
 
@@ -20,50 +22,70 @@ public class NetworkPlanRealizerTests(
     }
 
     [Fact]
-    public async Task ApplyNetworkPlan_UpdatedPlan_IsSuccessful()
+    public async Task ApplyNetworkPlan_UpdatedPlan_PlanIsApplied()
+    {
+        await ApplyNetworkPlan(CreateNetworkPlan());
+
+        var updatedPlan = new NetworkPlan("test-project")
+            .AddRouter("router-2")
+            .AddRouterPort(
+                "provider-switch-2",
+                "router-2",
+                "02:00:00:00:00:01",
+                IPAddress.Parse("192.0.2.100"),
+                IPNetwork2.Parse("192.0.2.0/24"),
+                chassisGroup: "local")
+            .AddRouterPort(
+                "switch-2",
+                "router-2",
+                "02:00:00:00:00:02",
+                IPAddress.Parse("198.51.100.1"),
+                IPNetwork2.Parse("198.51.100.0/24"))
+            .AddSourceNATRule(
+                "router-2",
+                IPAddress.Parse("192.0.2.100"),
+                IPNetwork2.Parse("198.51.100.0/24"))
+            .AddDestinationNATRule(
+                "router-2",
+                IPAddress.Parse("192.0.2.110"),
+                "02:00:00:00:00:03",
+                IPAddress.Parse("198.51.100.100"))
+            .AddStaticRoute(
+                "router-2",
+                "0.0.0.0/0",
+                IPAddress.Parse("198.0.2.1"))
+            .AddSwitch("provider-switch-2")
+            .AddExternalNetworkPort("provider-switch-2", "extern", 5)
+            .AddSwitch("switch-2")
+            .AddNetworkPort(
+                "switch-2",
+                "switch2-port-1",
+                "02:01:00:00:00:01",
+                IPAddress.Parse("198.51.100.100"),
+                dhcpOptionsV4: "dhcp-2")
+            .AddDHCPOptions(
+                "dhcp-2",
+                IPNetwork2.Parse("198.51.100.0/24"),
+                Empty)
+            .AddDnsRecords(
+                "dns-2",
+                Map(("vm-1.acme.test", "198.51.100.0")),
+                Empty);
+
+        await ApplyNetworkPlan(updatedPlan);
+
+        await VerifyDatabase();
+    }
+
+    [Fact]
+    public async Task ApplyNetworkPlan_RemoveChildResources_PlanIsApplied()
     {
         await ApplyNetworkPlan(CreateNetworkPlan());
 
         var updatedPlan = new NetworkPlan("test-project")
             .AddRouter("router-1")
-            .AddRouterPort(
-                "provider-switch-1",
-                "router-1",
-                "02:00:00:00:00:01",
-                IPAddress.Parse("192.0.2.101"),
-                IPNetwork2.Parse("192.0.2.0/24"),
-                chassisGroup: "test")
-            .AddRouterPort(
-                "switch-2",
-                "router-1",
-                "02:00:00:00:00:02",
-                IPAddress.Parse("198.51.100.1"),
-                IPNetwork2.Parse("198.51.100.0/24"))
-            .AddNATRule(
-                "router-1",
-                "snat",
-                IPAddress.Parse("192.0.2.100"),
-                "02:00:00:00:00:03",
-                "198.51.100.0/24")
             .AddSwitch("provider-switch-1")
-            .AddExternalNetworkPort("provider-switch-1", "extern", 5)
-            .AddSwitch("switch-2")
-            .AddNetworkPort(
-                "switch-2",
-                "switch-2-port-1",
-                "02:01:00:00:00:01",
-                IPAddress.Parse("198.51.100.100"),
-                dhcpOptionsV4: "dhcp-1")
-            .AddNetworkPort(
-                "switch-2",
-                "switch-2-port-2",
-                "02:01:00:00:00:02",
-                IPAddress.Parse("198.51.100.101"),
-                dhcpOptionsV4: "dhcp-1")
-            .AddDHCPOptions(
-                "dhcp-1",
-                IPNetwork2.Parse("198.51.100.0/24"),
-                Prelude.Empty);
+            .AddSwitch("switch-1");
 
         await ApplyNetworkPlan(updatedPlan);
 
@@ -93,29 +115,34 @@ public class NetworkPlanRealizerTests(
                 "02:00:00:00:00:02",
                 IPAddress.Parse("198.51.100.1"),
                 IPNetwork2.Parse("198.51.100.0/24"))
-            .AddNATRule(
+            .AddSourceNATRule(
                 "router-1",
-                "snat",
                 IPAddress.Parse("192.0.2.100"),
+                IPNetwork2.Parse("198.51.100.0/24"))
+            .AddDestinationNATRule(
+                "router-1",
+                IPAddress.Parse("192.0.2.110"),
                 "02:00:00:00:00:03",
-                "198.51.100.0/24")
+                IPAddress.Parse("198.51.100.100"))
+            .AddStaticRoute(
+                "router-1",
+                "0.0.0.0/0",
+                IPAddress.Parse("198.0.2.1"))
             .AddSwitch("provider-switch-1")
-                .AddExternalNetworkPort("provider-switch-1", "extern", 5)
-                .AddSwitch("switch-1")
-                .AddNetworkPort(
+            .AddExternalNetworkPort("provider-switch-1", "extern", 5)
+            .AddSwitch("switch-1")
+            .AddNetworkPort(
                 "switch-1",
                 "switch-1-port-1",
                 "02:01:00:00:00:01",
-            IPAddress.Parse("198.51.100.100"),
-            dhcpOptionsV4: "dhcp-1")
-            .AddNetworkPort(
-                "switch-1",
-                "switch-1-port-2",
-                "02:01:00:00:00:02",
-            IPAddress.Parse("198.51.100.101"),
-            dhcpOptionsV4: "dhcp-1")
+                IPAddress.Parse("198.51.100.100"),
+                dhcpOptionsV4: "dhcp-1")
             .AddDHCPOptions(
                 "dhcp-1",
-            IPNetwork2.Parse("198.51.100.0/24"),
-            Prelude.Empty);
+                IPNetwork2.Parse("198.51.100.0/24"),
+                Empty)
+            .AddDnsRecords(
+                "dns-1",
+                Map(("vm-1.acme.test", "198.51.100.0")),
+                Empty);
 }
