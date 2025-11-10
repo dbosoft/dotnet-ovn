@@ -1,4 +1,6 @@
-﻿namespace Dbosoft.OVN.Model.OVN;
+﻿using static LanguageExt.Prelude;
+
+namespace Dbosoft.OVN.Model.OVN;
 
 public record Chassis : OVSTableRecord, IHasParentReference, IOVSEntityWithName
 {
@@ -13,13 +15,11 @@ public record Chassis : OVSTableRecord, IHasParentReference, IOVSEntityWithName
 
     public short? Priority => GetValue<short>("priority");
 
-    public Guid? ParentId => GetValue<Guid>("__parentId");
-
-    public OVSParentReference? GetParentReference()
+    public OVSParentReference GetParentReference()
     {
         return new OVSParentReference(
             OVNTableNames.ChassisGroups,
-            ParentId.HasValue ? ParentId.Value.ToString("D") : Guid.Empty.ToString("D"),
+            Optional(GetValue<Guid>("__parentId")).Map(i => i.ToString("D")),
             "ha_chassis");
     }
 }
