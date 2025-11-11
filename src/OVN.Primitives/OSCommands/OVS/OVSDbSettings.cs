@@ -1,4 +1,5 @@
 using Dbosoft.OVN.Logging;
+using LanguageExt;
 
 namespace Dbosoft.OVN.OSCommands.OVS;
 
@@ -9,4 +10,5 @@ public record OVSDbSettings(
     OvsFile ControlFile,
     OvsFile LogFile,
     OvsLoggingSettings LoggingSettings,
-    bool AllowAttach);
+    bool AllowAttach,
+    Option<string> DatabaseRemoteConfig);

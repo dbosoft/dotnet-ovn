@@ -1,10 +1,12 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
+using System.Net;
 using System.Reflection;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.OSCommands.OVN;
+using Dbosoft.OVN.OSCommands.OVS;
 #if WINDOWS
 using Dbosoft.OVN.Windows;
 #endif
@@ -19,6 +21,7 @@ using YamlDotNet.Serialization.NamingConventions;
 
 var logLevelOptions = new System.CommandLine.Option<LogLevel>("--logLevel", () => LogLevel.Information);
 var nodeTypeOptions = new System.CommandLine.Option<NodeType>("--nodes", () => NodeType.AllInOne );
+var fileOption = new System.CommandLine.Option<FileInfo>("--file");
 
 var rootCommand = new RootCommand();
 rootCommand.AddGlobalOption(logLevelOptions);
@@ -28,14 +31,38 @@ runCommand.AddOption(nodeTypeOptions);
 runCommand.SetHandler(RunCommand, logLevelOptions, nodeTypeOptions);
 rootCommand.Add(runCommand);
 
+var runPrimaryCommand = new Command("run-primary", "Runs OVN primary.");
+runPrimaryCommand.SetHandler(RunPrimaryCommand, logLevelOptions);
+rootCommand.Add(runPrimaryCommand);
+
+var runSecondaryCommand = new Command("run-secondary", "Runs OVN secondary.");
+runSecondaryCommand.SetHandler(RunSecondaryCommand, logLevelOptions);
+rootCommand.Add(runSecondaryCommand);
+
+
 var netplanCommand = new Command("netplan", "netplan commands");
 rootCommand.Add(netplanCommand);
 
-var applyCommand = new Command("apply", "apply network plan");
-var fileOption = new System.CommandLine.Option<FileInfo>("--file");
-applyCommand.AddOption(fileOption);
-applyCommand.SetHandler(ApplyNetplan, logLevelOptions, fileOption);
-netplanCommand.AddCommand(applyCommand);
+var netplanApplyCommand = new Command("apply", "apply network plan");
+netplanApplyCommand.AddOption(fileOption);
+netplanApplyCommand.SetHandler(ApplyNetplan, logLevelOptions, fileOption);
+netplanCommand.AddCommand(netplanApplyCommand);
+
+var clusterPlanCommand = new Command("clusterplan", "cluster plan commands");
+rootCommand.Add(clusterPlanCommand);
+
+var clusterPlanApplyCommand = new Command("apply", "apply cluster plan");
+clusterPlanApplyCommand.AddOption(fileOption);
+clusterPlanApplyCommand.SetHandler(ApplyClusterPlan, logLevelOptions, fileOption);
+clusterPlanCommand.AddCommand(clusterPlanApplyCommand);
+
+var chassisPlanCommand = new Command("chassisplan", "chassis plan commands");
+rootCommand.Add(chassisPlanCommand);
+
+var chassisPlanApplyCommand = new Command("apply", "apply chassis plan");
+chassisPlanApplyCommand.AddOption(fileOption);
+chassisPlanApplyCommand.SetHandler(ApplyChassisPlan, logLevelOptions, fileOption);
+chassisPlanCommand.AddCommand(chassisPlanApplyCommand);
 
 var serviceCommand = new Command("service", "service commands");
 rootCommand.Add(serviceCommand);
@@ -142,6 +169,48 @@ static Task RunCommand(LogLevel logLevel, NodeType nodeType)
     return host.RunAsync();
 }
 
+static Task RunPrimaryCommand(LogLevel logLevel)
+{
+    var host = Host.CreateDefaultBuilder()
+        .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = TimeSpan.FromSeconds(15))
+        .UseWindowsService(cfg => cfg.ServiceName = "ovn-primary")
+        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
+        .ConfigureServices(services =>
+        {
+            AddSystemEnvironment(services);
+            AddRemoteSettings(services, "primary", IPAddress.Parse("192.168.240.101"), Prelude.Map(("extern", "br-extern")));
+
+            services.AddHostedNode<OVNDatabaseNode>();
+            services.AddHostedNode<NetworkControllerNode>();
+            services.AddHostedNode<OVSDbNode>();
+            services.AddHostedNode<OVSSwitchNode>();
+            services.AddHostedNode<OVNChassisNode>();
+        })
+        .Build();
+
+    return host.RunAsync();
+}
+
+static Task RunSecondaryCommand(LogLevel logLevel)
+{
+    var host = Host.CreateDefaultBuilder()
+        .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = TimeSpan.FromSeconds(15))
+        .UseWindowsService(cfg => cfg.ServiceName = "ovn-secondary")
+        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
+        .ConfigureServices(services =>
+        {
+            AddSystemEnvironment(services);
+            AddRemoteSettings(services, "secondary", IPAddress.Parse("192.168.240.102"));
+
+            services.AddHostedNode<OVSDbNode>();
+            services.AddHostedNode<OVSSwitchNode>();
+            services.AddHostedNode<OVNChassisNode>();
+        })
+        .Build();
+
+    return host.RunAsync();
+}
+
 static async Task<int> ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
 {
     var serializer = new DeserializerBuilder()
@@ -176,6 +245,76 @@ static async Task<int> ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
         {
             Console.WriteLine(ErrorUtils.PrintError(
                 Error.New("Failed to apply network plan.", error)));
+            return -1;
+        });
+}
+
+static async Task<int> ApplyClusterPlan(LogLevel logLevel, FileInfo clusterPlanFile)
+{
+    string yaml = await ReadTextAsync(clusterPlanFile);
+    var netplan = ClusterPlanParser.ParseYaml(yaml);
+
+    var host = Host.CreateDefaultBuilder()
+        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
+        .ConfigureServices(services =>
+        {
+
+            AddOVNCore(services);
+            services.AddSingleton(
+                sp => new ClusterPlanRealizer(
+                    new OVNControlTool(
+                        sp.GetRequiredService<ISystemEnvironment>(),
+                        sp.GetRequiredService<IOVNSettings>().NorthDBConnection),
+                    new OVNSouthboundControlTool(
+                        sp.GetRequiredService<ISystemEnvironment>(),
+                        sp.GetRequiredService<IOVNSettings>().SouthDBConnection),
+                    sp.GetRequiredService<ILogger<ClusterPlanRealizer>>()));
+        })
+        .Build();
+
+    var result = await host.Services.GetRequiredService<ClusterPlanRealizer>()
+        .ApplyClusterPlan(netplan);
+
+    return result.Match(
+        Right: _ => 0,
+        Left: error =>
+        {
+            Console.WriteLine(ErrorUtils.PrintError(
+                Error.New("Failed to apply cluster plan.", error)));
+            return -1;
+        });
+}
+
+static async Task<int> ApplyChassisPlan(LogLevel logLevel, FileInfo chassisPlanFile)
+{
+    string yaml = await ReadTextAsync(chassisPlanFile);
+    var netplan = ChassisPlanParser.ParseYaml(yaml);
+
+    var host = Host.CreateDefaultBuilder()
+        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
+        .ConfigureServices(services =>
+        {
+
+            AddOVNCore(services);
+            services.AddSingleton(
+                sp => new ChassisPlanRealizer(
+                    sp.GetRequiredService<ISystemEnvironment>(),
+                    new OVSControlTool(
+                        sp.GetRequiredService<ISystemEnvironment>(),
+                        LocalConnections.Switch),
+                    sp.GetRequiredService<ILogger<ChassisPlanRealizer>>()));
+        })
+        .Build();
+
+    var result = await host.Services.GetRequiredService<ChassisPlanRealizer>()
+        .ApplyChassisPlan(netplan);
+
+    return result.Match(
+        Right: _ => 0,
+        Left: error =>
+        {
+            Console.WriteLine(ErrorUtils.PrintError(
+                Error.New("Failed to apply chassis plan.", error)));
             return -1;
         });
 }
@@ -287,6 +426,32 @@ static async Task<int> SetPortName(string adapterId, string portName)
 
 static void AddOVNCore(IServiceCollection services)
 {
+    AddSystemEnvironment(services);
+    services.AddSingleton<IOvsSettings, LocalOVSWithOVNSettings>();
+    services.AddSingleton<IOVNSettings, LocalOVSWithOVNSettings>();
+}
+
+static void AddRemoteSettings(
+    IServiceCollection services,
+    string chassisName,
+    IPAddress? ipAddress,
+    Map<string, string> bridgeMappings = default)
+{
+    var settings = new RemoteOvsWithOvnSettings(
+        LocalConnections.Southbound,
+        //new OvsDbConnection("192.168.241.101", 6642),
+        chassisName,
+        ipAddress,
+        bridgeMappings);
+
+    settings.Logging.File.Level = OvsLogLevel.Debug;
+
+    services.AddSingleton<IOvsSettings>(settings);
+    services.AddSingleton<IOVNSettings>(settings);
+}
+
+static void AddSystemEnvironment(IServiceCollection services)
+{
 #if WINDOWS
     services.AddSingleton<ISystemEnvironment, WindowsSystemEnvironment>();
 #else
@@ -294,6 +459,12 @@ static void AddOVNCore(IServiceCollection services)
 #endif
     services.AddSingleton<IOvsSettings, LocalOVSWithOVNSettings>();
     services.AddSingleton<IOVNSettings, LocalOVSWithOVNSettings>();
+}
+
+static async Task<string> ReadTextAsync(FileInfo fileInfo)
+{
+    using var reader = fileInfo.OpenText();
+    return await reader.ReadToEndAsync();
 }
 
 /// <summary>

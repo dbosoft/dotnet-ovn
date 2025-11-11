@@ -18,7 +18,7 @@ public record PlannedChassis(string ChassisGroupName) : OVSEntity, IOVSEntityWit
         init => SetValue("chassis_name", value);
     }
 
-    public short? Priority
+    public short Priority
     {
         get => GetValue<short>("priority");
         init => SetValue("priority", value);

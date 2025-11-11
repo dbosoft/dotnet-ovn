@@ -51,9 +51,9 @@ _uuid active_timeout add_id_to_interface engine_id engine_type external_ids targ
 ----- -------------- ------------------- --------- ----------- ------------ -------
 
 Open_vSwitch table
-_uuid                                bridges cur_cfg datapath_types datapaths db_version dpdk_initialized dpdk_version external_ids                                                                                                                   iface_types manager_options next_cfg other_config ovs_version ssl statistics system_type system_version
------------------------------------- ------- ------- -------------- --------- ---------- ---------------- ------------ ------------------------------------------------------------------------------------------------------------------------------ ----------- --------------- -------- ------------ ----------- --- ---------- ----------- --------------
-Guid_0000000000000000000000000000001 []      0       []             {}        []         false            []           {ovn-bridge-mappings="extern:br-extern", ovn-encap-ip="203.0.113.2", ovn-encap-type=geneve, ovn-remote="tcp:203.0.113.1:6642"} []          []              0        {}           []          []  {}         []          []
+_uuid                                bridges cur_cfg datapath_types datapaths db_version dpdk_initialized dpdk_version external_ids                                                                                                                                        iface_types manager_options next_cfg other_config ovs_version ssl statistics system_type system_version
+------------------------------------ ------- ------- -------------- --------- ---------- ---------------- ------------ --------------------------------------------------------------------------------------------------------------------------------------------------- ----------- --------------- -------- ------------ ----------- --- ---------- ----------- --------------
+Guid_0000000000000000000000000000001 []      0       []             {}        []         false            []           {ovn-bridge-mappings="extern:br-extern", ovn-encap-ip="203.0.113.2", ovn-encap-type=geneve, ovn-remote="tcp:203.0.113.1:6642", system-id=chassis-1} []          []              0        {}           []          []  {}         []          []
 
 Port table
 _uuid bond_active_slave bond_downdelay bond_fake_iface bond_mode bond_updelay cvlans external_ids fake_bridge interfaces lacp mac name other_config protected qos rstp_statistics rstp_status statistics status tag trunks vlan_mode

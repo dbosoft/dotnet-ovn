@@ -31,6 +31,7 @@ public class OVNDatabaseNode : DemonNodeBase
                 .WithDbConnection(_ovnSettings.SouthDBConnection)
                 .WithLogging(_ovnSettings.Logging)
                 .AllowAttach(false)
+                .UseRemoteConfigsFromDatabase(true)
                 .Build(),
             _loggerFactory.CreateLogger<OVSDBProcess>());
     }
