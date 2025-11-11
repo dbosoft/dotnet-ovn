@@ -35,7 +35,7 @@ public class ClusterPlanRealizerTests(
 
     private async Task ApplyClusterPlan(ClusterPlan clusterPlan)
     {
-        var realizer = new ClusterPlanRealizer(ControlTool, NullLogger.Instance);
+        var realizer = new ClusterPlanNorthboundRealizer(ControlTool, NullLogger.Instance);
 
         (await realizer.ApplyClusterPlan(clusterPlan)).ThrowIfLeft();
     }

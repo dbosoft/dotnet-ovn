@@ -2,6 +2,7 @@ namespace Dbosoft.OVN.Model.OVN;
 
 public static class OVNTableNames
 {
+    public const string Global = "NB_Global";
     public const string LogicalSwitch = "logical_switch";
     public const string LogicalSwitchPort = "logical_switch_port";
     public const string LogicalRouter = "logical_router";

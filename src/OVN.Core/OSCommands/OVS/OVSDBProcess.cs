@@ -1,4 +1,3 @@
-using System.Net.Sockets;
 using System.Text;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -40,6 +39,8 @@ public class OVSDBProcess : DemonProcessBase
         sb.Append(' ');
         sb.Append($"--remote=\"{_dbSettings.Connection.GetCommandString(_systemEnvironment.FileSystem, true)}\"");
         sb.Append(' ');
+        sb.Append(_dbSettings.DatabaseRemoteConfig.Map(c => $"--remote=\"{c}\" ").IfNone(""));
+
         sb.Append(baseArguments);
         return sb.ToString();
     }
@@ -61,5 +62,4 @@ public class OVSDBProcess : DemonProcessBase
         return dbTool.CreateDBFile(_dbSettings.DBFile, _dbSettings.SchemaFile)
             .Map(_ => true);
     }
-    
 }

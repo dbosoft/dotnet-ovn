@@ -176,7 +176,7 @@ public class OVSTool: IOVSDBTool
     /// <inheritdoc />
     public EitherAsync<Error, Seq<T>> FindRecords<T>(
         string tableName,
-        Map<string, OVSQuery> query,
+        Map<string, OVSQuery> query = default,
         Seq<string> columns = default,
         CancellationToken cancellationToken = default)
         where T : OVSTableRecord, new()

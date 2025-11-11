@@ -43,8 +43,8 @@ public class OVNChassisNode : DemonNodeBase
     protected override EitherAsync<Error, Unit> OnProcessStarted(DemonProcessBase process,
         CancellationToken cancellationToken)
     {
-        return WaitForDbSocket(cancellationToken)
-            .Bind(_ => ConfigureController(cancellationToken));
+        return WaitForDbSocket(cancellationToken);
+            //.Bind(_ => ConfigureController(cancellationToken));
     }
 
     private EitherAsync<Error, Unit> ConfigureController(CancellationToken cancellationToken)

@@ -1,72 +1,63 @@
 ﻿using Dbosoft.OVN;
+using Dbosoft.OVN.Model.OVN;
 
 namespace Dbosoft.OVNAgent;
 
 public static class ClusterPlanParser
 {
-    public static ClusterPlan ParseYaml(IDictionary<object, object> dictionary)
+    public static ClusterPlan ParseYaml(string yaml)
     {
+        var planConfig = PlanYamlSerializer.Deserialize<ClusterPlanConfig>(yaml);
         var clusterPlan = new ClusterPlan();
 
-        if (dictionary.ContainsKey("chassis_groups")
-            && dictionary["chassis_groups"] is IList<object> chassisGroups)
+        clusterPlan = clusterPlan with
         {
-            clusterPlan = ParseChassisGroups(clusterPlan, chassisGroups);
+            // TODO Parse from cluster plan
+            //PlannedSouthboundConnections = clusterPlan.PlannedSouthboundConnections.Add(
+            //    "ptcp:6642",
+            //    new PlannedSouthboundConnection()
+            //    {
+            //        Target = "ptcp:6642",
+            //    }),
+        };
+
+        foreach (var chassisGroupConfig in planConfig.ChassisGroups)
+        {
+            clusterPlan = ParseChassisGroup(clusterPlan, chassisGroupConfig);
         }
 
         return clusterPlan;
     }
 
-    private static ClusterPlan ParseChassisGroups(
-        ClusterPlan networkPlan,
-        IEnumerable<object> chassisGroups)
-    {
-        foreach (var chassisGroupObj in chassisGroups)
-        {
-            if (chassisGroupObj is not IDictionary<object, object> chassisGroup)
-                continue;
-
-            networkPlan = ParseChassisGroup(networkPlan, chassisGroup);
-        }
-
-        return networkPlan;
-    }
-
     private static ClusterPlan ParseChassisGroup(
-        ClusterPlan networkPlan,
-        IDictionary<object, object> chassisGroupValues)
+        ClusterPlan clusterPlan,
+        ChassisGroupConfig chassisGroupConfig)
     {
-        if (!chassisGroupValues.ContainsKey("name") || chassisGroupValues["name"] is not string chassisGroupName)
-            throw new InvalidDataException("chassis group name is required.");
+        if (string.IsNullOrWhiteSpace(chassisGroupConfig.Name))
+            throw new InvalidDataException("The chassis group name is required.");
+        
+        clusterPlan = clusterPlan.AddChassisGroup(chassisGroupConfig.Name);
 
-        networkPlan = networkPlan.AddChassisGroup(chassisGroupName);
-
-        if (!chassisGroupValues.ContainsKey("chassis") || chassisGroupValues["chassis"] is not IList<object> chassisList)
-            return networkPlan;
-
-        foreach (var chassisObj in chassisList)
+        foreach (var chassisConfig in chassisGroupConfig.Chassis)
         {
-            if (chassisObj is IDictionary<object, object> chassisValues)
-                networkPlan = ParseChassis(networkPlan, chassisValues, chassisGroupName);
+            clusterPlan = ParseChassis(clusterPlan, chassisConfig, chassisGroupConfig.Name);
         }
 
-        return networkPlan;
+        return clusterPlan;
     }
 
     private static ClusterPlan ParseChassis(
         ClusterPlan clusterPlan,
-        IDictionary<object, object> chassisValues,
+        ChassisConfig chassisConfig,
         string chassisGroupName)
     {
-        if (!chassisValues.ContainsKey("name") || chassisValues["name"] is not string chassisName)
-            throw new InvalidDataException("chassis name is required.");
+        if (string.IsNullOrWhiteSpace(chassisConfig.Name))
+            throw new InvalidDataException("The chassis name is required.");
 
-        short priority = 0;
-        if (chassisValues.ContainsKey("priority") && chassisValues["priority"] is int prio)
-        {
-            priority = (short)prio;
-        }
-        return clusterPlan.AddChassis(chassisGroupName, chassisName, priority);
+        return clusterPlan.AddChassis(
+            chassisGroupName,
+            chassisConfig.Name,
+            // The priority can be between 0 and 32,767. We use 16,383 as the default priority.
+            chassisConfig.Priority.GetValueOrDefault(16383));
     }
-
 }

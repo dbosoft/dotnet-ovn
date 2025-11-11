@@ -40,6 +40,7 @@ public class OVSDbNode : DemonNodeBase
                 .WithDbConnection(LocalOVSConnection)
                 .WithLogging(_ovsSettings.Logging)
                 .AllowAttach(true)
+                .UseRemoteConfigsFromDatabase(false)
                 .Build(),
             _loggerFactory.CreateLogger<OVSDBProcess>());
 

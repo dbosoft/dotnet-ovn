@@ -28,6 +28,14 @@ public static class ChassisPlanConfigurationExtensions
             TunnelEndpoints = chassisPlan.TunnelEndpoints.Add(new PlannedTunnelEndpoint("geneve", ipAddress)),
         };
 
+    public static ChassisPlan AddVxlanTunnelEndpoint(
+        this ChassisPlan chassisPlan,
+        IPAddress ipAddress) =>
+        chassisPlan with
+        {
+            TunnelEndpoints = chassisPlan.TunnelEndpoints.Add(new PlannedTunnelEndpoint("vxlan", ipAddress)),
+        };
+
     public static ChassisPlan AddBridgeMapping(
         this ChassisPlan chassisPlan,
         string networkName,
@@ -39,7 +47,6 @@ public static class ChassisPlanConfigurationExtensions
 
     public static ChassisPlan AddBridgeMapping(
         this ChassisPlan chassisPlan,
-        string networkName,
         HashMap<string, string> bridgeMappings) =>
         chassisPlan with
         {

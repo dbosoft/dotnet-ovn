@@ -27,7 +27,7 @@ public class ChassisPlanRealizer : PlanRealizer
         _systemEnvironment = systemEnvironment;
         _ovsDBTool = ovsDBTool;
     }
-
+    
     public EitherAsync<Error, ChassisPlan> ApplyChassisPlan(
         ChassisPlan chassisPlan,
         CancellationToken cancellationToken = default) =>
@@ -46,6 +46,7 @@ public class ChassisPlanRealizer : PlanRealizer
         let ovnRemote = chassisPlan.SouthboundDatabase
             .GetCommandString(_systemEnvironment.FileSystem, false)
         let update = Map(
+            ("system-id", OVSValue<string>.New(chassisPlan.ChassisId)),
             ("ovn-bridge-mappings", OVSValue<string>.New(bridgeMappings)),
             ("ovn-encap-type", OVSValue<string>.New(encapTypes)),
             ("ovn-encap-ip", OVSValue<string>.New(encapIps)),
