@@ -15,7 +15,13 @@ public abstract class OvsControlToolTestBase : OvsDbTestBase
         ITestOutputHelper testOutputHelper)
         : base(testOutputHelper, DbSettings)
     {
-        ControlTool = new OVSControlTool(SystemEnvironment, DbSettings.Connection);
+        ControlTool = new OVSControlTool(
+            SystemEnvironment,
+            DbSettings.Connection,
+            // The tests must run with --no-wait as we are running only the OVS DB.
+            // Without --no-wait, all commands would hang forever ovs-vsctl waits
+            // for confirmation by vswitchd (which is not running during these tests).
+            noWait: true);
     }
 
     protected override EitherAsync<Error, Unit> InitializeDatabase() =>

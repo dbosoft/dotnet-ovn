@@ -11,8 +11,7 @@ public class OvsControlToolTests(
     {
         var either = await ControlTool.ConfigureOVN(
             new OvsDbConnection("203.0.113.1", 6641),
-            "local",
-            noWait: true);
+            "local");
         either.ThrowIfLeft();
 
         await VerifyDatabase();
