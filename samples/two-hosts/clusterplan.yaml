@@ -1,0 +1,9 @@
+chassis_groups:
+- name: dotnet-ovn
+  chassis:
+  - name: chassis-primary
+    priority: 20
+  - name: chassis-secondary
+    priority: 10
+southbound_connections:
+- port: 6642
