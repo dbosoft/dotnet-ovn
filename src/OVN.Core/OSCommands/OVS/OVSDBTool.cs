@@ -32,6 +32,6 @@ public class OVSDBTool : OVSTool
         var schemaPath = _systemEnvironment.FileSystem.ResolveOvsFilePath(schemaFile);
 
         var command = $"create \"{dbFilePath}\" \"{schemaPath}\"";
-        return RunCommand(command).Map(_ => Unit.Default);
+        return RunCommandWithResponse(command).Map(_ => Unit.Default);
     }
 }
