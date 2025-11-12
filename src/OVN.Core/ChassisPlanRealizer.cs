@@ -37,10 +37,11 @@ public class ChassisPlanRealizer : PlanRealizer
         from ovsRecord in optionalOvsRecord
             .ToEitherAsync(Error.New("The OVS configuration table does not exist."))
         let chassisId = ovsRecord.ExternalIds.Find("system-id")
-        from _1 in guard(
-            chassisId.Map(i => i == chassisPlan.ChassisId).IfNone(true),
-            Error.New($"A different chassis ID ('{chassisId}' is already configured. The chassis ID cannot be changed."))
-        let bridgeMappings = string.Join(",", chassisPlan.BridgeMappings.ToSeq().Map(kvp => $"{kvp.Key}:{kvp.Value}"))
+        from _1 in chassisId
+            .Filter(i => i != chassisPlan.ChassisId)
+            .Map<EitherAsync<Error, Unit>>(i => Error.New($"A different chassis ID ('{i}') is already configured. The chassis ID cannot be changed."))
+            .Sequence()
+        let bridgeMappings = string.Join(",", chassisPlan.BridgeMappings.ToSeq().Map(kvp => $"{kvp.Key}:{kvp.Value}").Order())
         let encapTypes = string.Join(",", chassisPlan.TunnelEndpoints.Map(e => e.EncapsulationType))
         let encapIps = string.Join(",", chassisPlan.TunnelEndpoints.Map(e => e.IpAddress))
         let ovnRemote = chassisPlan.SouthboundDatabase

@@ -52,7 +52,7 @@ public class OVNControlTool : OVSTool
                             cancellationToken: cancellationToken)
                         .Map(chassisSeq =>
                             chassisSeq.Filter(c => 
-                                    group.Chassis.GetValueOrDefault().Contains(c.Id)).HeadOrNone()
+                                    group.Chassis.Contains(c.Id)).HeadOrNone()
                                 .Match(_ => "", () =>
                                     $"ha-chassis-group-add-chassis {chassisGroup} {chassis} {priority}")),
                     () =>

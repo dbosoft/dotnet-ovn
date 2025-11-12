@@ -39,15 +39,13 @@ _uuid chassis_name external_ids name options priority
 ----- ------------ ------------ ---- ------- --------
 
 HA_Chassis table
-_uuid                                chassis_name external_ids priority
------------------------------------- ------------ ------------ --------
-Guid_0000000000000000000000000000001 chassis-3    {}           25
-Guid_0000000000000000000000000000002 chassis-4    {}           50
+_uuid chassis_name external_ids priority
+----- ------------ ------------ --------
 
 HA_Chassis_Group table
-_uuid                                external_ids ha_chassis                                                                   name
------------------------------------- ------------ ---------------------------------------------------------------------------- ---------------
-Guid_0000000000000000000000000000003 {}           [Guid_0000000000000000000000000000001, Guid_0000000000000000000000000000002] chassis-group-2
+_uuid                                external_ids ha_chassis name
+------------------------------------ ------------ ---------- ---------------
+Guid_0000000000000000000000000000001 {}           []         chassis-group-1
 
 Load_Balancer table
 _uuid external_ids health_check ip_port_mappings name options protocol selection_fields vips
@@ -104,7 +102,7 @@ _uuid allowed_ext_ips exempted_ext_ips external_ids external_ip external_mac ext
 NB_Global table
 _uuid                                connections external_ids hv_cfg hv_cfg_timestamp ipsec name nb_cfg nb_cfg_timestamp options sb_cfg sb_cfg_timestamp ssl
 ------------------------------------ ----------- ------------ ------ ---------------- ----- ---- ------ ---------------- ------- ------ ---------------- ---
-Guid_0000000000000000000000000000004 []          {}           0      0                false ""   0      0                {}      0      0                []
+Guid_0000000000000000000000000000002 []          {}           0      0                false ""   0      0                {}      0      0                []
 
 Port_Group table
 _uuid acls external_ids name ports
