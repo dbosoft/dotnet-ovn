@@ -3,7 +3,7 @@ using Xunit.Abstractions;
 
 namespace Dbosoft.OVN.Core.IntegrationTests;
 
-public class ClusterPlanRealizerTests(
+public class ClusterPlanNorthboundRealizerTests(
     ITestOutputHelper testOutputHelper)
     : OvnControlToolTestBase(testOutputHelper)
 {

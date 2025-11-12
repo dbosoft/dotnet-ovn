@@ -1,4 +1,5 @@
-﻿using AwesomeAssertions;
+﻿using System.Net;
+using AwesomeAssertions;
 using Dbosoft.OVN.Model.OVN;
 using Dbosoft.OVN.OSCommands.OVN;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -12,28 +13,43 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
     [Fact]
     public async Task ApplyClusterPlan_NewPlan_IsSuccessful()
     {
-        const int port = 42421;
-        var clusterPlan = new ClusterPlan();
-        clusterPlan = clusterPlan with
-        {
-            PlannedSouthboundConnections = clusterPlan.PlannedSouthboundConnections
-                .Add("ptcp:42421", new PlannedSouthboundConnection { Target = "ptcp:42421", })
-                .Add("tcp:203.0.113.1:16642", new PlannedSouthboundConnection { Target = "tcp:203.0.113.1:16642", }),
-        };
-
-        await ApplyClusterPlan(clusterPlan);
+        await ApplyClusterPlan(CreateClusterPlan());
 
         await VerifyDatabase();
 
         // Verify that the OVN Southbound database is listening on the expected port
         var networkControlTool = new OVNSouthboundControlTool(
             SystemEnvironment,
-            new OvsDbConnection("127.0.0.1", port));
+            new OvsDbConnection("127.0.0.1", 42421));
         var either = await networkControlTool.FindRecords<SouthboundConnection>(
             OVNSouthboundTableNames.Connection);
-        
+
         var records = either.ThrowIfLeft();
         records.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task ApplyClusterPlan_UpdatedPlan_IsSuccessful()
+    {
+        await ApplyClusterPlan(CreateClusterPlan());
+
+        var updatedPlan = new ClusterPlan()
+            .AddSouthboundConnection(42423);
+
+        await ApplyClusterPlan(updatedPlan);
+
+        await VerifyDatabase();
+
+        // Verify that the OVN Southbound database is listening on the expected port
+        var networkControlTool = new OVNSouthboundControlTool(
+            SystemEnvironment,
+            new OvsDbConnection("127.0.0.1", 42423));
+        var either = await networkControlTool.GetRecord<SouthboundGlobal>(
+            OVNSouthboundTableNames.Global,
+            ".");
+
+        var record = either.ThrowIfLeft();
+        record.IsSome.Should().BeTrue();
     }
 
     private async Task ApplyClusterPlan(ClusterPlan clusterPlan)
@@ -42,4 +58,9 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
 
         (await realizer.ApplyClusterPlan(clusterPlan)).ThrowIfLeft();
     }
+
+    private ClusterPlan CreateClusterPlan() =>
+        new ClusterPlan()
+            .AddSouthboundConnection(42421)
+            .AddSouthboundConnection(42422, true, IPAddress.Parse("203.0.113.2"));
 }

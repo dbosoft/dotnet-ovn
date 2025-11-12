@@ -3,6 +3,8 @@
 public class ClusterPlanConfig
 {
     public IList<ChassisGroupConfig> ChassisGroups { get; set; } = new List<ChassisGroupConfig>();
+
+    public IList<SouthboundConnectionConfig> SouthboundConnections { get; set; } = new List<SouthboundConnectionConfig>();
 }
 
 public class ChassisGroupConfig
@@ -16,5 +18,14 @@ public class ChassisConfig
 {
     public required string Name { get; init; }
 
-    public short? Priority { get; set; }
+    public short? Priority { get; init; }
+}
+
+public class SouthboundConnectionConfig
+{
+    public required int Port { get; init; }
+
+    public bool? Ssl { get; init; }
+
+    public string? IpAddress { get; init; }
 }

@@ -20,9 +20,8 @@ _uuid chassis variables
 
 Connection table
 _uuid                                external_ids inactivity_probe is_connected max_backoff other_config read_only role status target
------------------------------------- ------------ ---------------- ------------ ----------- ------------ --------- ---- ------ ------------------------
-Guid_0000000000000000000000000000001 {}           []               false        []          {}           false     ""   {}     "pssl:42422:203.0.113.2"
-Guid_0000000000000000000000000000002 {}           []               false        []          {}           false     ""   {}     "ptcp:42421"
+------------------------------------ ------------ ---------------- ------------ ----------- ------------ --------- ---- ------ ------------
+Guid_0000000000000000000000000000001 {}           []               false        []          {}           false     ""   {}     "ptcp:42423"
 
 Controller_Event table
 _uuid chassis event_info event_type seq_num
@@ -121,9 +120,9 @@ _uuid name permissions
 ----- ---- -----------
 
 SB_Global table
-_uuid                                connections                                                                  external_ids ipsec nb_cfg options ssl
------------------------------------- ---------------------------------------------------------------------------- ------------ ----- ------ ------- ---
-Guid_0000000000000000000000000000003 [Guid_0000000000000000000000000000001, Guid_0000000000000000000000000000002] {}           false 0      {}      []
+_uuid                                connections                            external_ids ipsec nb_cfg options ssl
+------------------------------------ -------------------------------------- ------------ ----- ------ ------- ---
+Guid_0000000000000000000000000000002 [Guid_0000000000000000000000000000001] {}           false 0      {}      []
 
 SSL table
 _uuid bootstrap_ca_cert ca_cert certificate external_ids private_key ssl_ciphers ssl_protocols

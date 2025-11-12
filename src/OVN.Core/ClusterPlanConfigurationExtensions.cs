@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.OVN.Model.OVN;
@@ -35,6 +36,22 @@ public static class ClusterPlanConfigurationExtensions
                 Name = chassisName,
                 Priority = priority
             }),
+        };
+    }
+
+    public static ClusterPlan AddSouthboundConnection(
+        this ClusterPlan plan,
+        int port = 6642,
+        bool ssl = false,
+        IPAddress? ipAddress = null)
+    {
+        var protocol = ssl ? "pssl" : "ptcp";
+        var target = ipAddress is null ? $"{protocol}:{port}" : $"{protocol}:{port}:{ipAddress}";
+        return plan with
+        {
+            PlannedSouthboundConnections = plan.PlannedSouthboundConnections.Add(
+                target,
+                new PlannedSouthboundConnection { Target = target }),
         };
     }
 }
