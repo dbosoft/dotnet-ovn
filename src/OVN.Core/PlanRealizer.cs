@@ -35,6 +35,21 @@ public abstract class PlanRealizer
             .ToHashMap()
         select result;
 
+    protected EitherAsync<Error, HashMap<Guid, TRecord>> FindRecordsWithParents<TRecord, TParent>(
+        string tableName,
+        Seq<TParent> parents,
+        IDictionary<string, OVSFieldMetadata> columns,
+        Map<string, OVSQuery> queries = default,
+        CancellationToken cancellationToken = default)
+        where TRecord : OVSTableRecord, IHasParentReference, new()
+        where TParent : OVSTableRecord, IHasOVSReferences<TRecord> =>
+        from records in FindRecords<TRecord>(tableName, columns, queries, cancellationToken)
+        let result = records.Values.ToSeq()
+            .AddParentReferences(parents)
+            .Select(r => (r.Id, r))
+            .ToHashMap()
+        select result;
+
     protected EitherAsync<Error, HashMap<string, TEntity>> RemoveEntitiesNotPlanned<TEntity, TPlanned>(
         string tableName,
         HashMap<Guid, TEntity> realized,
@@ -43,8 +58,8 @@ public abstract class PlanRealizer
         where TEntity : OVSTableRecord, IOVSEntityWithName
         where TPlanned : OVSEntity =>
         from _1 in RightAsync<Error, Unit>(unit)
-            //realized is still hashed with Id column catch duplicates here
-            //found will be rehashed to name
+        //realized is still hashed with Id column catch duplicates here
+        //found will be rehashed to name
         let foundByName = realized.Values
             .Filter(x => x.Name != null && planned.ContainsKey(x.Name))
             .Map(v => (v.Name ?? "", v))
@@ -54,10 +69,10 @@ public abstract class PlanRealizer
             .Map(v => (v.Id, v))
             .ToHashMap()
         let notFound = realized - foundById
-        from _2 in notFound.Values.Map(r =>
-            RemoveEntity(tableName, r, cancellationToken)
-                .MapLeft(e => Error.New($"Could not remove entity {r} from table {tableName}", e))
-        ).SequenceSerial()
+        from _2 in notFound.Values
+            .Map(r => RemoveEntity(tableName, r, cancellationToken)
+                .MapLeft(e => Error.New($"Could not remove entity {r} from table {tableName}", e)))
+            .SequenceSerial()
         select foundByName;
 
     private EitherAsync<Error, Unit> RemoveEntity<TEntity>(
@@ -85,47 +100,26 @@ public abstract class PlanRealizer
             None: () => _ovnDBTool.RemoveRecord(tableName, entity.Id.ToString("D"), cancellationToken))
         select unit;
 
-        private EitherAsync<Error, Guid> ResolveParentId(
-            OVSParentReference parentReference,
-            Guid entityId,
-            CancellationToken cancellationToken) =>
-            parentReference.RowId.Match(
-                Some: rId =>
-                    from parentId in parseGuid(rId)
-                        .ToEitherAsync(Error.New("The parent ID {parentReference.RowId} is invalid"))
-                    select parentId,
-                None: () =>
-                    from records in _ovnDBTool.FindRecords<OVSTableRecord>(
-                            parentReference.TableName,
-                            // TODO The original code used '>='. It this even correct for GUID column?
-                            Map((parentReference.RefColumn,
-                                new OVSQuery("includes", new OVSSet<Guid>(Seq1(entityId))))),
-                            cancellationToken: cancellationToken)
-                        .MapLeft(e => Error.New(
-                            $"Failed to search the parent of entity {entityId} in table {parentReference.TableName}.",
-                            e))
-                    from parent in records.HeadOrNone().ToEitherAsync(
-                        Error.New($"Could not find the parent of entity {entityId} in table {parentReference.TableName}."))
-                    select parent.Id);
-            
-
-    private EitherAsync<Error, Unit> RemoveEntity<TEntity>(
-        TEntity entity,
+    private EitherAsync<Error, Guid> ResolveParentId(
         OVSParentReference parentReference,
-        CancellationToken cancellationToken)
-        where TEntity : OVSTableRecord =>
-        from parentRowId in parentReference.RowId
-            .ToEitherAsync(Error.New("The parent row ID is missing."))
-        from _ in _ovnDBTool.RemoveColumnValue(
-                parentReference.TableName,
-                parentRowId,
-                parentReference.RefColumn,
-                entity.Id.ToString("D"),
-                cancellationToken)
-            .MapLeft(e => Error.New(
-                $"Could not remove entity reference {entity} from table {parentReference.TableName}.",
-                e))
-        select unit;
+        Guid entityId,
+        CancellationToken cancellationToken) =>
+        parentReference.RowId.Match(
+            Some: rId =>
+                from parentId in parseGuid(rId)
+                    .ToEitherAsync(Error.New($"The parent ID {parentReference.RowId} is invalid."))
+                select parentId,
+            None: () =>
+                from records in _ovnDBTool.FindRecords<OVSTableRecord>(
+                        parentReference.TableName,
+                        Map((parentReference.RefColumn, new OVSQuery("includes", new OVSSet<Guid>(Seq1(entityId))))),
+                        cancellationToken: cancellationToken)
+                    .MapLeft(e => Error.New(
+                        $"Failed to search the parent of entity {entityId} in table {parentReference.TableName}.",
+                        e))
+                from parent in records.HeadOrNone().ToEitherAsync(
+                    Error.New($"Could not find the parent of entity {entityId} in table {parentReference.TableName}."))
+                select parent.Id);
 
     protected EitherAsync<Error, HashMap<string, TPlanned>> CreatePlannedEntities<TEntity, TPlanned>(
         string tableName,
@@ -159,7 +153,6 @@ public abstract class PlanRealizer
             cancellationToken)
             .MapLeft(l => Error.New($"Could not create entity {plannedEntity} in table {tableName}.", l))
         select unit;
-
 
     protected EitherAsync<Error, Unit> UpdateEntities<TEntity, TPlanned>(
         string tableName,
