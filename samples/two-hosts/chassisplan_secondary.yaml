@@ -1,0 +1,6 @@
+name: chassis-secondary
+tunnel_endpoints:
+- ip_address: 192.168.240.102
+  encapsulation_type: geneve
+bridge_mappings:
+  extern: br-tunnel

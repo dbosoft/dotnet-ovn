@@ -1,0 +1,61 @@
+id: project-1
+
+routers:
+- name: project-1-router
+  gateway_port:
+    chassis_group: dotnet-ovn
+    switch: project-1-provider
+    mac: 02:03:00:00:00:01
+    network: 192.168.242.110/24
+
+  ports: 
+    - switch: project-1-switch
+      mac: 02:03:00:00:00:02 
+      network: 10.0.100.1/24
+
+  nat:
+  - snat:
+      external_address: 192.168.242.128
+      network: 10.0.100.0/24
+  - dnat_and_snat:
+      external_address: 192.168.242.161
+      address: 10.0.100.111
+      mac: 02:02:00:00:01:01
+      port: ovs_vm-primary
+  - dnat_and_snat:
+      external_address: 192.168.242.163
+      address: 10.0.100.121
+      mac: 02:02:00:00:02:01   
+      port: ovs_vm-secondary
+
+  routes:
+   - route: 0.0.0.0/0
+     nexthop: 192.168.242.1
+
+switches:
+- name: project-1-provider
+  ports:
+  - network: extern
+
+- name: project-1-switch
+  ports: 
+  - name: ovs_vm-primary
+    mac: 02:01:00:00:01:01
+    address: 10.0.100.111
+    dhcp_options_v4: dhcp_v4
+  - name: ovs_vm-secondary
+    mac: 02:01:00:00:02:01
+    address: 10.0.100.121
+    dhcp_options_v4: dhcp_v4
+
+dhcp_options_v4:
+  - name: dhcp_v4
+    cidr: 10.0.100.0/24
+    server_id: 10.0.100.2
+    server_mac: 02:01:00:00:10:01
+    lease_time: 3600
+    router: 10.0.100.1
+    dns_servers:
+    - 9.9.9.9
+    - 8.8.8.8
+    mtu: 1400

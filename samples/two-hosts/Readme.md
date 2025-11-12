@@ -24,6 +24,9 @@ The following is required for the example:
 5. Start the dotnet-ovn agent: `OVNAgent.exe run ...`
 6. Create a bridge for the tunnel: `ovs-vsctl.exe -- add-br br-tunnel -- add-port br-tunnel eth0`
 7. Assign an IP address: `Enable-NetAdapter -Name br-tunnel; New-NetIPAddress -InterfaceAlias br-tunnel -IPAddress 192.168.240.101 -PrefixLength 24`
+8. Create a VM `vm-primary`
+9. Set the port name of the VM: `OVSAgent.exe hyperv portname set {adapterId} ovs_vm-primary`
+10. Add the VM port to the ingration bridge: `ovs-vsctl.exe -- add-port br-int ovs_vm-primary -- set interface ovs_vm-primary external_ids:iface-id=ovs_vm-primary`
 
 ## Manual setup of `chassis-secondary`
 1. Install Hyper-V
@@ -33,3 +36,6 @@ The following is required for the example:
 5. Start the dotnet-ovn agent: `OVNAgent.exe run ...`
 6. Create a bridge for the tunnel: `ovs-vsctl.exe -- add-br br-tunnel -- add-port br-tunnel eth0`
 7. Assign an IP address: `Enable-NetAdapter -Name br-tunnel; New-NetIPAddress -InterfaceAlias br-tunnel -IPAddress 192.168.240.102 -PrefixLength 24`
+8. Create a VM `vm-secondary`
+9. Set the port name of the VM: `OVSAgent.exe hyperv portname set {adapterId} ovs_vm-secondary`
+10. Add the VM port to the ingration bridge: `ovs-vsctl.exe -- add-port br-int ovs_vm-secodary -- set interface ovs_vm-secondary external_ids:iface-id=ovs_vm-secondary`
