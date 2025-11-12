@@ -11,15 +11,6 @@ public class ClusterPlanNorthboundRealizer(IOVSDBTool ovnDBTool, ILogger logger)
     public EitherAsync<Error, ClusterPlan> ApplyClusterPlan(
         ClusterPlan clusterPlan,
         CancellationToken cancellationToken = default) =>
-        from existingChassis in FindRecords<Chassis>(
-            OVNTableNames.Chassis,
-            Chassis.Columns,
-            cancellationToken: cancellationToken)
-        from remainingChassis in RemoveEntitiesNotPlanned(
-            OVNTableNames.Chassis,
-            existingChassis,
-            clusterPlan.PlannedChassis,
-            cancellationToken: cancellationToken)
         from existingChassisGroups in FindRecords<ChassisGroup>(
             OVNTableNames.ChassisGroups,
             ChassisGroup.Columns,
@@ -28,6 +19,16 @@ public class ClusterPlanNorthboundRealizer(IOVSDBTool ovnDBTool, ILogger logger)
             OVNTableNames.ChassisGroups,
             existingChassisGroups,
             clusterPlan.PlannedChassisGroups,
+            cancellationToken: cancellationToken)
+        from existingChassis in FindRecordsWithParents<Chassis, ChassisGroup>(
+            OVNTableNames.Chassis,
+            existingChassisGroups.Values.ToSeq(),
+            Chassis.Columns,
+            cancellationToken: cancellationToken)
+        from remainingChassis in RemoveEntitiesNotPlanned(
+            OVNTableNames.Chassis,
+            existingChassis,
+            clusterPlan.PlannedChassis,
             cancellationToken: cancellationToken)
         from existingPlannedChassisGroups in CreatePlannedEntities(
             OVNTableNames.ChassisGroups,

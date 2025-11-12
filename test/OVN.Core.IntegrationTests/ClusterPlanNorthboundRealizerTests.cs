@@ -10,12 +10,7 @@ public class ClusterPlanNorthboundRealizerTests(
     [Fact]
     public async Task ApplyClusterPlan_NewPlan_IsSuccessful()
     {
-        var clusterPlan = new ClusterPlan()
-            .AddChassisGroup("chassis-group-1")
-            .AddChassis("chassis-group-1", "chassis-1", 10)
-            .AddChassis("chassis-group-1", "chassis-2", 20);
-
-        await ApplyClusterPlan(clusterPlan);
+        await ApplyClusterPlan(CreateClusterPlan());
 
         await VerifyDatabase();
     }
@@ -23,12 +18,28 @@ public class ClusterPlanNorthboundRealizerTests(
     [Fact]
     public async Task ApplyClusterPlan_ChassisGroupChanged_IsSuccessful()
     {
-        var clusterPlan = new ClusterPlan()
-            .AddChassisGroup("chassis-group-1")
-            .AddChassis("chassis-group-1", "chassis-2", 25)
-            .AddChassis("chassis-group-1", "chassis-3", 50);
+        await ApplyClusterPlan(CreateClusterPlan());
 
-        await ApplyClusterPlan(clusterPlan);
+        var updatedPlan = new ClusterPlan()
+            .AddChassisGroup("chassis-group-2")
+            .AddChassis("chassis-group-2", "chassis-3", 25)
+            .AddChassis("chassis-group-2", "chassis-4", 50);
+
+        await ApplyClusterPlan(updatedPlan);
+
+        await VerifyDatabase();
+    }
+
+    [Fact]
+    public async Task ApplyClusterPlan_RemoveChassisFromGroup_IsSuccessful()
+    {
+        await ApplyClusterPlan(CreateClusterPlan());
+
+        var updatedPlan = new ClusterPlan()
+            .AddChassisGroup("chassis-group-1")
+            .AddChassis("chassis-group-1", "chassis-1", 10);
+
+        await ApplyClusterPlan(updatedPlan);
 
         await VerifyDatabase();
     }
@@ -39,4 +50,10 @@ public class ClusterPlanNorthboundRealizerTests(
 
         (await realizer.ApplyClusterPlan(clusterPlan)).ThrowIfLeft();
     }
+
+    private ClusterPlan CreateClusterPlan() =>
+        new ClusterPlan()
+            .AddChassisGroup("chassis-group-1")
+            .AddChassis("chassis-group-1", "chassis-1", 10)
+            .AddChassis("chassis-group-1", "chassis-2", 20);
 }

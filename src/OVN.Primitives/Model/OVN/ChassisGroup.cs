@@ -2,7 +2,7 @@ using LanguageExt;
 
 namespace Dbosoft.OVN.Model.OVN;
 
-public record ChassisGroup : OVSTableRecord, IOVSEntityWithName
+public record ChassisGroup : OVSTableRecord, IOVSEntityWithName, IHasOVSReferences<Chassis>
 {
     public new static readonly IDictionary<string, OVSFieldMetadata>
         Columns = new Dictionary<string, OVSFieldMetadata>(OVSTableRecord.Columns)
@@ -13,5 +13,7 @@ public record ChassisGroup : OVSTableRecord, IOVSEntityWithName
     
     public string? Name => GetValue<string>("name");
 
-    public Seq<Guid>? Chassis => GetSet<Guid>("ha_chassis");
+    public Seq<Guid> Chassis => GetSet<Guid>("ha_chassis");
+
+    Seq<Guid> IHasOVSReferences<Chassis>.GetOvsReferences() => Chassis;
 }
