@@ -10,7 +10,7 @@ namespace Dbosoft.OVN.OSCommands.OVS;
 public abstract class OVSDbSettingsBuilder
 {
     protected OvsDbConnection? _dbConnection;
-    protected OvsLoggingSettings _loggingSettings = new OvsLoggingSettings();
+    protected OvsLoggingSettings _loggingSettings = new();
     protected bool _allowAttach;
 
     public static OVSDbSettingsBuilder ForNorthbound() => new NorthboundDbSettingsBuilder();
@@ -50,7 +50,7 @@ public abstract class OVSDbSettingsBuilder
                 new OvsFile("var/run/ovn", "ovn_nb.ctl"),
                 new OvsFile("var/log/ovn", "ovn-nb.log"),
                 _loggingSettings,
-                false);
+                _allowAttach);
         }
     }
 

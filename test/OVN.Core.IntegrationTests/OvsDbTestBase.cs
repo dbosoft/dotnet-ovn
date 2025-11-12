@@ -45,7 +45,7 @@ public abstract class OvsDbTestBase : IAsyncLifetime
             Assert.Fail($"The data directory '{_dataDirectoryPath}' already exists.");
 
         var serverExecutable = SystemEnvironment.FileSystem.ResolveOvsFilePath(OVSCommands.DBServer);
-        if(!File.Exists(serverExecutable))
+        if (!File.Exists(serverExecutable))
             Assert.Fail("OVN is not installed.");
 
         Directory.CreateDirectory(_dataDirectoryPath);
