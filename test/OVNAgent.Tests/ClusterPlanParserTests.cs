@@ -13,6 +13,11 @@ public class ClusterPlanParserTests
                               chassis:
                               - name: test-chassis-1
                                 priority: 10
+                            southbound_connections:
+                            - port: 42421
+                            - port: 42422
+                              ssl: true
+                              ip_address: 203.0.113.2
                             """;
 
         var plan = ClusterPlanParser.ParseYaml(yaml);
@@ -29,5 +34,13 @@ public class ClusterPlanParserTests
         plannedChassis.Name.Should().Be("test-chassis-1");
         plannedChassis.ChassisGroupName.Should().Be("test-cluster");
         plannedChassis.Priority.Should().Be(10);
+
+        plan.PlannedSouthboundConnections.Should().HaveCount(2);
+        plan.PlannedSouthboundConnections.ToDictionary()
+            .Should().ContainKey("ptcp:42421")
+            .WhoseValue.Target.Should().Be("ptcp:42421");
+        plan.PlannedSouthboundConnections.ToDictionary()
+            .Should().ContainKey("pssl:42422:203.0.113.2")
+            .WhoseValue.Target.Should().Be("pssl:42422:203.0.113.2");
     }
 }

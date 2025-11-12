@@ -11,13 +11,18 @@ public class ClusterPlanSouthboundRealizer(IOVSDBTool ovnDBTool, ILogger logger)
     public EitherAsync<Error, ClusterPlan> ApplyClusterPlan(
         ClusterPlan clusterPlan,
         CancellationToken cancellationToken = default) =>
-        from existingChassis in FindRecords<SouthboundConnection>(
+        from global in FindRecords<SouthboundGlobal>(
+            OVNSouthboundTableNames.Global,
+            SouthboundGlobal.Columns,
+            cancellationToken: cancellationToken)
+        from existingConnection in FindRecordsWithParents<SouthboundConnection, SouthboundGlobal>(
             OVNSouthboundTableNames.Connection,
+            global.Values.ToSeq(),
             SouthboundConnection.Columns,
             cancellationToken: cancellationToken)
         from remainingConnections in RemoveEntitiesNotPlanned(
             OVNSouthboundTableNames.Connection,
-            existingChassis,
+            existingConnection,
             clusterPlan.PlannedSouthboundConnections,
             cancellationToken: cancellationToken)
         from existingPlannedChassisGroups in CreatePlannedEntities(
