@@ -13,7 +13,7 @@ public class ClusterPlanParserTests
                               chassis:
                               - name: test-chassis-1
                                 priority: 10
-                            southbound_connections:
+                            southbound_endpoints:
                             - port: 42421
                             - port: 42422
                               ssl: true

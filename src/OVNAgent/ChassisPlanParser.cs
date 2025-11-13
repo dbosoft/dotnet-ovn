@@ -8,21 +8,21 @@ public static class ChassisPlanParser
     public static ChassisPlan ParseYaml(string yaml)
     {
         var planConfig = PlanYamlSerializer.Deserialize<ChassisPlanConfig>(yaml);
-        
-        // TODO handle southbound database config
 
         if (string.IsNullOrWhiteSpace(planConfig.Name))
             throw new InvalidDataException("The chassis name is required.");
 
-        var clusterPlan = new ChassisPlan(planConfig.Name)
+        var chassisPlan = new ChassisPlan(planConfig.Name)
             .AddBridgeMapping(planConfig.BridgeMappings.ToHashMap());
+
+        chassisPlan = ParseSouthboundConnection(chassisPlan, planConfig.SouthboundConnection);
 
         foreach (var tunnelEndpointConfig in planConfig.TunnelEndpoints)
         {
-            clusterPlan = ParseTunnelEndpoint(clusterPlan, tunnelEndpointConfig);
+            chassisPlan = ParseTunnelEndpoint(chassisPlan, tunnelEndpointConfig);
         }
 
-        return clusterPlan;
+        return chassisPlan;
     }
 
     private static ChassisPlan ParseTunnelEndpoint(
@@ -38,5 +38,21 @@ public static class ChassisPlanParser
             "vxlan" => chassisPlan.AddVxlanTunnelEndpoint(endpointAddress),
             _ => throw new InvalidDataException("The encapsulation type must be 'geneve' and 'vxlan'."),
         };
+    }
+
+    private static ChassisPlan ParseSouthboundConnection(
+        ChassisPlan chassisPlan,
+        SouthboundConnectionConfig? southboundConnectionConfig)
+    {
+        if (southboundConnectionConfig is null)
+            return chassisPlan;
+
+        if (!IPAddress.TryParse(southboundConnectionConfig.IpAddress, out var ipAddress))
+            throw new InvalidDataException("The southbound connection must have a valid IP address.");
+
+        return chassisPlan.SetSouthboundDatabase(
+            ipAddress,
+            southboundConnectionConfig.Port,
+            southboundConnectionConfig.Ssl.GetValueOrDefault());
     }
 }

@@ -31,15 +31,6 @@ runCommand.AddOption(nodeTypeOptions);
 runCommand.SetHandler(RunCommand, logLevelOptions, nodeTypeOptions);
 rootCommand.Add(runCommand);
 
-var runPrimaryCommand = new Command("run-primary", "Runs OVN primary.");
-runPrimaryCommand.SetHandler(RunPrimaryCommand, logLevelOptions);
-rootCommand.Add(runPrimaryCommand);
-
-var runSecondaryCommand = new Command("run-secondary", "Runs OVN secondary.");
-runSecondaryCommand.SetHandler(RunSecondaryCommand, logLevelOptions);
-rootCommand.Add(runSecondaryCommand);
-
-
 var netplanCommand = new Command("netplan", "netplan commands");
 rootCommand.Add(netplanCommand);
 
@@ -147,64 +138,18 @@ static Task RunCommand(LogLevel logLevel, NodeType nodeType)
         {
             AddOVNCore(services);
             
-            if (nodeType is NodeType.AllInOne or NodeType.OVNCentral or NodeType.OVNDB)
+            if (nodeType is NodeType.AllInOne or NodeType.OVNCentral)
             {
                 services.AddHostedNode<OVNDatabaseNode>();
+                services.AddHostedNode<NetworkControllerNode>();
             }
 
-            if (nodeType is not (NodeType.AllInOne or NodeType.OVNCentral or NodeType.OVNController))
-                return;
-            
-            services.AddHostedNode<NetworkControllerNode>();
-
-            if (nodeType is not (NodeType.AllInOne or NodeType.Chassis))
-                return;
-             
-            services.AddHostedNode<OVSDbNode>();
-            services.AddHostedNode<OVSSwitchNode>();
-            services.AddHostedNode<OVNChassisNode>();
-        })
-        .Build();
-
-    return host.RunAsync();
-}
-
-static Task RunPrimaryCommand(LogLevel logLevel)
-{
-    var host = Host.CreateDefaultBuilder()
-        .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = TimeSpan.FromSeconds(15))
-        .UseWindowsService(cfg => cfg.ServiceName = "ovn-primary")
-        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
-        .ConfigureServices(services =>
-        {
-            AddSystemEnvironment(services);
-            AddRemoteSettings(services, "primary", IPAddress.Parse("192.168.240.101"), Prelude.Map(("extern", "br-extern")));
-
-            services.AddHostedNode<OVNDatabaseNode>();
-            services.AddHostedNode<NetworkControllerNode>();
-            services.AddHostedNode<OVSDbNode>();
-            services.AddHostedNode<OVSSwitchNode>();
-            services.AddHostedNode<OVNChassisNode>();
-        })
-        .Build();
-
-    return host.RunAsync();
-}
-
-static Task RunSecondaryCommand(LogLevel logLevel)
-{
-    var host = Host.CreateDefaultBuilder()
-        .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = TimeSpan.FromSeconds(15))
-        .UseWindowsService(cfg => cfg.ServiceName = "ovn-secondary")
-        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
-        .ConfigureServices(services =>
-        {
-            AddSystemEnvironment(services);
-            AddRemoteSettings(services, "secondary", IPAddress.Parse("192.168.240.102"));
-
-            services.AddHostedNode<OVSDbNode>();
-            services.AddHostedNode<OVSSwitchNode>();
-            services.AddHostedNode<OVNChassisNode>();
+            if (nodeType is NodeType.AllInOne or NodeType.Chassis)
+            {
+                services.AddHostedNode<OVSDbNode>();
+                services.AddHostedNode<OVSSwitchNode>();
+                services.AddHostedNode<OVNChassisNode>();
+            }
         })
         .Build();
 
@@ -426,32 +371,6 @@ static async Task<int> SetPortName(string adapterId, string portName)
 
 static void AddOVNCore(IServiceCollection services)
 {
-    AddSystemEnvironment(services);
-    services.AddSingleton<IOvsSettings, LocalOVSWithOVNSettings>();
-    services.AddSingleton<IOVNSettings, LocalOVSWithOVNSettings>();
-}
-
-static void AddRemoteSettings(
-    IServiceCollection services,
-    string chassisName,
-    IPAddress? ipAddress,
-    Map<string, string> bridgeMappings = default)
-{
-    var settings = new RemoteOvsWithOvnSettings(
-        LocalConnections.Southbound,
-        //new OvsDbConnection("192.168.241.101", 6642),
-        chassisName,
-        ipAddress,
-        bridgeMappings);
-
-    settings.Logging.File.Level = OvsLogLevel.Debug;
-
-    services.AddSingleton<IOvsSettings>(settings);
-    services.AddSingleton<IOVNSettings>(settings);
-}
-
-static void AddSystemEnvironment(IServiceCollection services)
-{
 #if WINDOWS
     services.AddSingleton<ISystemEnvironment, WindowsSystemEnvironment>();
 #else
@@ -468,32 +387,24 @@ static async Task<string> ReadTextAsync(FileInfo fileInfo)
 }
 
 /// <summary>
-/// Type of started node(s)
+/// The type of node which is started.
 /// </summary>
 public enum NodeType
 {
     /// <summary>
-    /// Run all OVN nodes
+    /// Runs all OVN and OVS processes.
     /// </summary>
     AllInOne,
     
     /// <summary>
-    /// Run only chassis node
+    /// Runs only the processes which are necessary for
+    /// an OVN chassis (ovs processes and ovn-controller).
     /// </summary>
     Chassis,
     
     /// <summary>
-    /// Run all nodes except the chassis node
+    /// Run only the central management processes for OVN
+    /// (databases and northd).
     /// </summary>
     OVNCentral,
-    
-    /// <summary>
-    /// Run OVN database node
-    /// </summary>
-    OVNDB,
-    
-    /// <summary>
-    /// RUn OVN controller
-    /// </summary>
-    OVNController
 }

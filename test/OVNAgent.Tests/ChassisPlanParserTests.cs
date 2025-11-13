@@ -9,6 +9,10 @@ public class ChassisPlanParserTests
     {
         const string yaml = """
                             name: test-chassis
+                            southbound_connection:
+                              ip_address: 203.0.113.1
+                              port: 42421
+                              ssl: true
                             tunnel_endpoints:
                             - ip_address: 203.0.113.2
                               encapsulation_type: geneve
@@ -19,6 +23,12 @@ public class ChassisPlanParserTests
         var plan = ChassisPlanParser.ParseYaml(yaml);
 
         plan.ChassisId.Should().Be("test-chassis");
+
+        plan.SouthboundDatabase.Address.Should().Be("203.0.113.1");
+        plan.SouthboundDatabase.Port.Should().Be(42421);
+        plan.SouthboundDatabase.Ssl.Should().BeTrue();
+        plan.SouthboundDatabase.PipeFile.Should().BeNull();
+
         plan.TunnelEndpoints.Should().HaveCount(1);
         plan.TunnelEndpoints.Should().SatisfyRespectively(
             plannedEndpoint =>

@@ -4,7 +4,7 @@ public class ClusterPlanConfig
 {
     public IList<ChassisGroupConfig> ChassisGroups { get; set; } = new List<ChassisGroupConfig>();
 
-    public IList<SouthboundConnectionConfig> SouthboundConnections { get; set; } = new List<SouthboundConnectionConfig>();
+    public IList<SouthboundEndpointConfig> SouthboundEndpoints { get; set; } = new List<SouthboundEndpointConfig>();
 }
 
 public class ChassisGroupConfig
@@ -21,7 +21,7 @@ public class ChassisConfig
     public short? Priority { get; init; }
 }
 
-public class SouthboundConnectionConfig
+public class SouthboundEndpointConfig
 {
     public required int Port { get; init; }
 

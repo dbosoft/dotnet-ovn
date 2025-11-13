@@ -5,5 +5,5 @@ chassis_groups:
     priority: 20
   - name: chassis-secondary
     priority: 10
-southbound_connections:
+southbound_endpoints:
 - port: 6642
