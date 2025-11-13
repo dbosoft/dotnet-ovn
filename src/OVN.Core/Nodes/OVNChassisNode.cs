@@ -46,20 +46,6 @@ public class OVNChassisNode : DemonNodeBase
         return WaitForDbSocket(cancellationToken);
             //.Bind(_ => ConfigureController(cancellationToken));
     }
-
-    private EitherAsync<Error, Unit> ConfigureController(CancellationToken cancellationToken)
-    {
-        // when init is still running this could take a while...
-        var timeout = new CancellationTokenSource(new TimeSpan(0,5,0));
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-
-        var ovsControl = new OVSControlTool(_systemEnvironment, LocalOVSConnection);
-        return ovsControl.ConfigureOVN(
-            _ovnSettings.SouthDBConnection,
-            _ovnSettings.ChassisName,
-            encapIp: _ovnSettings.EncapId,
-            cancellationToken: cts.Token);
-    }
     
     private EitherAsync<Error, Unit> WaitForDbSocket(CancellationToken cancellationToken)
     {
@@ -83,5 +69,4 @@ public class OVNChassisNode : DemonNodeBase
 
         return WaitForDbSocketAsync().ToAsync();
     }
-    
 }

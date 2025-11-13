@@ -30,10 +30,4 @@ public class LocalOVSWithOVNSettings : IOVNSettings, IOvsSettings
 
     /// <inheritdoc cref="IOvsSettings.Logging" />
     public OvsLoggingSettings Logging { get; set; } = new();
-
-    public string ChassisName => "local";
-
-    public IPAddress? EncapId => null;
-
-    public Map<string, string> BridgeMappings => default;
 }

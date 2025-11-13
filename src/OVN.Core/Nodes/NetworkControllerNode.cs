@@ -63,16 +63,6 @@ public class NetworkControllerNode : DemonNodeBase
             .Bind(_ => InitDB(cancellationToken));
             //.Bind(_ => ConfigureController(cancellationToken));
     }
-    
-    private EitherAsync<Error, Unit> ConfigureController(CancellationToken cancellationToken)
-    {
-        var timeout = new CancellationTokenSource(10000);
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-
-        var ovnControl = new OVNControlTool(_systemEnvironment, _ovnSettings.NorthDBConnection);
-        return ovnControl.EnsureChassisInGroup("local", "local", 10,
-            cancellationToken: cts.Token);
-    }
 
     private EitherAsync<Error, Unit> InitDB(CancellationToken cancellationToken)
     {

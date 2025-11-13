@@ -34,33 +34,4 @@ public class OVNControlTool : OVSTool
     {
         return RunCommand(" --no-wait init", true, cancellationToken).Map(_ => Unit.Default);
     }
-    
-    public EitherAsync<Error, Unit> EnsureChassisInGroup(
-        string chassisGroup, string chassis, int priority, CancellationToken cancellationToken = default)
-    {
-        return FindRecords<ChassisGroup>(OVNTableNames.ChassisGroups,
-                CommonQueries.Name(chassisGroup),
-                cancellationToken: cancellationToken)
-            .Bind(s => s.HeadOrNone()
-                .Match(
-                    group => FindRecords<Chassis>(OVNTableNames.Chassis,
-                            new Map<string, OVSQuery>(new[]
-                            {
-                                ("chassis_name",
-                                    new OVSQuery("=", OVSValue<string>.New(chassis)))
-                            }),
-                            cancellationToken: cancellationToken)
-                        .Map(chassisSeq =>
-                            chassisSeq.Filter(c => 
-                                    group.Chassis.Contains(c.Id)).HeadOrNone()
-                                .Match(_ => "", () =>
-                                    $"ha-chassis-group-add-chassis {chassisGroup} {chassis} {priority}")),
-                    () =>
-                        $"ha-chassis-group-add {chassisGroup} -- ha-chassis-group-add-chassis {chassisGroup} {chassis} {priority}"
-                ))
-            .Bind(command => command == "" 
-                ? Unit.Default
-                : RunCommand(command).Map(_ => Unit.Default));
-        
-    }
 }

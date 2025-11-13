@@ -15,7 +15,7 @@ public static class ClusterPlanParser
             clusterPlan = ParseChassisGroup(clusterPlan, chassisGroupConfig);
         }
 
-        foreach (var southboundConnectionConfig in planConfig.SouthboundConnections)
+        foreach (var southboundConnectionConfig in planConfig.SouthboundEndpoints)
         {
             clusterPlan = ParseSouthboundConnections(clusterPlan, southboundConnectionConfig);
         }
@@ -57,13 +57,13 @@ public static class ClusterPlanParser
 
     private static ClusterPlan ParseSouthboundConnections(
         ClusterPlan clusterPlan,
-        SouthboundConnectionConfig connectionConfig)
+        SouthboundEndpointConfig endpointConfig)
     {
         return clusterPlan.AddSouthboundConnection(
-            connectionConfig.Port,
-            connectionConfig.Ssl.GetValueOrDefault(),
-            string.IsNullOrWhiteSpace(connectionConfig.IpAddress)
+            endpointConfig.Port,
+            endpointConfig.Ssl.GetValueOrDefault(),
+            string.IsNullOrWhiteSpace(endpointConfig.IpAddress)
                 ? null
-                : IPAddress.Parse(connectionConfig.IpAddress));
+                : IPAddress.Parse(endpointConfig.IpAddress));
     }
 }
