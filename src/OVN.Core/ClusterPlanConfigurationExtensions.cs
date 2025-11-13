@@ -54,4 +54,22 @@ public static class ClusterPlanConfigurationExtensions
                 new PlannedSouthboundConnection { Target = target }),
         };
     }
+
+    public static ClusterPlan SetSouthboundSsl(
+        this ClusterPlan plan,
+        string privateKey,
+        string certificate,
+        string caCertificate)
+    {
+        return plan with
+        {
+            PlannedSouthboundSsl = new PlannedSouthboundSsl
+            {
+                PrivateKey = privateKey,
+                Certificate = certificate,
+                CaCertificate = caCertificate,
+                SslProtocols = "TLSv1.2",
+            }
+        };
+    }
 }

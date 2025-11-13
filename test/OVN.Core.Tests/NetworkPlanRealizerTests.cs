@@ -12,6 +12,7 @@ public class NetworkPlanRealizerTests
     [Fact]
     public async Task ApplyPlan()
     {
+        var mockEnvironment = new Mock<ISystemEnvironment>();
         var mockTool = new Mock<IOVSDBTool>();
         var logger = new Mock<ILogger>();
 
@@ -29,7 +30,7 @@ public class NetworkPlanRealizerTests
         var netplan = new NetworkPlan("id")
             .AddSwitch("test_switch");
 
-        var realizer = new NetworkPlanRealizer(mockTool.Object, logger.Object);
+        var realizer = new NetworkPlanRealizer(mockEnvironment.Object, mockTool.Object, logger.Object);
         await realizer.ApplyNetworkPlan(netplan);
         
     }

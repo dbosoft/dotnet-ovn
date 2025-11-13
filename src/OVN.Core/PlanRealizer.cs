@@ -1,4 +1,5 @@
 ﻿using Dbosoft.OVN.Model;
+using Dbosoft.OVN.Model.OVN;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -9,13 +10,13 @@ namespace Dbosoft.OVN;
 
 public abstract class PlanRealizer
 {
-    private readonly ILogger _logger;
+    private readonly ISystemEnvironment _systemEnvironment;
     private readonly IOVSDBTool _ovnDBTool;
 
-    protected PlanRealizer(IOVSDBTool ovnDBTool, ILogger logger)
+    protected PlanRealizer(ISystemEnvironment systemEnvironment, IOVSDBTool ovnDBTool)
     {
+        _systemEnvironment = systemEnvironment;
         _ovnDBTool = ovnDBTool;
-        _logger = logger;
     }
 
     protected EitherAsync<Error, HashMap<Guid, T>> FindRecords<T>(
@@ -202,4 +203,43 @@ public abstract class PlanRealizer
 
     private static bool IsUpdatable(string name, IOVSField value) =>
         name is not ("_uuid" or "__parentId") && value is not OVSReference;
+
+    protected EitherAsync<Error, Option<PlannedSouthboundSsl>> EnsureCertificateFiles(
+        Option<PlannedSouthboundSsl> plannedSouthboundSsl,
+        CancellationToken cancellationToken) =>
+        from updated in plannedSouthboundSsl
+            .Map(s => EnsureCertificateFiles(s, cancellationToken))
+            .Sequence()
+        select updated;
+
+    private EitherAsync<Error, PlannedSouthboundSsl> EnsureCertificateFiles(
+        PlannedSouthboundSsl plannedSouthboundSsl,
+        CancellationToken cancellationToken) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let caCertificateFile = OvsCertificateFileHelper.ComputeCaCertificatePath(plannedSouthboundSsl.CaCertificate!)
+        from _2 in EnsureCertificateFile(caCertificateFile, plannedSouthboundSsl.CaCertificate!)
+        let certificateFile = OvsCertificateFileHelper.ComputeCertificatePath(plannedSouthboundSsl.Certificate!)
+        from _3 in EnsureCertificateFile(certificateFile, plannedSouthboundSsl.Certificate!)
+        let privateKeyFile = OvsCertificateFileHelper.ComputePrivateKeyPath(plannedSouthboundSsl.PrivateKey!)
+        from _4 in EnsureCertificateFile(privateKeyFile, plannedSouthboundSsl.PrivateKey!)
+        select plannedSouthboundSsl with
+        {
+            CaCertificate = _systemEnvironment.FileSystem.ResolveOvsFilePath(caCertificateFile),
+            Certificate = _systemEnvironment.FileSystem.ResolveOvsFilePath(certificateFile),
+            PrivateKey = _systemEnvironment.FileSystem.ResolveOvsFilePath(privateKeyFile)
+        };
+
+    private EitherAsync<Error, Unit> EnsureCertificateFile(
+        OvsFile file,
+        string content) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let path = _systemEnvironment.FileSystem.ResolveOvsFilePath(file, false)
+        from _2 in TryAsync(async () =>
+        {
+            // TODO Handle case when file is specified directly
+            _systemEnvironment.FileSystem.EnsurePathForFileExists(file);
+            await _systemEnvironment.FileSystem.WriteFileAsync(file, content);
+            return unit;
+        }).ToEither()
+        select unit;
 }

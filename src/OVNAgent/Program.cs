@@ -174,6 +174,7 @@ static async Task<int> ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
             AddOVNCore(services);
             services.AddSingleton(
                 sp => new NetworkPlanRealizer(
+                    sp.GetRequiredService<ISystemEnvironment>(),
                     new OVNControlTool(
                         sp.GetRequiredService<ISystemEnvironment>(),
                         sp.GetRequiredService<IOVNSettings>().NorthDBConnection),
@@ -207,13 +208,13 @@ static async Task<int> ApplyClusterPlan(LogLevel logLevel, FileInfo clusterPlanF
             AddOVNCore(services);
             services.AddSingleton(
                 sp => new ClusterPlanRealizer(
+                    sp.GetRequiredService<ISystemEnvironment>(),
                     new OVNControlTool(
                         sp.GetRequiredService<ISystemEnvironment>(),
                         sp.GetRequiredService<IOVNSettings>().NorthDBConnection),
                     new OVNSouthboundControlTool(
                         sp.GetRequiredService<ISystemEnvironment>(),
-                        sp.GetRequiredService<IOVNSettings>().SouthDBConnection),
-                    sp.GetRequiredService<ILogger<ClusterPlanRealizer>>()));
+                        sp.GetRequiredService<IOVNSettings>().SouthDBConnection)));
         })
         .Build();
 
@@ -246,8 +247,7 @@ static async Task<int> ApplyChassisPlan(LogLevel logLevel, FileInfo chassisPlanF
                     sp.GetRequiredService<ISystemEnvironment>(),
                     new OVSControlTool(
                         sp.GetRequiredService<ISystemEnvironment>(),
-                        LocalConnections.Switch),
-                    sp.GetRequiredService<ILogger<ChassisPlanRealizer>>()));
+                        LocalConnections.Switch)));
         })
         .Build();
 

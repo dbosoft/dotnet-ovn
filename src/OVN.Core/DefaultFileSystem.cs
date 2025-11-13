@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Text;
 using JetBrains.Annotations;
 
 namespace Dbosoft.OVN;
@@ -103,4 +104,30 @@ public class DefaultFileSystem : IFileSystem
 
     protected virtual string GetProgramRootPath() =>
         _platform == OSPlatform.Windows ? "C:/openvswitch/" : "/";
+
+    public async Task<string> ReadFileAsync(string path)
+    {
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var sr = new StreamReader(stream, Encoding.UTF8);
+        return await sr.ReadToEndAsync();
+    }
+
+    public async Task<string> ReadFileAsync(OvsFile file)
+    {
+        var path = ResolveOvsFilePath(file);
+        return await ReadFileAsync(path);
+    }
+
+    public async Task WriteFileAsync(string path, string content)
+    {
+        await using var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+        await using var sw = new StreamWriter(stream, Encoding.UTF8);
+        await sw.WriteAsync(content);
+    }
+
+    public Task WriteFileAsync(OvsFile file, string content)
+    {
+        var path = ResolveOvsFilePath(file);
+        return WriteFileAsync(path, content);
+    }
 }

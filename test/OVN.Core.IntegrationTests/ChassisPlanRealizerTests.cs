@@ -51,7 +51,7 @@ public class ChassisPlanRealizerTests(
 
     private async Task ApplyChassisPlan(ChassisPlan chassisPlan)
     {
-        var realizer = new ChassisPlanRealizer(SystemEnvironment, ControlTool, NullLogger.Instance);
+        var realizer = new ChassisPlanRealizer(SystemEnvironment, ControlTool);
 
         (await realizer.ApplyChassisPlan(chassisPlan)).ThrowIfLeft();
     }
