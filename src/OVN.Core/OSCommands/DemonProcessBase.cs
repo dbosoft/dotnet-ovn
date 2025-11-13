@@ -117,7 +117,7 @@ public abstract class DemonProcessBase : IDisposable, IAsyncDisposable
 
                 try
                 {
-                    var pidString = _systemEnvironment.FileSystem.ReadFileAsString(pidFileFullName);
+                    var pidString = await _systemEnvironment.FileSystem.ReadFileAsync(pidFileFullName);
                     var pid = Convert.ToInt32(pidString);
                     orphanedDemon = new OVSProcess(_systemEnvironment, _exeFile, pid);
                     if (!orphanedDemon.IsRunning)

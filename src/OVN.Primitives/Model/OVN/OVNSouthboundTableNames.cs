@@ -3,5 +3,6 @@
 public static  class OVNSouthboundTableNames
 {
     public const string Global = "SB_Global";
-    public const string Connection = "connection";
+    public const string Connection = "Connection";
+    public const string Ssl = "SSL";
 }

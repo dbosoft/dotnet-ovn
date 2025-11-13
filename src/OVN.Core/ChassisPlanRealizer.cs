@@ -1,13 +1,6 @@
 ﻿using Dbosoft.OVN.Model;
-using Dbosoft.OVN.Model.OVN;
 using LanguageExt;
 using LanguageExt.Common;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 using static LanguageExt.Prelude;
 
@@ -20,9 +13,8 @@ public class ChassisPlanRealizer : PlanRealizer
 
     public ChassisPlanRealizer(
         ISystemEnvironment systemEnvironment,
-        IOVSDBTool ovsDBTool,
-        ILogger logger)
-        : base(ovsDBTool, logger)
+        IOVSDBTool ovsDBTool)
+        : base(systemEnvironment, ovsDBTool)
     {
         _systemEnvironment = systemEnvironment;
         _ovsDBTool = ovsDBTool;

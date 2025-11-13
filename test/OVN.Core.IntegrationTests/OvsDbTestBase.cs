@@ -11,7 +11,8 @@ namespace Dbosoft.OVN.Core.IntegrationTests;
 
 public abstract class OvsDbTestBase : IAsyncLifetime
 {
-    private readonly string _dataDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+    private readonly string _dataDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+        .Replace(@"\", "/");
     private readonly ILoggerFactory _loggerFactory;
     protected readonly ISystemEnvironment SystemEnvironment;
 
@@ -73,6 +74,13 @@ public abstract class OvsDbTestBase : IAsyncLifetime
         var dump = (await ovsDbClientTool.PrintDatabase(databaseName)).ThrowIfLeft();
         var settings = new VerifySettings();
         settings.AddScrubber(FixedLengthGuidScrubber.ReplaceGuids);
+        settings.AddScrubber(FixedLengthHashScrubber.ReplaceHashes);
+        settings.AddScrubber(builder =>
+        {
+            builder.Replace(
+                _dataDirectoryPath,
+                $"{{OvsTestDirectory{new string('_', _dataDirectoryPath.Length - "OvsTestDirectory".Length - 2)}}}");
+        });
         await Verify(dump, settings);
     }
 

@@ -1,12 +1,13 @@
 ﻿using Dbosoft.OVN.Model.OVN;
 using LanguageExt;
 using LanguageExt.Common;
-using Microsoft.Extensions.Logging;
 
 namespace Dbosoft.OVN;
 
-public class ClusterPlanNorthboundRealizer(IOVSDBTool ovnDBTool, ILogger logger)
-    : PlanRealizer(ovnDBTool, logger)
+public class ClusterPlanNorthboundRealizer(
+    ISystemEnvironment systemEnvironment,
+    IOVSDBTool ovnDBTool)
+    : PlanRealizer(systemEnvironment, ovnDBTool)
 {
     public EitherAsync<Error, ClusterPlan> ApplyClusterPlan(
         ClusterPlan clusterPlan,

@@ -10,12 +10,12 @@ public class ClusterPlanRealizer
     private readonly ClusterPlanSouthboundRealizer _southboundRealizer;
     
     public ClusterPlanRealizer(
+        ISystemEnvironment systemEnvironment,
         IOVSDBTool northboundOvnDbTool,
-        IOVSDBTool southboundOvnDbTool,
-        ILogger logger)
+        IOVSDBTool southboundOvnDbTool)
     {
-        _northboundRealizer = new ClusterPlanNorthboundRealizer(northboundOvnDbTool, logger);
-        _southboundRealizer = new ClusterPlanSouthboundRealizer(southboundOvnDbTool, logger);
+        _northboundRealizer = new ClusterPlanNorthboundRealizer(systemEnvironment, northboundOvnDbTool);
+        _southboundRealizer = new ClusterPlanSouthboundRealizer(systemEnvironment, southboundOvnDbTool);
     }
 
     public EitherAsync<Error, ClusterPlan> ApplyClusterPlan(
