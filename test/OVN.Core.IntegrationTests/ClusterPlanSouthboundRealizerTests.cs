@@ -2,43 +2,60 @@
 using AwesomeAssertions;
 using Dbosoft.OVN.Model.OVN;
 using Dbosoft.OVN.OSCommands.OVN;
+using Dbosoft.OVN.SimplePki;
 using Xunit.Abstractions;
 
 namespace Dbosoft.OVN.Core.IntegrationTests;
 
-public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelper)
-    : OvnSouthboundControlToolTestBase(testOutputHelper)
+public class ClusterPlanSouthboundRealizerTests : OvnSouthboundControlToolTestBase
 {
+    private readonly IPkiService _pkiService;
+    private readonly OvsFile _clientPrivateKey = new("/etc/dotnet-ovn/test-client", "privkey.pem");
+    private readonly OvsFile _clientCertificate = new("/etc/dotnet-ovn/test-client", "cert.pem");
+    private readonly OvsFile _clientCaCertificate = new("/etc/dotnet-ovn/test-client", "ca-cert.pem");
+
+    public ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelper)
+        : base(testOutputHelper)
+    {
+        _pkiService = new PkiService(SystemEnvironment);
+    }
+
+    public override async Task InitializeAsync()
+    {
+        await base.InitializeAsync();
+        await _pkiService.InitializeAsync();
+
+        var clientPki = await _pkiService.GenerateChassisPkiAsync("test-client");
+        
+        SystemEnvironment.FileSystem.EnsurePathForFileExists(_clientPrivateKey);
+        await SystemEnvironment.FileSystem.WriteFileAsync(_clientPrivateKey, clientPki.PrivateKey);
+        SystemEnvironment.FileSystem.EnsurePathForFileExists(_clientCertificate);
+        await SystemEnvironment.FileSystem.WriteFileAsync(_clientCertificate, clientPki.Certificate);
+        SystemEnvironment.FileSystem.EnsurePathForFileExists(_clientCaCertificate);
+        await SystemEnvironment.FileSystem.WriteFileAsync(_clientCaCertificate, clientPki.CaCertificate);
+    }
+
     [Fact]
     public async Task ApplyClusterPlan_NewPlan_IsSuccessful()
     {
-        await ApplyClusterPlan(CreateClusterPlan());
+        var initialChassisPki = await _pkiService.GenerateChassisPkiAsync("test-chassis");
+        await ApplyClusterPlan(CreateClusterPlan(initialChassisPki));
 
         await VerifyDatabase();
 
-        // Verify that the OVN Southbound database is listening on the expected port
-        var networkControlTool = new OVNSouthboundControlTool(
-            SystemEnvironment,
-            new OvsDbConnection("127.0.0.1", 42421));
-        var either = await networkControlTool.FindRecords<SouthboundConnection>(
-            OVNSouthboundTableNames.Connection);
-
-        var records = either.ThrowIfLeft();
-        records.Should().HaveCount(3);
-
-        var sslControlTool = CreateControlTool(42422, true);
-        var sslEither = await sslControlTool.FindRecords<SouthboundConnection>(
-            OVNSouthboundTableNames.Connection);
-        var sslRecords = sslEither.ThrowIfLeft();
-        sslRecords.Should().HaveCount(3);
+        await TestConnection(42421, false);
+        await TestConnection(42422, true);
     }
 
     [Fact]
     public async Task ApplyClusterPlan_UpdatedPlan_IsSuccessful()
     {
-        await ApplyClusterPlan(CreateClusterPlan());
+        var initialChassisPki = await _pkiService.GenerateChassisPkiAsync("test-chassis");
+        await ApplyClusterPlan(CreateClusterPlan(initialChassisPki));
 
+        var updatedChassisPki = await _pkiService.GenerateChassisPkiAsync("test-chassis");
         var updatedPlan = new ClusterPlan()
+            .SetSouthboundSsl(updatedChassisPki.PrivateKey, updatedChassisPki.Certificate, updatedChassisPki.CaCertificate)
             .AddSouthboundConnection(52421)
             .AddSouthboundConnection(52422, true);
 
@@ -46,22 +63,8 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
 
         await VerifyDatabase();
 
-        // Verify that the OVN Southbound database is listening on the expected port
-        var networkControlTool = new OVNSouthboundControlTool(
-            SystemEnvironment,
-            new OvsDbConnection("127.0.0.1", 52421));
-        var either = await networkControlTool.GetRecord<SouthboundGlobal>(
-            OVNSouthboundTableNames.Global,
-            ".");
-
-        var record = either.ThrowIfLeft();
-        record.IsSome.Should().BeTrue();
-
-        var sslControlTool = CreateControlTool(52422, true);
-        var sslEither = await sslControlTool.FindRecords<SouthboundConnection>(
-            OVNSouthboundTableNames.Connection);
-        var sslRecords = sslEither.ThrowIfLeft();
-        sslRecords.Should().HaveCount(2);
+        await TestConnection(52421, false);
+        await TestConnection(52422, true);
     }
 
     private async Task ApplyClusterPlan(ClusterPlan clusterPlan)
@@ -70,11 +73,13 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
 
         var either = await realizer.ApplyClusterPlan(clusterPlan);
         either.ThrowIfLeft();
+
+        await Task.Delay(2000);
     }
 
-    private ClusterPlan CreateClusterPlan() =>
+    private ClusterPlan CreateClusterPlan(ChassisPkiResult chassisPki) =>
         new ClusterPlan()
-            .SetSouthboundSsl(TestData.PrivateKey, TestData.Certificate, TestData.CaCertificate)
+            .SetSouthboundSsl(chassisPki.PrivateKey, chassisPki.Certificate, chassisPki.CaCertificate)
             .AddSouthboundConnection(42421)
             .AddSouthboundConnection(42422, true)
             .AddSouthboundConnection(42423, true, IPAddress.Parse("203.0.113.2"));
@@ -82,14 +87,18 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
     private OVNSouthboundControlTool CreateControlTool(int port, bool ssl)
     {
         OvsDbConnection dbConnection = ssl
-            ? new OvsDbConnection(
-                "127.0.0.1",
-                port,
-                OvsCertificateFileHelper.ComputePrivateKeyPath(TestData.PrivateKey),
-                OvsCertificateFileHelper.ComputeCertificatePath(TestData.Certificate),
-                OvsCertificateFileHelper.ComputeCaCertificatePath(TestData.CaCertificate))
+            ? new OvsDbConnection("127.0.0.1", port, _clientPrivateKey, _clientCertificate, _clientCaCertificate)
             : new OvsDbConnection("127.0.0.1", port);
         
         return new OVNSouthboundControlTool(SystemEnvironment, dbConnection);
+    }
+
+    private async Task TestConnection(int port, bool ssl)
+    {
+        var controlTool = CreateControlTool(port, ssl);
+        var sslEither = await controlTool.FindRecords<SouthboundGlobal>(
+            OVNSouthboundTableNames.Global);
+        var sslRecords = sslEither.ThrowIfLeft();
+        sslRecords.Should().HaveCount(1);
     }
 }

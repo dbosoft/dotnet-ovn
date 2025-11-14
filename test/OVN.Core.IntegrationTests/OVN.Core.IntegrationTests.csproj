@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\OVN.Core\OVN.Core.csproj" />
+    <ProjectReference Include="..\..\src\OVN.SimplePki\OVN.SimplePki.csproj" />
     <ProjectReference Include="..\..\src\OVN.Windows\OVN.Windows.csproj" />
   </ItemGroup>
 

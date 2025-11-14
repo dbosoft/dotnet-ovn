@@ -11,8 +11,7 @@ namespace Dbosoft.OVN.Core.IntegrationTests;
 
 public abstract class OvsDbTestBase : IAsyncLifetime
 {
-    private readonly string _dataDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-        .Replace(@"\", "/");
+    private readonly string _dataDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName()).Replace(@"\", "/");
     private readonly ILoggerFactory _loggerFactory;
     protected readonly ISystemEnvironment SystemEnvironment;
 
