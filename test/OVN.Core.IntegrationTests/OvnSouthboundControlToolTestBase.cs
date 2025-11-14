@@ -28,6 +28,6 @@ public class OvnSouthboundControlToolTestBase : OvsDbTestBase
 
     protected async Task VerifyDatabase()
     {
-        await VerifyDatabase("OVN_Southbound");
+        await VerifyDatabase("OVN_Southbound", "20.41.0");
     }
 }

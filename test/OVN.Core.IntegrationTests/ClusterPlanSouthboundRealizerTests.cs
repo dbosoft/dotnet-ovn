@@ -14,8 +14,6 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
     {
         await ApplyClusterPlan(CreateClusterPlan());
 
-        await Task.Delay(1000);
-
         await VerifyDatabase();
 
         // Verify that the OVN Southbound database is listening on the expected port
@@ -51,13 +49,19 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
         // Verify that the OVN Southbound database is listening on the expected port
         var networkControlTool = new OVNSouthboundControlTool(
             SystemEnvironment,
-            new OvsDbConnection("127.0.0.1", 42423));
+            new OvsDbConnection("127.0.0.1", 52421));
         var either = await networkControlTool.GetRecord<SouthboundGlobal>(
             OVNSouthboundTableNames.Global,
             ".");
 
         var record = either.ThrowIfLeft();
         record.IsSome.Should().BeTrue();
+
+        var sslControlTool = CreateControlTool(52422, true);
+        var sslEither = await sslControlTool.FindRecords<SouthboundConnection>(
+            OVNSouthboundTableNames.Connection);
+        var sslRecords = sslEither.ThrowIfLeft();
+        sslRecords.Should().HaveCount(2);
     }
 
     private async Task ApplyClusterPlan(ClusterPlan clusterPlan)

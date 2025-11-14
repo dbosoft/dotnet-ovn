@@ -1,6 +1,14 @@
-﻿Address_Set table
+﻿ACL_ID table
+_uuid id
+----- --
+
+Address_Set table
 _uuid addresses name
 ----- --------- ----
+
+Advertised_Route table
+_uuid datapath external_ids ip_prefix logical_port tracked_port
+----- -------- ------------ --------- ------------ ------------
 
 BFD table
 _uuid chassis_name detect_mult disc dst_ip external_ids logical_port min_rx min_tx options src_port status
@@ -19,10 +27,11 @@ _uuid chassis variables
 ----- ------- ---------
 
 Connection table
-_uuid                                external_ids inactivity_probe is_connected max_backoff other_config read_only role status target
------------------------------------- ------------ ---------------- ------------ ----------- ------------ --------- ---- ------ ------------------------
-Guid_0000000000000000000000000000001 {}           []               false        []          {}           false     ""   {}     "pssl:42422:203.0.113.2"
-Guid_0000000000000000000000000000002 {}           []               false        []          {}           false     ""   {}     "ptcp:42421"
+_uuid                                external_ids inactivity_probe is_connected max_backoff other_config read_only role status                                                                target
+------------------------------------ ------------ ---------------- ------------ ----------- ------------ --------- ---- --------------------------------------------------------------------- ------------------------
+Guid_0000000000000000000000000000001 {}           []               false        []          {}           false     ""   {sec_since_connect="0", sec_since_disconnect="0"}                     "pssl:42423:203.0.113.2"
+Guid_0000000000000000000000000000002 {}           []               false        []          {}           false     ""   {bound_port="42421", sec_since_connect="0", sec_since_disconnect="0"} "ptcp:42421"
+Guid_0000000000000000000000000000003 {}           []               false        []          {}           false     ""   {bound_port="42422", sec_since_connect="0", sec_since_disconnect="0"} "pssl:42422"
 
 Controller_Event table
 _uuid chassis event_info event_type seq_num
@@ -43,6 +52,10 @@ _uuid datapaths external_ids options records
 Datapath_Binding table
 _uuid external_ids load_balancers tunnel_key
 ----- ------------ -------------- ----------
+
+ECMP_Nexthop table
+_uuid datapath external_ids mac nexthop port
+----- -------- ------------ --- ------- ----
 
 Encap table
 _uuid chassis_name ip options type
@@ -65,12 +78,16 @@ _uuid external_ids ha_chassis name ref_chassis
 ----- ------------ ---------- ---- -----------
 
 IGMP_Group table
-_uuid address chassis chassis_name datapath ports
------ ------- ------- ------------ -------- -----
+_uuid address chassis chassis_name datapath ports protocol
+----- ------- ------- ------------ -------- ----- --------
 
 IP_Multicast table
 _uuid datapath enabled eth_src idle_timeout ip4_src ip6_src querier query_interval query_max_resp seq_no table_size
 ----- -------- ------- ------- ------------ ------- ------- ------- -------------- -------------- ------ ----------
+
+Learned_Route table
+_uuid datapath external_ids ip_prefix logical_port nexthop
+----- -------- ------------ --------- ------------ -------
 
 Load_Balancer table
 _uuid datapath_group datapaths external_ids lr_datapath_group ls_datapath_group name options protocol vips
@@ -81,8 +98,8 @@ _uuid datapaths
 ----- ---------
 
 Logical_Flow table
-_uuid actions controller_meter external_ids logical_datapath logical_dp_group match pipeline priority table_id tags
------ ------- ---------------- ------------ ---------------- ---------------- ----- -------- -------- -------- ----
+_uuid actions controller_meter external_ids flow_desc logical_datapath logical_dp_group match pipeline priority table_id tags
+----- ------- ---------------- ------------ --------- ---------------- ---------------- ----- -------- -------- -------- ----
 
 MAC_Binding table
 _uuid datapath ip logical_port mac timestamp
@@ -121,13 +138,14 @@ _uuid name permissions
 ----- ---- -----------
 
 SB_Global table
-_uuid                                connections                                                                  external_ids ipsec nb_cfg options ssl
------------------------------------- ---------------------------------------------------------------------------- ------------ ----- ------ ------- ---
-Guid_0000000000000000000000000000003 [Guid_0000000000000000000000000000001, Guid_0000000000000000000000000000002] {}           false 0      {}      []
+_uuid                                connections                                                                                                        external_ids ipsec nb_cfg options ssl
+------------------------------------ ------------------------------------------------------------------------------------------------------------------ ------------ ----- ------ ------- ------------------------------------
+Guid_0000000000000000000000000000004 [Guid_0000000000000000000000000000003, Guid_0000000000000000000000000000001, Guid_0000000000000000000000000000002] {}           false 0      {}      Guid_0000000000000000000000000000005
 
 SSL table
-_uuid bootstrap_ca_cert ca_cert certificate external_ids private_key ssl_ciphers ssl_protocols
------ ----------------- ------- ----------- ------------ ----------- ----------- -------------
+_uuid                                bootstrap_ca_cert ca_cert                                                                                                                                      certificate                                                                                                                                external_ids private_key                                                                                                                                   ssl_ciphers ssl_ciphersuites ssl_protocols
+------------------------------------ ----------------- -------------------------------------------------------------------------------------------------------------------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------ ------------ --------------------------------------------------------------------------------------------------------------------------------------------- ----------- ---------------- -------------
+Guid_0000000000000000000000000000005 false             "{OvsTestDirectory____________________________}/etc/openvswitch/cacert_SHA256_000000000000000000000000000000000000000000000000000000001.pem" "{OvsTestDirectory____________________________}/etc/openvswitch/cert_SHA256_000000000000000000000000000000000000000000000000000000002.pem" {}           "{OvsTestDirectory____________________________}/etc/openvswitch/privkey_SHA256_000000000000000000000000000000000000000000000000000000003.pem" ""          ""               TLSv1.2
 
 Service_Monitor table
 _uuid chassis_name external_ids ip logical_port options port protocol src_ip src_mac status

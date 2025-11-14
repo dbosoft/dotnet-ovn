@@ -23,8 +23,8 @@ _uuid capabilities ct_zone_default_limit ct_zones datapath_version external_ids
 ----- ------------ --------------------- -------- ---------------- ------------
 
 Flow_Sample_Collector_Set table
-_uuid bridge external_ids id ipfix
------ ------ ------------ -- -----
+_uuid bridge external_ids id ipfix local_group_id
+----- ------ ------------ -- ----- --------------
 
 Flow_Table table
 _uuid external_ids flow_limit groups name overflow_policy prefixes
@@ -43,8 +43,8 @@ _uuid connection_mode external_ids inactivity_probe is_connected max_backoff oth
 ----- --------------- ------------ ---------------- ------------ ----------- ------------ ------ ------
 
 Mirror table
-_uuid external_ids name output_port output_vlan select_all select_dst_port select_src_port select_vlan snaplen statistics
------ ------------ ---- ----------- ----------- ---------- --------------- --------------- ----------- ------- ----------
+_uuid external_ids filter name output_port output_vlan select_all select_dst_port select_src_port select_vlan snaplen statistics
+----- ------------ ------ ---- ----------- ----------- ---------- --------------- --------------- ----------- ------- ----------
 
 NetFlow table
 _uuid active_timeout add_id_to_interface engine_id engine_type external_ids targets
