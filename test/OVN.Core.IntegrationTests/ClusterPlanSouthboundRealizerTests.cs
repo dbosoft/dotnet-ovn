@@ -2,7 +2,6 @@
 using AwesomeAssertions;
 using Dbosoft.OVN.Model.OVN;
 using Dbosoft.OVN.OSCommands.OVN;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit.Abstractions;
 
 namespace Dbosoft.OVN.Core.IntegrationTests;
@@ -15,6 +14,8 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
     {
         await ApplyClusterPlan(CreateClusterPlan());
 
+        await Task.Delay(1000);
+
         await VerifyDatabase();
 
         // Verify that the OVN Southbound database is listening on the expected port
@@ -25,7 +26,13 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
             OVNSouthboundTableNames.Connection);
 
         var records = either.ThrowIfLeft();
-        records.Should().HaveCount(2);
+        records.Should().HaveCount(3);
+
+        var sslControlTool = CreateControlTool(42422, true);
+        var sslEither = await sslControlTool.FindRecords<SouthboundConnection>(
+            OVNSouthboundTableNames.Connection);
+        var sslRecords = sslEither.ThrowIfLeft();
+        sslRecords.Should().HaveCount(3);
     }
 
     [Fact]
@@ -34,7 +41,8 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
         await ApplyClusterPlan(CreateClusterPlan());
 
         var updatedPlan = new ClusterPlan()
-            .AddSouthboundConnection(42423);
+            .AddSouthboundConnection(52421)
+            .AddSouthboundConnection(52422, true);
 
         await ApplyClusterPlan(updatedPlan);
 
@@ -54,13 +62,30 @@ public class ClusterPlanSouthboundRealizerTests(ITestOutputHelper testOutputHelp
 
     private async Task ApplyClusterPlan(ClusterPlan clusterPlan)
     {
-        var realizer = new ClusterPlanSouthboundRealizer(ControlTool, NullLogger.Instance);
+        var realizer = new ClusterPlanSouthboundRealizer(SystemEnvironment, ControlTool);
 
-        (await realizer.ApplyClusterPlan(clusterPlan)).ThrowIfLeft();
+        var either = await realizer.ApplyClusterPlan(clusterPlan);
+        either.ThrowIfLeft();
     }
 
     private ClusterPlan CreateClusterPlan() =>
         new ClusterPlan()
+            .SetSouthboundSsl(TestData.PrivateKey, TestData.Certificate, TestData.CaCertificate)
             .AddSouthboundConnection(42421)
-            .AddSouthboundConnection(42422, true, IPAddress.Parse("203.0.113.2"));
+            .AddSouthboundConnection(42422, true)
+            .AddSouthboundConnection(42423, true, IPAddress.Parse("203.0.113.2"));
+
+    private OVNSouthboundControlTool CreateControlTool(int port, bool ssl)
+    {
+        OvsDbConnection dbConnection = ssl
+            ? new OvsDbConnection(
+                "127.0.0.1",
+                port,
+                OvsCertificateFileHelper.ComputePrivateKeyPath(TestData.PrivateKey),
+                OvsCertificateFileHelper.ComputeCertificatePath(TestData.Certificate),
+                OvsCertificateFileHelper.ComputeCaCertificatePath(TestData.CaCertificate))
+            : new OvsDbConnection("127.0.0.1", port);
+        
+        return new OVNSouthboundControlTool(SystemEnvironment, dbConnection);
+    }
 }
