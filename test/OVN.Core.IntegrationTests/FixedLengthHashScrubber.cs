@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿// Based on https://github.com/VerifyTests/Verify/blob/main/src/Verify/Serialization/Scrubbers/GuidScrubber.cs
+// Copyright(c).NET Foundation and Contributors
+// Licensed under the MIT License.
+using System.Text;
 
 namespace Dbosoft.OVN.Core.IntegrationTests;
 
@@ -17,21 +20,19 @@ public static class FixedLengthHashScrubber
         for (var index = 0; index < value.Length - 64; index++)
         {
             var slice = value.Slice(index, 64).ToString();
-            if (slice.All(c => c is >='0' and <='9' or >= 'a' and <='f'))
+            if (!slice.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'))
+                continue;
+            
+            if (!cache.TryGetValue(slice, out var counterValue))
             {
-                if (!cache.TryGetValue(slice, out var counterValue))
-                {
-                    counterValue = $"SHA256_{counter:000000000000000000000000000000000000000000000000000000000}";
-                    cache.Add(slice, counterValue);
-                    counter++;
-                }
-
-                builder.Remove(index, 64);
-                builder.Insert(index, counterValue);
-                index += 63;
+                counterValue = $"SHA256_{counter:000000000000000000000000000000000000000000000000000000000}";
+                cache.Add(slice, counterValue);
+                counter++;
             }
 
-            index++;
+            builder.Remove(index, 64);
+            builder.Insert(index, counterValue);
+            index += 63;
         }
     }
 }

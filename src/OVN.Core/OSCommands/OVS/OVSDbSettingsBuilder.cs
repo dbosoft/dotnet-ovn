@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using Dbosoft.OVN.Model.OVN;
+using Dbosoft.OVN.Model.OVS;
 using static LanguageExt.Prelude;
 
 namespace Dbosoft.OVN.OSCommands.OVS;
@@ -60,8 +61,10 @@ public abstract class OVSDbSettingsBuilder
                 new OvsFile("var/run/ovn", "ovn_nb.ctl"),
                 new OvsFile("var/log/ovn", "ovn-nb.log"),
                 _loggingSettings,
+                "OVN_Northbound",
+                OVNTableNames.Global,
                 _allowAttach,
-                _useRemoteConfigsFromDatabase ? Some("db:OVN_Northbound,NB_Global,connections") : None);
+                _useRemoteConfigsFromDatabase);
         }
     }
 
@@ -76,8 +79,10 @@ public abstract class OVSDbSettingsBuilder
                 new OvsFile("var/run/ovn", "ovn_sb.ctl"),
                 new OvsFile("var/log/ovn", "ovn-sb.log"),
                 _loggingSettings,
+                "OVN_Southbound",
+                OVNSouthboundTableNames.Global,
                 _allowAttach,
-                _useRemoteConfigsFromDatabase ? Some("db:OVN_Southbound,SB_Global,connections") : None);
+                _useRemoteConfigsFromDatabase);
         }
     }
 
@@ -92,8 +97,10 @@ public abstract class OVSDbSettingsBuilder
                 new OvsFile("var/run/openvswitch", "ovs-db.ctl"),
                 new OvsFile("var/log/openvswitch", "ovs-db.log"),
                 _loggingSettings,
+                "Open_vSwitch",
+                OVSTableNames.Global,
                 _allowAttach,
-                _useRemoteConfigsFromDatabase ? Some("db:Open_vSwitch,Open_vSwitch,connections") : None);
+                _useRemoteConfigsFromDatabase);
         }
     }
 }

@@ -31,17 +31,19 @@ public class OVSDBProcess : DemonProcessBase
 
     protected override string BuildArguments()
     {
-        var baseArguments = base.BuildArguments();
-
-        var dbFileFullPath = _systemEnvironment.FileSystem.ResolveOvsFilePath(_dbSettings.DBFile);
         var sb = new StringBuilder();
-        sb.Append($"\"{dbFileFullPath}\"");
-        sb.Append(' ');
-        sb.Append($"--remote=\"{_dbSettings.Connection.GetCommandString(_systemEnvironment.FileSystem, true)}\"");
-        sb.Append(' ');
-        sb.Append(_dbSettings.DatabaseRemoteConfig.Map(c => $"--remote=\"{c}\" ").IfNone(""));
+        var dbFileFullPath = _systemEnvironment.FileSystem.ResolveOvsFilePath(_dbSettings.DBFile);
+        sb.Append($"\"{dbFileFullPath}\" ");
+        
+        sb.Append($"--remote=\"{_dbSettings.Connection.GetCommandString(_systemEnvironment.FileSystem, true)}\" ");
+        if (_dbSettings.UseRemotesFromDatabase)
+            sb.Append($"--remote=\"db:{_dbSettings.DatabaseName},{_dbSettings.GlobalTableName},connections\" ");
 
-        sb.Append(baseArguments);
+        sb.Append($"--private-key=\"db:{_dbSettings.DatabaseName},SSL,private_key\" ");
+        sb.Append($"--certificate=\"db:{_dbSettings.DatabaseName},SSL,certificate\" ");
+        sb.Append($"--ca-cert=\"db:{_dbSettings.DatabaseName},SSL,ca_cert\" ");
+
+        sb.Append(base.BuildArguments());
         return sb.ToString();
     }
     

@@ -94,7 +94,7 @@ public class NetworkPlanRealizerTests(
 
     private async Task ApplyNetworkPlan(NetworkPlan networkPlan)
     {
-        var realizer = new NetworkPlanRealizer(ControlTool, NullLogger.Instance);
+        var realizer = new NetworkPlanRealizer(SystemEnvironment, ControlTool, NullLogger.Instance);
 
         (await realizer.ApplyNetworkPlan(networkPlan)).ThrowIfLeft();
     }
