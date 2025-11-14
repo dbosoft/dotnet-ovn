@@ -41,7 +41,7 @@ steps:
       # See https://github.com/PowerShell/Microsoft.PowerShell.Archive/issues/77#issuecomment-601947496
       $global:ProgressPreference = 'SilentlyContinue'
       
-      Invoke-WebRequest -Uri 'https://github.com/eryph-org/eryph/raw/refs/heads/main/ovspackage.zip' -OutFile C:\ovspackage.zip -UseBasicParsing
+      Invoke-WebRequest -Uri 'https://github.com/eryph-org/eryph/raw/refs/heads/main/ovspackage-3.5.0-exp.zip' -OutFile C:\ovspackage.zip -UseBasicParsing
       Expand-Archive -Path C:\ovspackage.zip -DestinationPath C:\openvswitch\usr
 
 - task: DotNetCoreCLI@2
