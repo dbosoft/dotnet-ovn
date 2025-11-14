@@ -19,7 +19,7 @@ public static class OVSEntityMetadata
 
     private static Func<IDictionary<string, OVSFieldMetadata>> MakeDelegate(Type ovsType)
     {
-        var field = ovsType.GetField("Columns", BindingFlags.Public | BindingFlags.Static);
+        var field = ovsType.GetField("Columns", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
         if (field == null)
             throw new InvalidOperationException(
                 $"Failed to access column metadata of entity {ovsType}");

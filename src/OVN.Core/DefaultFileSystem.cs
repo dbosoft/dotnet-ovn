@@ -105,29 +105,39 @@ public class DefaultFileSystem : IFileSystem
     protected virtual string GetProgramRootPath() =>
         _platform == OSPlatform.Windows ? "C:/openvswitch/" : "/";
 
-    public async Task<string> ReadFileAsync(string path)
+    public async Task<string> ReadFileAsync(
+        string path,
+        CancellationToken cancellationToken = default)
     {
         await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var sr = new StreamReader(stream, Encoding.UTF8);
-        return await sr.ReadToEndAsync();
+        return await sr.ReadToEndAsync(cancellationToken);
     }
 
-    public async Task<string> ReadFileAsync(OvsFile file)
+    public async Task<string> ReadFileAsync(
+        OvsFile file,
+        CancellationToken cancellationToken = default)
     {
         var path = ResolveOvsFilePath(file);
-        return await ReadFileAsync(path);
+        return await ReadFileAsync(path, cancellationToken);
     }
 
-    public async Task WriteFileAsync(string path, string content)
+    public async Task WriteFileAsync(
+        string path,
+        string content,
+        CancellationToken cancellationToken = default)
     {
         await using var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
         await using var sw = new StreamWriter(stream, Encoding.UTF8);
-        await sw.WriteAsync(content);
+        await sw.WriteAsync(new StringBuilder(content), cancellationToken);
     }
 
-    public Task WriteFileAsync(OvsFile file, string content)
+    public Task WriteFileAsync(
+        OvsFile file,
+        string content,
+        CancellationToken cancellationToken = default)
     {
         var path = ResolveOvsFilePath(file);
-        return WriteFileAsync(path, content);
+        return WriteFileAsync(path, content, cancellationToken);
     }
 }
