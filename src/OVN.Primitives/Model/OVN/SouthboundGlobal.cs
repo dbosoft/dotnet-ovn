@@ -12,6 +12,7 @@ public record SouthboundGlobal : OVSTableRecord, IOVSEntityWithName, IHasOVSRefe
         };
 
     public Seq<Guid> Connections => GetReference("connections");
+
     public Seq<Guid> Ssl => GetReference("ssl");
 
     public string? Name => ".";

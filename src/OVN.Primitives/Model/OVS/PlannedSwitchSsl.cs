@@ -1,6 +1,6 @@
-﻿namespace Dbosoft.OVN.Model.OVN;
+﻿namespace Dbosoft.OVN.Model.OVS;
 
-public record PlannedSouthboundSsl : OVSEntity, IOVSEntityWithName, IHasParentReference
+public record PlannedSwitchSsl : OVSEntity, IOVSEntityWithName, IHasParentReference
 {
     public new static readonly IDictionary<string, OVSFieldMetadata>
         Columns = new Dictionary<string, OVSFieldMetadata>(OVSTableRecord.Columns)
@@ -23,7 +23,7 @@ public record PlannedSouthboundSsl : OVSEntity, IOVSEntityWithName, IHasParentRe
     {
         get => GetValue<string>("certificate");
         init => SetValue("certificate", value);
-    } 
+    }
 
     public string? CaCertificate
     {
@@ -53,6 +53,6 @@ public record PlannedSouthboundSsl : OVSEntity, IOVSEntityWithName, IHasParentRe
 
     public OVSParentReference GetParentReference()
     {
-        return new OVSParentReference(OVNSouthboundTableNames.Global, ".", "ssl");
+        return new OVSParentReference(OVSTableNames.Global, ".", "ssl");
     }
 }
