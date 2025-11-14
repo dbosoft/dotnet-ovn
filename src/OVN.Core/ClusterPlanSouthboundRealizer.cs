@@ -17,7 +17,10 @@ public class ClusterPlanSouthboundRealizer(
         ClusterPlan clusterPlan,
         CancellationToken cancellationToken = default) =>
         from _1 in ApplySouthboundConnections(clusterPlan, cancellationToken)
-        from _2 in ApplySouthboundSsl(clusterPlan, cancellationToken)
+        from _2 in ApplySouthboundSsl<PlannedSouthboundSsl, SouthboundSsl, SouthboundGlobal>(
+            clusterPlan.PlannedSouthboundSsl,
+            OVNSouthboundTableNames.Global,
+            cancellationToken)
         select clusterPlan;
 
 
@@ -47,44 +50,6 @@ public class ClusterPlanSouthboundRealizer(
             OVNSouthboundTableNames.Connection,
             remainingConnections,
             existingPlannedChassisGroups,
-            cancellationToken: cancellationToken)
-        select unit;
-
-    // The SSL configuration is special there can be at most one SSL
-
-    // TODO Map certificates
-    private EitherAsync<Error, Unit> ApplySouthboundSsl(
-        ClusterPlan clusterPlan,
-        CancellationToken cancellationToken) =>
-        from global in FindRecords<SouthboundGlobal>(
-            OVNSouthboundTableNames.Global,
-            SouthboundGlobal.Columns,
-            cancellationToken: cancellationToken)
-        from sslWithPaths in EnsureCertificateFiles(
-            clusterPlan.PlannedSouthboundSsl,
-            cancellationToken)
-        let plannedSsl = sslWithPaths
-            .Map(s => (s.Name, s))
-            .ToHashMap()
-        from existingSsl in FindRecordsWithParents<SouthboundSsl, SouthboundGlobal>(
-            OVNSouthboundTableNames.Ssl,
-            global.Values.ToSeq(),
-            SouthboundSsl.Columns,
-            cancellationToken: cancellationToken)
-        from remainingSsl in RemoveEntitiesNotPlanned(
-            OVNSouthboundTableNames.Ssl,
-            existingSsl,
-            plannedSsl,
-            cancellationToken: cancellationToken)
-        from existingPlannedSsl in CreatePlannedEntities(
-            OVNSouthboundTableNames.Ssl,
-            remainingSsl,
-            plannedSsl,
-            cancellationToken: cancellationToken)
-        from _3 in UpdateEntities(
-            OVNSouthboundTableNames.Ssl,
-            remainingSsl,
-            existingPlannedSsl,
             cancellationToken: cancellationToken)
         select unit;
 }

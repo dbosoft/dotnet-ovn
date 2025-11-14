@@ -68,7 +68,7 @@ public static class ClusterPlanConfigurationExtensions
                 PrivateKey = privateKey,
                 Certificate = certificate,
                 CaCertificate = caCertificate,
-                SslProtocols = "TLSv1.2",
+                SslProtocols = "TLSv1.3,TLSv1.2",
                 SslCiphers = "",
                 SslCipherSuites = "",
             }

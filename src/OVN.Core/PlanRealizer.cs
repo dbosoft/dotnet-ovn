@@ -204,24 +204,69 @@ public abstract class PlanRealizer
     private static bool IsUpdatable(string name, IOVSField value) =>
         name is not ("_uuid" or "__parentId") && value is not OVSReference;
 
-    protected EitherAsync<Error, Option<PlannedSouthboundSsl>> EnsureCertificateFiles(
-        Option<PlannedSouthboundSsl> plannedSouthboundSsl,
-        CancellationToken cancellationToken) =>
+
+    // The SSL configuration is special there can be at most one SSL
+
+    // TODO Map certificates
+    protected EitherAsync<Error, Unit> ApplySouthboundSsl<TPlannedSsl, TSsl, TGlobal>(
+        Option<TPlannedSsl> plannedSsl,
+        string globalTableName,
+        CancellationToken cancellationToken)
+        where TPlannedSsl : PlannedOvsSsl
+        where TSsl : OVSSsl, new()
+        where TGlobal : OVSTableRecord, IHasOVSReferences<TSsl>, new() =>
+        from global in FindRecords<TGlobal>(
+            OVNSouthboundTableNames.Global,
+            SouthboundGlobal.Columns,
+            cancellationToken: cancellationToken)
+        from sslWithPaths in EnsureCertificateFiles(
+            plannedSsl,
+            cancellationToken)
+        let plannedSslMap = sslWithPaths
+            .Map(s => (s.Name, s))
+            .ToHashMap()
+        from existingSsl in FindRecordsWithParents<TSsl, TGlobal>(
+            OVNSouthboundTableNames.Ssl,
+            global.Values.ToSeq(),
+            OVSSsl.Columns,
+            cancellationToken: cancellationToken)
+        from remainingSsl in RemoveEntitiesNotPlanned<TSsl, TPlannedSsl>(
+            OVNSouthboundTableNames.Ssl,
+            existingSsl,
+            plannedSslMap,
+            cancellationToken: cancellationToken)
+        from existingPlannedSsl in CreatePlannedEntities<TSsl, TPlannedSsl>(
+            OVNSouthboundTableNames.Ssl,
+            remainingSsl,
+            plannedSslMap,
+            cancellationToken: cancellationToken)
+        from _3 in UpdateEntities(
+            OVNSouthboundTableNames.Ssl,
+            remainingSsl,
+            existingPlannedSsl,
+            cancellationToken: cancellationToken)
+        select unit;
+
+    protected EitherAsync<Error, Option<TPlannedSsl>> EnsureCertificateFiles<TPlannedSsl>(
+        Option<TPlannedSsl> plannedSouthboundSsl,
+        CancellationToken cancellationToken)
+        where TPlannedSsl : PlannedOvsSsl =>
         from updated in plannedSouthboundSsl
             .Map(s => EnsureCertificateFiles(s, cancellationToken))
             .Sequence()
         select updated;
 
-    private EitherAsync<Error, PlannedSouthboundSsl> EnsureCertificateFiles(
-        PlannedSouthboundSsl plannedSouthboundSsl,
-        CancellationToken cancellationToken) =>
+    private EitherAsync<Error, TPlannedSsl> EnsureCertificateFiles<TPlannedSsl>(
+        TPlannedSsl plannedSouthboundSsl,
+        CancellationToken cancellationToken)
+        where TPlannedSsl : PlannedOvsSsl =>
         from _ in RightAsync<Error, Unit>(unit)
         let caCertificateFile = OvsCertificateFileHelper.ComputeCaCertificatePath(plannedSouthboundSsl.CaCertificate!)
-        from _2 in EnsureCertificateFile(caCertificateFile, plannedSouthboundSsl.CaCertificate!)
+        from _2 in EnsureCertificateFile(caCertificateFile, plannedSouthboundSsl.CaCertificate!, cancellationToken)
         let certificateFile = OvsCertificateFileHelper.ComputeCertificatePath(plannedSouthboundSsl.Certificate!)
-        from _3 in EnsureCertificateFile(certificateFile, plannedSouthboundSsl.Certificate!)
+        from _3 in EnsureCertificateFile(certificateFile, plannedSouthboundSsl.Certificate!, cancellationToken)
         let privateKeyFile = OvsCertificateFileHelper.ComputePrivateKeyPath(plannedSouthboundSsl.PrivateKey!)
-        from _4 in EnsureCertificateFile(privateKeyFile, plannedSouthboundSsl.PrivateKey!)
+        from _4 in EnsureCertificateFile(privateKeyFile, plannedSouthboundSsl.PrivateKey!, cancellationToken)
         select plannedSouthboundSsl with
         {
             CaCertificate = _systemEnvironment.FileSystem.ResolveOvsFilePath(caCertificateFile),
@@ -231,14 +276,15 @@ public abstract class PlanRealizer
 
     private EitherAsync<Error, Unit> EnsureCertificateFile(
         OvsFile file,
-        string content) =>
+        string content,
+        CancellationToken cancellationToken) =>
         from _1 in RightAsync<Error, Unit>(unit)
         let path = _systemEnvironment.FileSystem.ResolveOvsFilePath(file, false)
         from _2 in TryAsync(async () =>
         {
             // TODO Handle case when file is specified directly
             _systemEnvironment.FileSystem.EnsurePathForFileExists(file);
-            await _systemEnvironment.FileSystem.WriteFileAsync(file, content);
+            await _systemEnvironment.FileSystem.WriteFileAsync(file, content, cancellationToken);
             return unit;
         }).ToEither()
         select unit;

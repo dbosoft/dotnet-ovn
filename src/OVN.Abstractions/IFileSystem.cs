@@ -41,11 +41,11 @@ public interface IFileSystem
     /// <param name="file">OVS file</param>
     void EnsurePathForFileExists(OvsFile file);
 
-    Task<string> ReadFileAsync(string path);
+    Task<string> ReadFileAsync(string path, CancellationToken cancellationToken = default);
 
-    Task<string> ReadFileAsync(OvsFile file);
+    Task<string> ReadFileAsync(OvsFile file, CancellationToken cancellationToken = default);
 
-    Task WriteFileAsync(string path, string content);
+    Task WriteFileAsync(string path, string content, CancellationToken cancellationToken = default);
 
-    Task WriteFileAsync(OvsFile file, string content);
+    Task WriteFileAsync(OvsFile file, string content, CancellationToken cancellationToken =default);
 }
