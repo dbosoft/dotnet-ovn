@@ -24,6 +24,6 @@ public abstract class OvnControlToolTestBase : OvsDbTestBase
 
     protected async Task VerifyDatabase()
     {
-        await VerifyDatabase("OVN_Northbound");
+        await VerifyDatabase("OVN_Northbound", "7.11.0");
     }
 }

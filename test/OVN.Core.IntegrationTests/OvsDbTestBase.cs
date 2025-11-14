@@ -1,15 +1,8 @@
-﻿using MartinCostello.Logging.XUnit;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Dbosoft.OVN.Nodes;
-using Dbosoft.OVN.OSCommands.OVS;
+﻿using Dbosoft.OVN.OSCommands.OVS;
 using LanguageExt;
 using LanguageExt.Common;
+using MartinCostello.Logging.XUnit;
+using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
 using static LanguageExt.Prelude;
@@ -35,7 +28,7 @@ public abstract class OvsDbTestBase : IAsyncLifetime
 
         
         SystemEnvironment = new TestSystemEnvironment(_loggerFactory, _dataDirectoryPath);
-        this._dbSettings = dbSettings;
+        _dbSettings = dbSettings;
     }
 
     public virtual async Task InitializeAsync()
@@ -66,9 +59,17 @@ public abstract class OvsDbTestBase : IAsyncLifetime
 
     protected abstract EitherAsync<Error, Unit> InitializeDatabase();
 
-    protected async Task VerifyDatabase(string databaseName)
+    protected async Task VerifyDatabase(string databaseName, string schemaVersion)
     {
         var ovsDbClientTool = new OVSDbClientTool(SystemEnvironment, _dbSettings.Connection);
+        var dbSchemaVersion = (await ovsDbClientTool.GetSchemaVersion(databaseName)).ThrowIfLeft();
+        if (dbSchemaVersion != schemaVersion)
+            Assert.Fail($"""
+                        Schema version mismatch detected!
+                        The tests were created for schema version '{schemaVersion}', but the database
+                        reports schema version '{dbSchemaVersion}'. Is the correct version of OVS
+                        and OVS used to run the tests?
+                        """);
         var dump = (await ovsDbClientTool.PrintDatabase(databaseName)).ThrowIfLeft();
         var settings = new VerifySettings();
         settings.AddScrubber(FixedLengthGuidScrubber.ReplaceGuids);

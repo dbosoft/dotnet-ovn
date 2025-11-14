@@ -29,6 +29,6 @@ public abstract class OvsControlToolTestBase : OvsDbTestBase
 
     protected async Task VerifyDatabase()
     {
-        await VerifyDatabase("Open_vSwitch");
+        await VerifyDatabase("Open_vSwitch", "8.8.0");
     }
 }

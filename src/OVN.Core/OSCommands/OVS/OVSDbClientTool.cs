@@ -26,4 +26,11 @@ public class OVSDbClientTool : OVSTool
         RunCommandWithResponse(
             $"dump {_dbConnection.GetCommandString(_systemEnvironment.FileSystem, false)} {databaseName}",
             cancellationToken);
+
+    public EitherAsync<Error, string> GetSchemaVersion(
+        string databaseName,
+        CancellationToken cancellationToken = default) =>
+        RunCommandWithResponse(
+            $"get-schema-version {_dbConnection.GetCommandString(_systemEnvironment.FileSystem, false)} {databaseName}",
+            cancellationToken);
 }

@@ -1,6 +1,6 @@
 ﻿ACL table
-_uuid action direction external_ids label log match meter name options priority severity tier
------ ------ --------- ------------ ----- --- ----- ----- ---- ------- -------- -------- ----
+_uuid action direction external_ids label log match meter name options priority sample_est sample_new severity tier
+----- ------ --------- ------------ ----- --- ----- ----- ---- ------- -------- ---------- ---------- -------- ----
 
 Address_Set table
 _uuid addresses external_ids name
@@ -26,6 +26,10 @@ DHCP_Options table
 _uuid                                cidr              external_ids                           options
 ------------------------------------ ----------------- -------------------------------------- -------
 Guid_0000000000000000000000000000001 "198.51.100.0/24" {id=dhcp-1, network_plan=test-project} {}
+
+DHCP_Relay table
+_uuid external_ids name options servers
+----- ------------ ---- ------- -------
 
 DNS table
 _uuid                                external_ids                          options records
@@ -66,19 +70,19 @@ _uuid                                copp enabled external_ids                lo
 Guid_0000000000000000000000000000003 []   []      {network_plan=test-project} []            []                  router-1 [Guid_0000000000000000000000000000004, Guid_0000000000000000000000000000005] {}      []       [Guid_0000000000000000000000000000006, Guid_0000000000000000000000000000007] [Guid_0000000000000000000000000000008]
 
 Logical_Router_Policy table
-_uuid action bfd_sessions external_ids match nexthop nexthops options priority
------ ------ ------------ ------------ ----- ------- -------- ------- --------
+_uuid action bfd_sessions chain external_ids jump_chain match nexthop nexthops options priority
+----- ------ ------------ ----- ------------ ---------- ----- ------- -------- ------- --------
 
 Logical_Router_Port table
-_uuid                                enabled external_ids                                     gateway_chassis ha_chassis_group ipv6_prefix ipv6_ra_configs mac                 name                          networks            options peer status
------------------------------------- ------- ------------------------------------------------ --------------- ---------------- ----------- --------------- ------------------- ----------------------------- ------------------- ------- ---- ------
-Guid_0000000000000000000000000000007 []      {network_plan=test-project}                      []              []               []          {}              "02:00:00:00:00:02" RS-router-1-switch-1          ["198.51.100.1/24"] {}      []   {}
-Guid_0000000000000000000000000000006 []      {chassis_group=local, network_plan=test-project} []              []               []          {}              "02:00:00:00:00:01" RS-router-1-provider-switch-1 ["192.0.2.100/24"]  {}      []   {}
+_uuid                                dhcp_relay enabled external_ids                                     gateway_chassis ha_chassis_group ipv6_prefix ipv6_ra_configs mac                 name                          networks            options peer status
+------------------------------------ ---------- ------- ------------------------------------------------ --------------- ---------------- ----------- --------------- ------------------- ----------------------------- ------------------- ------- ---- ------
+Guid_0000000000000000000000000000007 []         []      {network_plan=test-project}                      []              []               []          {}              "02:00:00:00:00:02" RS-router-1-switch-1          ["198.51.100.1/24"] {}      []   {}
+Guid_0000000000000000000000000000006 []         []      {chassis_group=local, network_plan=test-project} []              []               []          {}              "02:00:00:00:00:01" RS-router-1-provider-switch-1 ["192.0.2.100/24"]  {}      []   {}
 
 Logical_Router_Static_Route table
-_uuid                                bfd external_ids                                      ip_prefix   nexthop     options output_port policy route_table
------------------------------------- --- ------------------------------------------------- ----------- ----------- ------- ----------- ------ -----------
-Guid_0000000000000000000000000000008 []  {network_plan=test-project, router_name=router-1} "0.0.0.0/0" "198.0.2.1" {}      []          []     ""
+_uuid                                bfd external_ids                                      ip_prefix   nexthop     options output_port policy route_table selection_fields
+------------------------------------ --- ------------------------------------------------- ----------- ----------- ------- ----------- ------ ----------- ----------------
+Guid_0000000000000000000000000000008 []  {network_plan=test-project, router_name=router-1} "0.0.0.0/0" "198.0.2.1" {}      []          []     ""          []
 
 Logical_Switch table
 _uuid                                acls copp dns_records external_ids                                forwarding_groups load_balancer load_balancer_group name              other_config ports                                                                        qos_rules
@@ -87,12 +91,12 @@ Guid_0000000000000000000000000000009 []   []   []          {dns_records="", netw
 Guid_0000000000000000000000000000012 []   []   []          {dns_records="", network_plan=test-project} []                []            []                  switch-1          {}           [Guid_0000000000000000000000000000013, Guid_0000000000000000000000000000014] []
 
 Logical_Switch_Port table
-_uuid                                addresses                            dhcpv4_options                       dhcpv6_options dynamic_addresses enabled external_ids                                        ha_chassis_group mirror_rules name                          options                                                           parent_name port_security                        tag tag_request type     up
------------------------------------- ------------------------------------ ------------------------------------ -------------- ----------------- ------- --------------------------------------------------- ---------------- ------------ ----------------------------- ----------------------------------------------------------------- ----------- ------------------------------------ --- ----------- -------- --
-Guid_0000000000000000000000000000014 ["02:01:00:00:00:01 198.51.100.100"] Guid_0000000000000000000000000000001 []             []                []      {dhcp_options_v4=dhcp-1, network_plan=test-project} []               []           switch-1-port-1               {}                                                                []          ["02:01:00:00:00:01 198.51.100.100"] []  []          ""       []
-Guid_0000000000000000000000000000011 [router]                             []                                   []             []                []      {network_plan=test-project}                         []               []           SR-provider-switch-1-router-1 {nat-addresses=router, router-port=RS-router-1-provider-switch-1} []          []                                   []  []          router   []
-Guid_0000000000000000000000000000013 [router]                             []                                   []             []                []      {network_plan=test-project}                         []               []           SR-switch-1-router-1          {nat-addresses=router, router-port=RS-router-1-switch-1}          []          []                                   []  []          router   []
-Guid_0000000000000000000000000000010 [unknown]                            []                                   []             []                []      {network_plan=test-project}                         []               []           SN-provider-switch-1-extern   {network_name=extern}                                             []          []                                   5   []          localnet []
+_uuid                                addresses                            dhcpv4_options                       dhcpv6_options dynamic_addresses enabled external_ids                                        ha_chassis_group mirror_rules name                          options                                                           parent_name peer port_security                        tag tag_request type     up
+------------------------------------ ------------------------------------ ------------------------------------ -------------- ----------------- ------- --------------------------------------------------- ---------------- ------------ ----------------------------- ----------------------------------------------------------------- ----------- ---- ------------------------------------ --- ----------- -------- --
+Guid_0000000000000000000000000000014 ["02:01:00:00:00:01 198.51.100.100"] Guid_0000000000000000000000000000001 []             []                []      {dhcp_options_v4=dhcp-1, network_plan=test-project} []               []           switch-1-port-1               {}                                                                []          []   ["02:01:00:00:00:01 198.51.100.100"] []  []          ""       []
+Guid_0000000000000000000000000000011 [router]                             []                                   []             []                []      {network_plan=test-project}                         []               []           SR-provider-switch-1-router-1 {nat-addresses=router, router-port=RS-router-1-provider-switch-1} []          []   []                                   []  []          router   []
+Guid_0000000000000000000000000000013 [router]                             []                                   []             []                []      {network_plan=test-project}                         []               []           SR-switch-1-router-1          {nat-addresses=router, router-port=RS-router-1-switch-1}          []          []   []                                   []  []          router   []
+Guid_0000000000000000000000000000010 [unknown]                            []                                   []             []                []      {network_plan=test-project}                         []               []           SN-provider-switch-1-extern   {network_name=extern}                                             []          []   []                                   5   []          localnet []
 
 Meter table
 _uuid bands external_ids fair name unit
@@ -107,10 +111,10 @@ _uuid external_ids filter index name sink type
 ----- ------------ ------ ----- ---- ---- ----
 
 NAT table
-_uuid                                allowed_ext_ips exempted_ext_ips external_ids                                      external_ip   external_mac        external_port_range gateway_port logical_ip        logical_port options type
------------------------------------- --------------- ---------------- ------------------------------------------------- ------------- ------------------- ------------------- ------------ ----------------- ------------ ------- -------------
-Guid_0000000000000000000000000000005 []              []               {network_plan=test-project, router_name=router-1} "192.0.2.100" []                  ""                  []           "198.51.100.0/24" []           {}      snat
-Guid_0000000000000000000000000000004 []              []               {network_plan=test-project, router_name=router-1} "192.0.2.110" "02:00:00:00:00:03" ""                  []           "198.51.100.100"  ""           {}      dnat_and_snat
+_uuid                                allowed_ext_ips exempted_ext_ips external_ids                                      external_ip   external_mac        external_port_range gateway_port logical_ip        logical_port match options priority type
+------------------------------------ --------------- ---------------- ------------------------------------------------- ------------- ------------------- ------------------- ------------ ----------------- ------------ ----- ------- -------- -------------
+Guid_0000000000000000000000000000005 []              []               {network_plan=test-project, router_name=router-1} "192.0.2.100" []                  ""                  []           "198.51.100.0/24" []           ""    {}      0        snat
+Guid_0000000000000000000000000000004 []              []               {network_plan=test-project, router_name=router-1} "192.0.2.110" "02:00:00:00:00:03" ""                  []           "198.51.100.100"  ""           ""    {}      0        dnat_and_snat
 
 NB_Global table
 _uuid                                connections external_ids hv_cfg hv_cfg_timestamp ipsec name nb_cfg nb_cfg_timestamp options sb_cfg sb_cfg_timestamp ssl
@@ -126,8 +130,20 @@ _uuid action bandwidth direction external_ids match priority
 ----- ------ --------- --------- ------------ ----- --------
 
 SSL table
-_uuid bootstrap_ca_cert ca_cert certificate external_ids private_key ssl_ciphers ssl_protocols
------ ----------------- ------- ----------- ------------ ----------- ----------- -------------
+_uuid bootstrap_ca_cert ca_cert certificate external_ids private_key ssl_ciphers ssl_ciphersuites ssl_protocols
+----- ----------------- ------- ----------- ------------ ----------- ----------- ---------------- -------------
+
+Sample table
+_uuid collectors metadata
+----- ---------- --------
+
+Sample_Collector table
+_uuid external_ids id name probability set_id
+----- ------------ -- ---- ----------- ------
+
+Sampling_App table
+_uuid external_ids id type
+----- ------------ -- ----
 
 Static_MAC_Binding table
 _uuid ip logical_port mac override_dynamic_mac
