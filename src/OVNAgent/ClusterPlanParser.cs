@@ -20,6 +20,8 @@ public static class ClusterPlanParser
             clusterPlan = ParseSouthboundConnections(clusterPlan, southboundConnectionConfig);
         }
 
+        clusterPlan = ParseSouthboundSsl(clusterPlan, planConfig.SouthboundSsl);
+
         return clusterPlan;
     }
 
@@ -65,5 +67,17 @@ public static class ClusterPlanParser
             string.IsNullOrWhiteSpace(endpointConfig.IpAddress)
                 ? null
                 : IPAddress.Parse(endpointConfig.IpAddress));
+    }
+
+    private static ClusterPlan ParseSouthboundSsl(
+        ClusterPlan clusterPlan,
+        SouthboundSslConfig? sslConfig)
+    {
+        return sslConfig is null
+            ? clusterPlan
+            : clusterPlan.SetSouthboundSsl(
+                sslConfig.PrivateKey,
+                sslConfig.Certificate,
+                sslConfig.CaCertificate);
     }
 }

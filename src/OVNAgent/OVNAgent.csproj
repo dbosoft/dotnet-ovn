@@ -22,6 +22,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\OVN.Hosting\OVN.Hosting.csproj" />
+        <ProjectReference Include="..\OVN.SimplePki\OVN.SimplePki.csproj" />
     </ItemGroup>
 
     <ItemGroup Condition="$(TargetFramework.EndsWith('-windows'))">

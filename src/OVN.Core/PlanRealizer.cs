@@ -208,16 +208,16 @@ public abstract class PlanRealizer
     // The SSL configuration is special there can be at most one SSL
 
     // TODO Map certificates
-    protected EitherAsync<Error, Unit> ApplySouthboundSsl<TPlannedSsl, TSsl, TGlobal>(
+    protected EitherAsync<Error, Unit> ApplySsl<TPlannedSsl, TSsl, TGlobal>(
         Option<TPlannedSsl> plannedSsl,
         string globalTableName,
         CancellationToken cancellationToken)
         where TPlannedSsl : PlannedOvsSsl
-        where TSsl : OVSSsl, new()
-        where TGlobal : OVSTableRecord, IHasOVSReferences<TSsl>, new() =>
+        where TSsl : OVSSslTableRecord, new()
+        where TGlobal : OVSGlobalTableRecord, IHasOVSReferences<TSsl>, new() =>
         from global in FindRecords<TGlobal>(
-            OVNSouthboundTableNames.Global,
-            SouthboundGlobal.Columns,
+            globalTableName,
+            OVSGlobalTableRecord.Columns,
             cancellationToken: cancellationToken)
         from sslWithPaths in EnsureCertificateFiles(
             plannedSsl,
@@ -226,28 +226,28 @@ public abstract class PlanRealizer
             .Map(s => (s.Name, s))
             .ToHashMap()
         from existingSsl in FindRecordsWithParents<TSsl, TGlobal>(
-            OVNSouthboundTableNames.Ssl,
+            "SSL",
             global.Values.ToSeq(),
-            OVSSsl.Columns,
+            OVSSslTableRecord.Columns,
             cancellationToken: cancellationToken)
         from remainingSsl in RemoveEntitiesNotPlanned<TSsl, TPlannedSsl>(
-            OVNSouthboundTableNames.Ssl,
+            "SSL",
             existingSsl,
             plannedSslMap,
             cancellationToken: cancellationToken)
         from existingPlannedSsl in CreatePlannedEntities<TSsl, TPlannedSsl>(
-            OVNSouthboundTableNames.Ssl,
+            "SSL",
             remainingSsl,
             plannedSslMap,
             cancellationToken: cancellationToken)
         from _3 in UpdateEntities(
-            OVNSouthboundTableNames.Ssl,
+            "SSL",
             remainingSsl,
             existingPlannedSsl,
             cancellationToken: cancellationToken)
         select unit;
 
-    protected EitherAsync<Error, Option<TPlannedSsl>> EnsureCertificateFiles<TPlannedSsl>(
+    private EitherAsync<Error, Option<TPlannedSsl>> EnsureCertificateFiles<TPlannedSsl>(
         Option<TPlannedSsl> plannedSouthboundSsl,
         CancellationToken cancellationToken)
         where TPlannedSsl : PlannedOvsSsl =>

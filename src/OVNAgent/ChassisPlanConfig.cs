@@ -14,6 +14,8 @@ public class ChassisPlanConfig
 
     public SouthboundConnectionConfig? SouthboundConnection { get; init; }
 
+    public SwitchSslConfig? Ssl { get; init; }
+
     public IList<TunnelEndpointConfig> TunnelEndpoints { get; init; } = new List<TunnelEndpointConfig>();
 
     public IDictionary<string, string> BridgeMappings { get; set; } = new Dictionary<string, string>();
@@ -33,4 +35,13 @@ public class SouthboundConnectionConfig
     public required int Port { get; init; }
 
     public bool? Ssl { get; init; }
+}
+
+public class SwitchSslConfig
+{
+    public required string PrivateKey { get; init; }
+
+    public required string Certificate { get; init; }
+
+    public required string CaCertificate { get; init; }
 }

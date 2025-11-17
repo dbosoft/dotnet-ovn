@@ -2,18 +2,15 @@
 
 namespace Dbosoft.OVN.Model.OVN;
 
-public record SouthboundGlobal : OVSTableRecord, IOVSEntityWithName, IHasOVSReferences<SouthboundConnection>, IHasOVSReferences<SouthboundSsl>
+public record SouthboundGlobal : OVSGlobalTableRecord, IOVSEntityWithName, IHasOVSReferences<SouthboundConnection>, IHasOVSReferences<SouthboundSsl>
 {
     public new static readonly IDictionary<string, OVSFieldMetadata>
-        Columns = new Dictionary<string, OVSFieldMetadata>(OVSTableRecord.Columns)
+        Columns = new Dictionary<string, OVSFieldMetadata>(OVSGlobalTableRecord.Columns)
         {
             { "connections", OVSReference.Metadata() },
-            { "ssl", OVSReference.Metadata() },
         };
 
     public Seq<Guid> Connections => GetReference("connections");
-
-    public Seq<Guid> Ssl => GetReference("ssl");
 
     public string? Name => ".";
 

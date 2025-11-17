@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Net;
 using Dbosoft.OVN.Model.OVN;
 
 namespace Dbosoft.OVN;
@@ -69,8 +64,6 @@ public static class ClusterPlanConfigurationExtensions
                 Certificate = certificate,
                 CaCertificate = caCertificate,
                 SslProtocols = "TLSv1.3,TLSv1.2",
-                SslCiphers = "",
-                SslCipherSuites = "",
             }
         };
     }

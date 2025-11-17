@@ -13,6 +13,10 @@ public class ChassisPlanParserTests
                               ip_address: 203.0.113.1
                               port: 42421
                               ssl: true
+                            ssl:
+                              private_key: test-private-key
+                              certificate: test-certificate
+                              ca_certificate: test-ca-certificate
                             tunnel_endpoints:
                             - ip_address: 203.0.113.2
                               encapsulation_type: geneve
@@ -28,6 +32,11 @@ public class ChassisPlanParserTests
         plan.SouthboundDatabase.Port.Should().Be(42421);
         plan.SouthboundDatabase.Ssl.Should().BeTrue();
         plan.SouthboundDatabase.PipeFile.Should().BeNull();
+
+        plan.PlannedSwitchSsl.Should().NotBeNull();
+        plan.PlannedSwitchSsl.PrivateKey.Should().Be("test-private-key");
+        plan.PlannedSwitchSsl.Certificate.Should().Be("test-certificate");
+        plan.PlannedSwitchSsl.CaCertificate.Should().Be("test-ca-certificate");
 
         plan.TunnelEndpoints.Should().HaveCount(1);
         plan.TunnelEndpoints.Should().SatisfyRespectively(

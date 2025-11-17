@@ -2,7 +2,7 @@
 
 namespace Dbosoft.OVN.Model.OVS;
 
-public record SwitchSsl : OVSSsl
+public record SwitchSsl : OVSSslTableRecord
 {
     //public new static readonly IDictionary<string, OVSFieldMetadata> Columns = OVSSsl.Columns;
 
