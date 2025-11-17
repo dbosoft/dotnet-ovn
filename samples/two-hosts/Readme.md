@@ -38,4 +38,10 @@ The following is required for the example:
 7. Assign an IP address: `Enable-NetAdapter -Name br-extern; New-NetIPAddress -InterfaceAlias br-extern -IPAddress 192.168.240.102 -PrefixLength 24`
 8. Create a VM `vm-secondary`
 9. Set the port name of the VM: `OVSAgent.exe hyperv portname set {adapterId} ovs_vm-secondary`
-10. Add the VM port to the ingration bridge: `ovs-vsctl.exe -- add-port br-int ovs_vm-secodary -- set interface ovs_vm-secondary external_ids:iface-id=ovs_vm-secondary`
+10. Add the VM port to the ingration bridge: `ovs-vsctl.exe -- add-port br-int ovs_vm-secondary -- set interface ovs_vm-secondary external_ids:iface-id=ovs_vm-secondary`
+
+## Configuration of the cluster
+1. Apply the chassis plan on primary: `OVSAgent.exe chassisplan apply --file ".\chassisplan_primary.yaml"`
+2. Apply the chassis plan on secondary: `OVSAgent.exe chassisplan apply --file ".\chassisplan_secondary.yaml"`
+3. Apply the cluster plan on primary: `OVSAgent.exe clusterplan apply --file ".\clusterplan.yaml"`
+4. Apply the network plan on primary: `OVSAgent.exe netplan apply --file "D:\git\dotnet-ovn\samples\two-hosts\netplan.yaml"`

@@ -25,7 +25,7 @@ routers:
   - dnat_and_snat:
       external_address: 192.168.242.163
       address: 10.0.100.121
-      mac: 02:02:00:00:02:01   
+      mac: 02:02:00:00:02:01
       port: ovs_vm-secondary
 
   routes:

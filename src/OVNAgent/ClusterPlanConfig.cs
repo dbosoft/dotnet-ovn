@@ -5,6 +5,8 @@ public class ClusterPlanConfig
     public IList<ChassisGroupConfig> ChassisGroups { get; set; } = new List<ChassisGroupConfig>();
 
     public IList<SouthboundEndpointConfig> SouthboundEndpoints { get; set; } = new List<SouthboundEndpointConfig>();
+
+    public SouthboundSslConfig? SouthboundSsl { get; init; }
 }
 
 public class ChassisGroupConfig
@@ -28,4 +30,13 @@ public class SouthboundEndpointConfig
     public bool? Ssl { get; init; }
 
     public string? IpAddress { get; init; }
+}
+
+public class SouthboundSslConfig
+{
+    public required string PrivateKey { get; init; }
+
+    public required string Certificate { get; init; }
+
+    public required string CaCertificate { get; init; }
 }

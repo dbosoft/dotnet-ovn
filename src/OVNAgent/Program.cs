@@ -7,6 +7,7 @@ using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVN.OSCommands.OVS;
+using Dbosoft.OVN.SimplePki;
 #if WINDOWS
 using Dbosoft.OVN.Windows;
 #endif
@@ -54,6 +55,20 @@ var chassisPlanApplyCommand = new Command("apply", "apply chassis plan");
 chassisPlanApplyCommand.AddOption(fileOption);
 chassisPlanApplyCommand.SetHandler(ApplyChassisPlan, logLevelOptions, fileOption);
 chassisPlanCommand.AddCommand(chassisPlanApplyCommand);
+
+var pkiCommand = new Command("pki", "PKI commands");
+rootCommand.Add(pkiCommand);
+
+var pkiInitCommand = new Command("init", "Initialize a new PKI");
+pkiInitCommand.SetHandler(InitializePki, logLevelOptions);
+pkiCommand.AddCommand(pkiInitCommand);
+
+var pkiGenerateChassisCommand = new Command("generate-chassis", "Generates a SSL certificate for a chassis");
+var chassisNameArgument = new Argument<string>("chassisName", "OVN chassis name");
+pkiGenerateChassisCommand.AddArgument(chassisNameArgument);
+pkiGenerateChassisCommand.SetHandler(CreateChassisPki, logLevelOptions, chassisNameArgument);
+pkiCommand.AddCommand(pkiGenerateChassisCommand);
+
 
 var serviceCommand = new Command("service", "service commands");
 rootCommand.Add(serviceCommand);
@@ -262,6 +277,48 @@ static async Task<int> ApplyChassisPlan(LogLevel logLevel, FileInfo chassisPlanF
                 Error.New("Failed to apply chassis plan.", error)));
             return -1;
         });
+}
+
+static async Task<int> InitializePki(LogLevel logLevel)
+{
+    var host = Host.CreateDefaultBuilder()
+        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
+        .ConfigureServices(services =>
+        {
+            AddOVNCore(services);
+            services.AddSingleton<IPkiService, PkiService>();
+        })
+        .Build();
+
+    await host.Services.GetRequiredService<IPkiService>().InitializeAsync();
+    return 0;
+}
+
+static async Task<int> CreateChassisPki(LogLevel logLevel, string chassisName)
+{
+    var host = Host.CreateDefaultBuilder()
+        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
+        .ConfigureServices(services =>
+        {
+            AddOVNCore(services);
+            services.AddSingleton<IPkiService, PkiService>();
+        })
+        .Build();
+
+    var pkiResult = await host.Services.GetRequiredService<IPkiService>()
+        .GenerateChassisPkiAsync(chassisName);
+
+    var config = new ChassisPkiOutput()
+    {
+        PrivateKey = pkiResult.PrivateKey,
+        Certificate = pkiResult.Certificate,
+        CaCertificate = pkiResult.CaCertificate
+    };
+
+    var yaml = PlanYamlSerializer.Serialize(config);
+    Console.WriteLine(yaml);
+
+    return 0;
 }
 
 #if WINDOWS

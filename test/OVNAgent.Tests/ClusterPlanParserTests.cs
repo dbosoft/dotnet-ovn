@@ -18,6 +18,10 @@ public class ClusterPlanParserTests
                             - port: 42422
                               ssl: true
                               ip_address: 203.0.113.2
+                            southbound_ssl:
+                              private_key: test-private-key
+                              certificate: test-certificate
+                              ca_certificate: test-ca-certificate
                             """;
 
         var plan = ClusterPlanParser.ParseYaml(yaml);
@@ -42,5 +46,10 @@ public class ClusterPlanParserTests
         plan.PlannedSouthboundConnections.ToDictionary()
             .Should().ContainKey("pssl:42422:203.0.113.2")
             .WhoseValue.Target.Should().Be("pssl:42422:203.0.113.2");
+
+        plan.PlannedSouthboundSsl.Should().NotBeNull();
+        plan.PlannedSouthboundSsl.PrivateKey.Should().Be("test-private-key");
+        plan.PlannedSouthboundSsl.Certificate.Should().Be("test-certificate");
+        plan.PlannedSouthboundSsl.CaCertificate.Should().Be("test-ca-certificate");
     }
 }

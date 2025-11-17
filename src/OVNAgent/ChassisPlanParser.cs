@@ -22,6 +22,8 @@ public static class ChassisPlanParser
             chassisPlan = ParseTunnelEndpoint(chassisPlan, tunnelEndpointConfig);
         }
 
+        chassisPlan = ParseSsl(chassisPlan, planConfig.Ssl);
+
         return chassisPlan;
     }
 
@@ -54,5 +56,17 @@ public static class ChassisPlanParser
             ipAddress,
             southboundConnectionConfig.Port,
             southboundConnectionConfig.Ssl.GetValueOrDefault());
+    }
+
+    private static ChassisPlan ParseSsl(
+        ChassisPlan chassisPlan,
+        SwitchSslConfig? sslConfig)
+    {
+        return sslConfig is null
+            ? chassisPlan
+            : chassisPlan.SetSwitchSsl(
+                sslConfig.PrivateKey,
+                sslConfig.Certificate,
+                sslConfig.CaCertificate);
     }
 }

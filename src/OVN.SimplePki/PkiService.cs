@@ -41,10 +41,14 @@ public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
             DateTimeOffset.UtcNow.Add(LifeSpan));
 
         systemEnvironment.FileSystem.EnsurePathForFileExists(CaCertificate);
-        await systemEnvironment.FileSystem.WriteFileAsync(CaCertificate, certificate.ExportCertificatePem());
+        await systemEnvironment.FileSystem.WriteFileAsync(
+            CaCertificate,
+            NormalizePem(certificate.ExportCertificatePem()));
 
         systemEnvironment.FileSystem.EnsurePathForFileExists(CaPrivateKey);
-        await systemEnvironment.FileSystem.WriteFileAsync(CaPrivateKey, keyPair.ExportRSAPrivateKeyPem());
+        await systemEnvironment.FileSystem.WriteFileAsync(
+            CaPrivateKey,
+            NormalizePem(keyPair.ExportRSAPrivateKeyPem()));
     }
 
     public async Task<ChassisPkiResult> GenerateChassisPkiAsync(string chassisName)
@@ -104,8 +108,13 @@ public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
             serial);
 
         return new ChassisPkiResult(
-            keyPair.ExportRSAPrivateKeyPem(),
-            certificate.ExportCertificatePem(),
-            caCertificatePem);
+            NormalizePem(keyPair.ExportRSAPrivateKeyPem()),
+            NormalizePem(certificate.ExportCertificatePem()),
+            NormalizePem(caCertificatePem));
+    }
+
+    private static string NormalizePem(string pem)
+    {
+        return pem.ReplaceLineEndings("\n").Trim() + "\n";
     }
 }

@@ -11,13 +11,11 @@ public class ClusterPlanSouthboundRealizer(
     IOVSDBTool ovnDBTool)
     : PlanRealizer(systemEnvironment, ovnDBTool)
 {
-    // Set SSL protocols"ssl_protocols": "'"TLSv1.3,TLSv1.2"'",
-
     public EitherAsync<Error, ClusterPlan> ApplyClusterPlan(
         ClusterPlan clusterPlan,
         CancellationToken cancellationToken = default) =>
         from _1 in ApplySouthboundConnections(clusterPlan, cancellationToken)
-        from _2 in ApplySouthboundSsl<PlannedSouthboundSsl, SouthboundSsl, SouthboundGlobal>(
+        from _2 in ApplySsl<PlannedSouthboundSsl, SouthboundSsl, SouthboundGlobal>(
             clusterPlan.PlannedSouthboundSsl,
             OVNSouthboundTableNames.Global,
             cancellationToken)
