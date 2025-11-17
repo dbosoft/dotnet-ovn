@@ -1,5 +1,4 @@
 using JetBrains.Annotations;
-using LanguageExt;
 
 using static LanguageExt.Prelude;
 
@@ -20,15 +19,11 @@ public record LogicalRouterStaticRoute : OVSTableRecord, IOVSEntityWithName, IHa
     public string? Nexthop => GetValue<string>("nexthop");
 
     private string? RouterName => ExternalIds.ContainsKey("router_name") ? ExternalIds["router_name"] : null;
-    
-    public OVSParentReference GetParentReference()
-    {
-        return new OVSParentReference(
-            OVNTableNames.LogicalRouter,
+
+    public string Name => $"router:{RouterName}, ip_prefix:{IpPrefix}";
+
+    public OVSParentReference GetParentReference() =>
+        new(OVNTableNames.LogicalRouter,
             Optional(GetValue<Guid>("__parentId")).Map(i => i.ToString("D")),
             "static_routes");
-    }
-
-    public string Name =>
-        $"router:{RouterName}, ip_prefix:{IpPrefix}";
 }

@@ -18,7 +18,6 @@ public record LogicalSwitchPort : OVSTableRecord, IHasParentReference, IOVSEntit
             { "port_security", OVSSet<string>.Metadata() },
             { "options", OVSMap<string>.Metadata(true) },
             { "tag", OVSValue<int>.Metadata() }
-
         };
 
     public Seq<string> Addresses => GetSet<string>("addresses");
@@ -29,19 +28,10 @@ public record LogicalSwitchPort : OVSTableRecord, IHasParentReference, IOVSEntit
 
     public string? Type => GetValue<string>("type");
 
-    public Guid? ParentId => GetValue<Guid>("__parentId");
+    public string? Name => GetValue<string>("name");
 
-    public OVSParentReference GetParentReference()
-    {
-        return new OVSParentReference(
-            OVNTableNames.LogicalSwitch,
+    public OVSParentReference GetParentReference() =>
+        new(OVNTableNames.LogicalSwitch,
             Optional(GetValue<Guid>("__parentId")).Map(i => i.ToString("D")),
             "Ports");
-    }
-
-    public string? Name
-    {
-        get => GetValue<string>("name");
-        init => SetValue("name", value);
-    }
 }

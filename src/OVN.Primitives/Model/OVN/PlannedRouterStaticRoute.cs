@@ -33,10 +33,9 @@ public record PlannedRouterStaticRoute(string RouterName) : OVSEntity, IOVSEntit
         init => SetValue("route_table", value);
     }
 
-    public OVSParentReference GetParentReference()
-    {
-        return new OVSParentReference(OVNTableNames.LogicalRouter, RouterName, "static_routes");
-    }
+    public OVSParentReference GetParentReference() =>
+        new(OVNTableNames.LogicalRouter, RouterName, "static_routes");
+    
 
     public string Name => string.IsNullOrWhiteSpace(RouteTable)
         ? $"router:{RouterName}, ip_prefix:{IpPrefix}"

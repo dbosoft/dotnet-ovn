@@ -1,12 +1,9 @@
-﻿using System.Net.Sockets;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dbosoft.OVN.Model;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
-using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
@@ -14,8 +11,6 @@ namespace Dbosoft.OVN.OSCommands;
 
 public class OVSTool: IOVSDBTool
 {
-
-    private static readonly Random Random = new();
     private readonly ISystemEnvironment _systemEnvironment;
     private readonly OvsFile _toolFile;
 
@@ -30,9 +25,11 @@ public class OVSTool: IOVSDBTool
         return command;
     }
 
-    protected EitherAsync<Error, string> RunCommandWithResponse(string command, CancellationToken cancellationToken = default)
+    protected EitherAsync<Error, string> RunCommandWithResponse(
+        string command,
+        CancellationToken cancellationToken = default)
     {
-        return Prelude.use(new OVSProcess(_systemEnvironment, _toolFile, BuildArguments(command)), 
+        return use(new OVSProcess(_systemEnvironment, _toolFile, BuildArguments(command)), 
             ovsProcess =>  ovsProcess.Start().ToAsync()
             .Bind(p =>
                 p.WaitForExitWithResponse(cancellationToken)).ToEither(l => Error.New(l))
@@ -41,13 +38,13 @@ public class OVSTool: IOVSDBTool
     
     protected EitherAsync<Error, int> RunCommand(string command, bool softWait = false, CancellationToken cancellationToken = default)
     {
-         return Prelude.use(new OVSProcess(_systemEnvironment, _toolFile, BuildArguments(command)), 
+         return use(new OVSProcess(_systemEnvironment, _toolFile, BuildArguments(command)), 
             ovsProcess => 
                 ovsProcess.Start().ToAsync()
                 .Bind(p =>
                     p.WaitForExit(softWait,cancellationToken))
                 .ToEither(l => Error.New(l)).ToEither()).ToAsync();
-}
+    }
 
     private static string ColumnsValuesToCommandString(Map<string, IOVSField> columns, bool setMode)
     {
@@ -112,7 +109,6 @@ public class OVSTool: IOVSDBTool
         if (toClear.Any())
             sb.Append($" -- clear {tableName} {rowId} {ColumnsListToCommandString(toClear).Replace(',', ' ')}");
 
-
         return RunCommandWithResponse(sb.ToString(), cancellationToken).Map(_ => Unit.Default);
     }
 
@@ -120,21 +116,20 @@ public class OVSTool: IOVSDBTool
     public EitherAsync<Error, Option<T>> GetRecord<T>(
         string tableName,
         string rowId,
-        IEnumerable<string>? columns = default,
-        Map<Guid, Map<string, IOVSField>> additionalFields = default,
+        Seq<string> columns = default,
         CancellationToken cancellationToken = default) where T : OVSTableRecord, new()
     {
         var sb = new StringBuilder();
         sb.Append("--if-exists");
         sb.Append(" --format json");
 
-        if (columns != null)
+        if (!columns.IsEmpty)
             sb.Append($" --columns={ColumnsListToCommandString(columns)}");
 
         sb.Append($" list {tableName} {rowId}");
 
         return RunCommandWithResponse(sb.ToString(), cancellationToken)
-            .Bind(MapResponse<T>)
+            .Bind(json => ParseResponse<T>(json).ToAsync())
             .Map(e => e.HeadOrNone());
     }
 
@@ -166,22 +161,6 @@ public class OVSTool: IOVSDBTool
             .Map(_ => Unit.Default);
     }
 
-    private static EitherAsync<Error, Seq<T>> MapResponse<T>(
-        string jsonResponse)
-        where T : OVSTableRecord, new() =>
-        Try(() =>
-        {
-            if (string.IsNullOrWhiteSpace(jsonResponse))
-                return Seq<T>();
-
-            var response = JsonSerializer.Deserialize<OVSJsonResponse>(jsonResponse);
-
-            if (response is null)
-                throw Error.New("Failed to deserialize OVN json response");
-
-            return response.ToOVSEntities<T>();
-        }).ToEitherAsync();
-
     /// <inheritdoc />
     public EitherAsync<Error, Seq<T>> FindRecords<T>(
         string tableName,
@@ -199,56 +178,75 @@ public class OVSTool: IOVSDBTool
         sb.Append(QueryCommandString(query));
 
         return RunCommandWithResponse(sb.ToString(), cancellationToken)
-            .Bind(MapResponse<T>);
+            .Bind(json => ParseResponse<T>(json).ToAsync());
     }
+
+    private Either<Error, Seq<TRecord>> ParseResponse<TRecord>(
+        string json)
+        where TRecord : OVSTableRecord, new() =>
+        from parsed in Try(() =>
+        {
+            if (string.IsNullOrEmpty(json))
+                return new OVSJsonResponse();
+
+            return JsonSerializer.Deserialize<OVSJsonResponse>(json)
+                   ?? new OVSJsonResponse();
+        }).ToEither(e => Error.New("Failed to deserialize OVS/OVN JSON response.", e))
+        let columns = OVSEntityMetadata.Get(typeof(TRecord)).ToHashMap()
+        let headings = parsed.Headings.ToSeq()
+        let records = parsed.Records.ToSeq()
+        from results in records
+            .Map(r => ParseResponseRecord<TRecord>(r, headings, columns))
+            .Sequence()
+        select results;
+
+    private Either<Error, TRecord> ParseResponseRecord<TRecord>(
+        object responseRecord,
+        Seq<String> headings,
+        HashMap<string, OVSFieldMetadata> columns)
+        where TRecord : OVSTableRecord, new() =>
+        from recordValues in Try(() => ((JsonElement)responseRecord).Deserialize<object[]>().ToSeq())
+            .ToEither(e => Error.New("The OVS/OVN response contains invalid data.", e))
+        from _1 in guard(headings.Count == recordValues.Length,
+            Error.New("The OVS/OVN data is invalid. The headings do not match the data."))
+        let namesWithValues = headings.Zip(recordValues, (name, value) => (name, value))
+        from parsedValues in namesWithValues
+            .Map(t => ParseResponseRecordValue<TRecord>(t.name, t.value, columns))
+            .Sequence()
+        let result = OVSEntity.FromValueMap<TRecord>(parsedValues.Somes().ToMap())
+        select result;
+
+    private Either<Error, Option<(string Name, IOVSField Value)>> ParseResponseRecordValue<TRecord>(
+        string name,
+        object value,
+        HashMap<string, OVSFieldMetadata> columns)
+        where TRecord : OVSTableRecord, new() =>
+        from result in columns.Find(name).Match(
+            Some: c => ParseResponseRecordValue<TRecord>(name, value, c),
+            None: () => Right<Error, Option<(string Name, IOVSField Value)>>(None))
+        select result;
+
+    private Either<Error, Option<(string Name, IOVSField Value)>> ParseResponseRecordValue<TRecord>(
+        string name,
+        object value,
+        OVSFieldMetadata column)
+        where TRecord : OVSTableRecord, new() =>
+        from fieldValue in Try(() =>
+        {
+            var fv = OVSFieldActivator.JsonElementToOVSField(
+                $"{typeof(TRecord).Name}:{name}",
+                column.FieldType,
+                (JsonElement)value);
+
+            return Optional(fv);
+        }).ToEither(e => Error.New("Failed to deserialize a value in the data of the OVS/OVN JSON response.", e))
+        let result = fieldValue.Map(v => (name, v))
+        select result;
 
     private class OVSJsonResponse
     {
-        [JsonPropertyName("headings")] public string[]? Headings { get; set; }
+        [JsonPropertyName("headings")] public string[]? Headings { get; init; }
 
-        [JsonPropertyName("data")] public object[]? Records { get; set; }
-
-        private Seq<Map<string, IOVSField>> ToOVSEntitiesValueMap<TEntity>()
-            where TEntity : OVSEntity
-        {
-            var result = new List<Map<string, IOVSField>>();
-
-            var columns = OVSEntityMetadata.Get(typeof(TEntity));
-
-            if (Records == null || Headings == null)
-                return Seq<Map<string, IOVSField>>();
-
-            foreach (var record in Records)
-            {
-                if (record is not JsonElement recordElement)
-                    continue;
-
-                var dictionary = new Dictionary<string, IOVSField>(Headings.Length);
-                var recordValues = recordElement.Deserialize<object[]>();
-                if (recordValues == null)
-                    continue;
-
-                for (var i = 0; i < Headings.Length; i++)
-                {
-                    var recordValueElement = (JsonElement)recordValues[i];
-                    var columnName = Headings[i];
-                    if (!columns.ContainsKey(columnName)) continue;
-                    var metadata = columns[columnName];
-
-                    var value = OVSFieldActivator.JsonElementToOVSField(
-                        $"{typeof(TEntity).Name}:{columnName}",
-                        metadata.FieldType, recordValueElement);
-                    if (value != null)
-                        dictionary.Add(columnName, value);
-                }
-
-                result.Add(dictionary.ToMap());
-            }
-
-            return result.ToSeq();
-        }
-
-        public Seq<T> ToOVSEntities<T>() where T : OVSTableRecord, new() =>
-            ToOVSEntitiesValueMap<T>().Map(OVSEntity.FromValueMap<T>);
+        [JsonPropertyName("data")] public object[]? Records { get; init; }
     }
 }

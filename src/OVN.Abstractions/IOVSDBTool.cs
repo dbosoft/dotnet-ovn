@@ -56,8 +56,7 @@ public interface IOVSDBTool
     EitherAsync<Error, Option<T>> GetRecord<T>(
         string tableName,
         string rowId,
-        IEnumerable<string>? columns = default,
-        Map<Guid, Map<string, IOVSField>> additionalFields = default,
+        Seq<string> columns = default,
         CancellationToken cancellationToken = default) where T : OVSTableRecord, new();
 
     /// <summary>

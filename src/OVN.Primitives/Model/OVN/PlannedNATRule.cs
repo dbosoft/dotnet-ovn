@@ -44,13 +44,9 @@ public record PlannedNATRule(string RouterName) : OVSTableRecord, IHasParentRefe
         init => SetValue("logical_port", value);
     }
 
-    public OVSParentReference GetParentReference()
-    {
-        return new OVSParentReference(OVNTableNames.LogicalRouter,
-            RouterName, "nat");
-    }
-
-
+    public OVSParentReference GetParentReference() =>
+        new(OVNTableNames.LogicalRouter, RouterName, "nat");
+    
     public string Name =>
         $"router:{RouterName}, type:{Type}, externalIP:{ExternalIP}, externalMac: {ExternalMAC}, logicalIP: {LogicalIP}, logicalPort: {LogicalPort}";
 }

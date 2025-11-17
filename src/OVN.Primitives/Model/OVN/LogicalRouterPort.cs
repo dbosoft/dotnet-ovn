@@ -25,13 +25,8 @@ public record LogicalRouterPort : OVSTableRecord, IOVSEntityWithName, IHasParent
 
     public string? Name => GetValue<string>("name");
 
-    public Guid? ParentId => GetValue<Guid>("__parentId");
-
-    public OVSParentReference GetParentReference()
-    {
-        return new OVSParentReference(
-            OVNTableNames.LogicalRouter,
+    public OVSParentReference GetParentReference() =>
+        new(OVNTableNames.LogicalRouter,
             Optional(GetValue<Guid>("__parentId")).Map(i => i.ToString("D")),
             "Ports");
-    }
 }
