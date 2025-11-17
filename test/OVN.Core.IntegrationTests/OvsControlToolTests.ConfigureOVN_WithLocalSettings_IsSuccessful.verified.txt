@@ -1,0 +1,76 @@
+﻿AutoAttach table
+_uuid mappings system_description system_name
+----- -------- ------------------ -----------
+
+Bridge table
+_uuid auto_attach controller datapath_id datapath_type datapath_version external_ids fail_mode flood_vlans flow_tables ipfix mcast_snooping_enable mirrors name netflow other_config ports protocols rstp_enable rstp_status sflow status stp_enable
+----- ----------- ---------- ----------- ------------- ---------------- ------------ --------- ----------- ----------- ----- --------------------- ------- ---- ------- ------------ ----- --------- ----------- ----------- ----- ------ ----------
+
+CT_Timeout_Policy table
+_uuid external_ids timeouts
+----- ------------ --------
+
+CT_Zone table
+_uuid external_ids limit timeout_policy
+----- ------------ ----- --------------
+
+Controller table
+_uuid connection_mode controller_burst_limit controller_queue_size controller_rate_limit enable_async_messages external_ids inactivity_probe is_connected local_gateway local_ip local_netmask max_backoff other_config role status target type
+----- --------------- ---------------------- --------------------- --------------------- --------------------- ------------ ---------------- ------------ ------------- -------- ------------- ----------- ------------ ---- ------ ------ ----
+
+Datapath table
+_uuid capabilities ct_zone_default_limit ct_zones datapath_version external_ids
+----- ------------ --------------------- -------- ---------------- ------------
+
+Flow_Sample_Collector_Set table
+_uuid bridge external_ids id ipfix local_group_id
+----- ------ ------------ -- ----- --------------
+
+Flow_Table table
+_uuid external_ids flow_limit groups name overflow_policy prefixes
+----- ------------ ---------- ------ ---- --------------- --------
+
+IPFIX table
+_uuid cache_active_timeout cache_max_flows external_ids obs_domain_id obs_point_id other_config sampling stats_interval targets template_interval
+----- -------------------- --------------- ------------ ------------- ------------ ------------ -------- -------------- ------- -----------------
+
+Interface table
+_uuid admin_state bfd bfd_status cfm_fault cfm_fault_status cfm_flap_count cfm_health cfm_mpid cfm_remote_mpids cfm_remote_opstate duplex error external_ids ifindex ingress_policing_burst ingress_policing_kpkts_burst ingress_policing_kpkts_rate ingress_policing_rate lacp_current link_resets link_speed link_state lldp mac mac_in_use mtu mtu_request name ofport ofport_request options other_config statistics status type
+----- ----------- --- ---------- --------- ---------------- -------------- ---------- -------- ---------------- ------------------ ------ ----- ------------ ------- ---------------------- ---------------------------- --------------------------- --------------------- ------------ ----------- ---------- ---------- ---- --- ---------- --- ----------- ---- ------ -------------- ------- ------------ ---------- ------ ----
+
+Manager table
+_uuid connection_mode external_ids inactivity_probe is_connected max_backoff other_config status target
+----- --------------- ------------ ---------------- ------------ ----------- ------------ ------ ------
+
+Mirror table
+_uuid external_ids filter name output_port output_vlan select_all select_dst_port select_src_port select_vlan snaplen statistics
+----- ------------ ------ ---- ----------- ----------- ---------- --------------- --------------- ----------- ------- ----------
+
+NetFlow table
+_uuid active_timeout add_id_to_interface engine_id engine_type external_ids targets
+----- -------------- ------------------- --------- ----------- ------------ -------
+
+Open_vSwitch table
+_uuid                                bridges cur_cfg datapath_types datapaths db_version dpdk_initialized dpdk_version external_ids                                                                                          iface_types manager_options next_cfg other_config ovs_version ssl statistics system_type system_version
+------------------------------------ ------- ------- -------------- --------- ---------- ---------------- ------------ ----------------------------------------------------------------------------------------------------- ----------- --------------- -------- ------------ ----------- --- ---------- ----------- --------------
+Guid_0000000000000000000000000000001 []      0       []             {}        []         false            []           {ovn-encap-ip="127.0.0.1", ovn-encap-type=geneve, ovn-remote="tcp:203.0.113.1:6641", system-id=local} []          []              0        {}           []          []  {}         []          []
+
+Port table
+_uuid bond_active_slave bond_downdelay bond_fake_iface bond_mode bond_updelay cvlans external_ids fake_bridge interfaces lacp mac name other_config protected qos rstp_statistics rstp_status statistics status tag trunks vlan_mode
+----- ----------------- -------------- --------------- --------- ------------ ------ ------------ ----------- ---------- ---- --- ---- ------------ --------- --- --------------- ----------- ---------- ------ --- ------ ---------
+
+QoS table
+_uuid external_ids other_config queues type
+----- ------------ ------------ ------ ----
+
+Queue table
+_uuid dscp external_ids other_config
+----- ---- ------------ ------------
+
+SSL table
+_uuid bootstrap_ca_cert ca_cert certificate external_ids private_key
+----- ----------------- ------- ----------- ------------ -----------
+
+sFlow table
+_uuid agent external_ids header polling sampling targets
+----- ----- ------------ ------ ------- -------- -------

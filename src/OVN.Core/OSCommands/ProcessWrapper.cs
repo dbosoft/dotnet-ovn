@@ -47,6 +47,12 @@ public class ProcessWrapper : IProcess
     public string ProcessName => _process.ProcessName;
 
     /// <inheritdoc />
+    public StreamReader StandardOutput => _process.StandardOutput;
+
+    /// <inheritdoc />
+    public StreamReader StandardError => _process.StandardError;
+
+    /// <inheritdoc />
     public int ExitCode
     {
         get

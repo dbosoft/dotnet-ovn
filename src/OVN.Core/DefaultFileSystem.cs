@@ -31,7 +31,7 @@ public class DefaultFileSystem : IFileSystem
     {
         var basePath = "";
         var pathRoot = file.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        basePath = FindBasePath(pathRoot.Length == 0
+        basePath = ResolveBasePath(pathRoot.Length == 0
             ? file.Path
             : pathRoot[0]);
 
@@ -89,17 +89,18 @@ public class DefaultFileSystem : IFileSystem
         return inputPath;
     }
 
-    protected virtual string FindBasePath(string pathRoot)
+    private string ResolveBasePath(string pathRoot)
     {
-        var basePath = "/";
-        if (_platform != OSPlatform.Windows) return $"{basePath}{pathRoot}";
-
-        if (pathRoot.StartsWith("usr"))
-            basePath = "c:/openvswitch/";
-        else
-            basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "openvswitch").Replace("\\", "/") + "/";
-        
-        return $"{basePath}{pathRoot}";
+        return pathRoot.StartsWith("usr")
+            ? $"{GetProgramRootPath()}{pathRoot}"
+            : $"{GetDataRootPath()}{pathRoot}";
     }
+
+    protected virtual string GetDataRootPath() =>
+        _platform == OSPlatform.Windows
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "openvswitch").Replace(@"\", "/") + "/"
+            : "/";
+
+    protected virtual string GetProgramRootPath() =>
+        _platform == OSPlatform.Windows ? "C:/openvswitch/" : "/";
 }

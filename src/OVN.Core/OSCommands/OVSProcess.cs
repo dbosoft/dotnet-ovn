@@ -78,8 +78,11 @@ public class OVSProcess : IDisposable
         return Prelude.Try(() =>
         {
             _startedProcess.Start();
-            _startedProcess.BeginOutputReadLine();
-            _startedProcess.BeginErrorReadLine();
+            if (_messageHandlers.Count > 0)
+            {
+                _startedProcess.BeginOutputReadLine();
+                _startedProcess.BeginErrorReadLine();
+            }
             return this;
         });
     }
@@ -156,54 +159,33 @@ public class OVSProcess : IDisposable
             if (_startedProcess == null)
                 throw new IOException("Process not started");
 
-            if(!_canBeRedirected)
+            if (!_canBeRedirected)
                 throw new IOException("Process was attached and output cannot be redirected.");
-            
-            var outputBuilder = new StringBuilder();
-            _startedProcess.OutputDataReceived += (_, o) =>
-            {
-                if (o.Data != null)
-                    outputBuilder.Append(o.Data);
-            };
-            _startedProcess.ErrorDataReceived += (_, o) =>
-            {
-                if(o.Data!=null)
-                    outputBuilder.Append(o.Data);
-            };
 
-            // ReSharper disable once MethodSupportsCancellation
-            var waitForExit = _startedProcess.WaitForExit();
- 
-            await Task.WhenAny(WaitForCancellation(cancellationToken), waitForExit)
-                .ConfigureAwait(false);
-            
-            if (!_startedProcess.HasExited)
+            try
             {
-               _startedProcess.Kill();
-                throw new TimeoutException(
-                    $"Process {_exeFile.Name} has not exited before timeout.");
+                // Read both outputs in parallel. This is necessary to avoid deadlocks.
+                var outputs = await Task.WhenAll(
+                    _startedProcess.StandardOutput.ReadToEndAsync(cancellationToken),
+                    _startedProcess.StandardError.ReadToEndAsync(cancellationToken));
+
+                await _startedProcess.WaitForExit(cancellationToken);
+
+                if (_startedProcess.ExitCode == 0)
+                {
+                    // Only return the standard output on success as the output is processed further.
+                    return outputs[0].TrimEnd();
+                }
+                
+                var output = string.Join("\n", outputs.Where(s => !string.IsNullOrWhiteSpace(s)));
+                throw new IOException($"Process {_exeFile.Name} failed with code {_startedProcess.ExitCode}. Output:\n{output}");
             }
-
-            var output = outputBuilder.ToString();
-
-            if (_startedProcess.ExitCode != 0)
-                throw new IOException(
-                    $"Process {_exeFile.Name} failed with code {_startedProcess.ExitCode}. \nOutput: {output}");
-
-            return output.TrimEnd().TrimEnd('\n', '\r');
+            catch (OperationCanceledException)
+            {
+                _startedProcess.Kill();
+                throw new TimeoutException($"Process {_exeFile.Name} has not exited before timeout.");
+            }
         });
-    }
-
-    private async Task WaitForCancellation(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            //
-        }
     }
 
     public void AddMessageHandler(Action<string?> messageHandler)
@@ -224,10 +206,18 @@ public class OVSProcess : IDisposable
         Dispose(false);
     }
 
-    public Try<Unit> Kill => 
-        Prelude.Try(() =>
+    public TryAsync<Unit> KillAsync() => 
+        Prelude.TryAsync(async () =>
         {
-            _startedProcess?.Kill();
+            if(_startedProcess is null)
+                return Unit.Default;
+            
+            _startedProcess.Kill();
+            
+            // Kill() itself is async.
+            using var cts = new CancellationTokenSource(5000);
+            await _startedProcess.WaitForExit(cts.Token);
+
             return Unit.Default;
         });
     

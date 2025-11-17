@@ -25,17 +25,13 @@ public class OVNDatabaseNode : DemonNodeBase
 
     protected override IEnumerable<DemonProcessBase> SetupDemons()
     {
-        yield return new OVSDBProcess(_systemEnvironment,
-            new OVSDbSettings(
-                _ovnSettings.SouthDBConnection,
-                new OvsFile("etc/ovn", "ovn_sb.db"),
-                // ReSharper disable StringLiteralTypo
-                new OvsFile("usr/share/ovn", "ovn-sb.ovsschema"),
-                // ReSharper restore StringLiteralTypo
-                new OvsFile("var/run/ovn", "ovn-sb.ctl"),
-                new OvsFile("var/log/ovn", "ovn-sb.log"),
-                _ovnSettings.Logging,
-                false),
+        yield return new OVSDBProcess(
+            _systemEnvironment,
+            OVSDbSettingsBuilder.ForSouthbound()
+                .WithDbConnection(_ovnSettings.SouthDBConnection)
+                .WithLogging(_ovnSettings.Logging)
+                .AllowAttach(false)
+                .Build(),
             _loggerFactory.CreateLogger<OVSDBProcess>());
     }
 }

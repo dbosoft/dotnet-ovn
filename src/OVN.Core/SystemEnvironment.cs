@@ -52,6 +52,9 @@ public class SystemEnvironment : ISystemEnvironment
     /// <inheritdoc />
     public virtual IFileSystem FileSystem => new DefaultFileSystem(GetPlatform());
 
+    /// <inheritdoc />
+    public virtual IGuidGenerator GuidGenerator { get; } = new DefaultGuidGenerator();
+
     private static IEnumerable<OSPlatform> EnumeratePlatforms()
     {
         yield return OSPlatform.Windows;
@@ -60,7 +63,7 @@ public class SystemEnvironment : ISystemEnvironment
         yield return OSPlatform.FreeBSD;
     }
 
-    private static OSPlatform GetPlatform()
+    protected static OSPlatform GetPlatform()
     {
         return EnumeratePlatforms().First(RuntimeInformation.IsOSPlatform);
     }

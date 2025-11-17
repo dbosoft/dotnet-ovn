@@ -30,4 +30,9 @@ public interface ISystemEnvironment
     /// to check the availability of the OVS kernel extensions.
     /// </summary>
     IOvsExtensionManager GetOvsExtensionManager();
+
+    /// <summary>
+    /// Returns a generator which can be used to generate <see cref="Guid"/>s.
+    /// </summary>
+    IGuidGenerator GuidGenerator { get; }
 }

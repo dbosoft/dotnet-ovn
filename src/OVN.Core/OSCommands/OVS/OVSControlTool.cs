@@ -8,30 +8,34 @@ namespace Dbosoft.OVN.OSCommands.OVS;
 public class OVSControlTool : OVSTool
 {
     private readonly OvsDbConnection _dbConnection;
+    private readonly bool _noWait;
     private readonly ISystemEnvironment _systemEnvironment;
 
     public OVSControlTool(
         ISystemEnvironment systemEnvironment,
-        OvsDbConnection dbConnection)
+        OvsDbConnection dbConnection,
+        bool noWait = false)
         : base(systemEnvironment, OVSCommands.VSwitchControl)
     {
         _systemEnvironment = systemEnvironment;
         _dbConnection = dbConnection;
+        _noWait = noWait;
     }
 
     protected override string BuildArguments(string command)
     {
-        var baseArguments = base.BuildArguments(command);
         var sb = new StringBuilder();
-        sb.Append($"--db=\"{_dbConnection.GetCommandString(_systemEnvironment.FileSystem, false)}\"");
-        sb.Append(' ');
-        sb.Append(baseArguments);
+        if (_noWait)
+            sb.Append("--no-wait ");
+        
+        sb.Append($"--db=\"{_dbConnection.GetCommandString(_systemEnvironment.FileSystem, false)}\" ");
+        sb.Append(base.BuildArguments(command));
         return sb.ToString();
     }
 
     public EitherAsync<Error, Unit> InitDb(CancellationToken cancellationToken = default)
     {
-        return RunCommand(" --no-wait init", true, cancellationToken).Map(_ => Unit.Default);
+        return RunCommand("--no-wait init", true, cancellationToken).Map(_ => Unit.Default);
     }
 
     public EitherAsync<Error, Unit> ConfigureOVN(

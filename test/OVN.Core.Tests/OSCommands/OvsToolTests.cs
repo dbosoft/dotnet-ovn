@@ -5,6 +5,7 @@ using Dbosoft.OVN.TestTools;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
+using Moq;
 
 namespace Dbosoft.OVN.Core.Tests.OSCommands;
 
@@ -27,11 +28,8 @@ public class OvsToolTests
                     if (returnCode != 0)
                         Assert.Equal("failure", "command succeed");
                     Assert.Equal(command, processStartInfo.Arguments);
-                    
-                    var expectedMessage = string.IsNullOrWhiteSpace(errorOutput) 
-                        ? output 
-                        : output + errorOutput;
-                    Assert.Equal(expectedMessage, r);
+                    // The error output is intentionally not included when a command exits successfully
+                    Assert.Equal(output, r);
                 },
                 l =>
                 {
@@ -40,7 +38,7 @@ public class OvsToolTests
 
                     var expectedMessage = string.IsNullOrWhiteSpace(errorOutput) 
                         ? output 
-                        : output+errorOutput;
+                        : $"{output}\n{errorOutput}";
 
                     Assert.Contains(expectedMessage, l.Message);
                     
@@ -75,7 +73,14 @@ public class OvsToolTests
       OVSParentReference? reference,  string expectedCommand)
     {
       var processStartInfo = new ProcessStartInfo();
-      var envMock = OvsMocks.SetupEnvForOvsTool(processStartInfo);
+      var guidGeneratorMock = new Mock<IGuidGenerator>();
+      guidGeneratorMock
+          .Setup(m => m.GenerateGuid())
+          .Returns(Guid.Parse("446035c9-1c80-4a8f-95b2-63adac02ac8f"));
+      var envMock = OvsMocks.SetupEnvForOvsTool(
+          processStartInfo,
+          guidGenerator: guidGeneratorMock.Object);
+
       
       var ovsTool = new DummyTool(envMock.Object);
       _ = await ovsTool.CreateRecord("test_table",
@@ -169,7 +174,7 @@ public class OvsToolTests
     {
       yield return new object[] { ResultFromDataSetWithSingleValue, 
         null!,
-        "create test_table _uuid=\"5a767e54-5a71-4e76-b2ff-2695f7d2771c\" "+ 
+        "-- --id=446035c9-1c80-4a8f-95b2-63adac02ac8f create test_table _uuid=\"5a767e54-5a71-4e76-b2ff-2695f7d2771c\" "+ 
         "external_ids={test=\"\\\"t1\\\"\",test2=\"\\\"t2\\\"\"} name=\"\\\"hello_router\\\"\""+
         " ports=[\"\\\"06490156-e71b-4dee-8755-6225f93c68a3\\\"\"]" };
 
@@ -177,10 +182,10 @@ public class OvsToolTests
       {
         ResultFromDataSetWithSingleValue,
         new OVSParentReference("ref_table", "parent", "ref_column"),
-        " -- --id=@ref create test_table _uuid=\"5a767e54-5a71-4e76-b2ff-2695f7d2771c\" "+
+        "-- --id=446035c9-1c80-4a8f-95b2-63adac02ac8f create test_table _uuid=\"5a767e54-5a71-4e76-b2ff-2695f7d2771c\" "+
         "external_ids={test=\"\\\"t1\\\"\",test2=\"\\\"t2\\\"\"} name=\"\\\"hello_router\\\"\" "+
         "ports=[\"\\\"06490156-e71b-4dee-8755-6225f93c68a3\\\"\"] "+
-        "-- add ref_table parent ref_column @ref"
+        "-- add ref_table parent ref_column 446035c9-1c80-4a8f-95b2-63adac02ac8f"
       };
 
     }

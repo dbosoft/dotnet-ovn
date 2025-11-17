@@ -10,14 +10,22 @@ namespace Dbosoft.OVN.TestTools;
 public static class OvsMocks
 {
     public static Mock<ISystemEnvironment> SetupEnvForOvsTool(
-        ProcessStartInfo startInfo, string outputString = "", string errorString = "", int exitCode = 0)
+        ProcessStartInfo startInfo,
+        string outputString = "",
+        string errorString = "",
+        int exitCode = 0,
+        IGuidGenerator? guidGenerator = null)
     {
-        var res = SetupEnvForOvsToolWithProcess(startInfo, outputString, errorString, exitCode);
+        var res = SetupEnvForOvsToolWithProcess(startInfo, outputString, errorString, exitCode, guidGenerator);
         return res.Item1;
     }
     
     public static (Mock<ISystemEnvironment> SysEnv, Mock<IProcess> Process) SetupEnvForOvsToolWithProcess(
-        ProcessStartInfo startInfo, string outputString = "", string errorString = "", int exitCode = 0)
+        ProcessStartInfo startInfo,
+        string outputString = "",
+        string errorString = "",
+        int exitCode = 0,
+        IGuidGenerator? guidGenerator = null)
     {
         var mockEnv = new Mock<ISystemEnvironment>();
         var processMock = new Mock<IProcess>();
@@ -31,6 +39,7 @@ public static class OvsMocks
         mockEnv.Setup(x => x.CreateProcess(0)).Returns(processMock.Object);
         mockEnv.Setup(x => x.FileSystem).Returns(
             new DefaultFileSystem(OSPlatform.Create("LINUX")));
+        mockEnv.Setup(x => x.GuidGenerator).Returns(guidGenerator ?? new DefaultGuidGenerator());
         processMock.Setup(x => x.StartInfo).Returns(startInfo);
         processMock.Setup(x => x.WaitForExit()).Callback(() =>
         {
@@ -42,7 +51,10 @@ public static class OvsMocks
             processMock.Raise(p => p.ErrorDataReceived += null, new DataReceivedEventArgs(null));
 
         });
-       
+
+        processMock.Setup(x => x.StandardOutput).Returns(outputStreamReader);
+        processMock.Setup(x => x.StandardError).Returns(errorStreamReader);
+
         processMock.Setup(x => x.HasExited).Returns(true);
         processMock.Setup(x => x.ExitCode).Returns(exitCode);
         return (mockEnv, processMock);

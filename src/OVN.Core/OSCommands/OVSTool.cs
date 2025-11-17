@@ -77,16 +77,16 @@ public class OVSTool: IOVSDBTool
         OVSParentReference? reference = default,
         CancellationToken cancellationToken = default)
     {
+        var id = _systemEnvironment.GuidGenerator.GenerateGuid().ToString("D");
+
         var sb = new StringBuilder();
-
-        if (reference != null)
-            sb.Append(" -- --id=@ref ");
-
+        
+        sb.Append($"-- --id={id} ");
         sb.Append($"create {tableName} ");
         sb.Append(ColumnsValuesToCommandString(columns, true));
 
         if (reference.HasValue)
-            sb.Append($" -- add {reference.Value.TableName} {reference.Value.RowId} {reference.Value.RefColumn} @ref");
+            sb.Append($" -- add {reference.Value.TableName} {reference.Value.RowId} {reference.Value.RefColumn} {id}");
 
         return RunCommandWithResponse(sb.ToString(), cancellationToken);
     }
@@ -114,7 +114,7 @@ public class OVSTool: IOVSDBTool
             sb.Append($" -- clear {tableName} {rowId} {ColumnsListToCommandString(toClear).Replace(',', ' ')}");
 
 
-        return RunCommand(sb.ToString(), false, cancellationToken).Map(_ => Unit.Default);
+        return RunCommandWithResponse(sb.ToString(), cancellationToken).Map(_ => Unit.Default);
     }
 
     /// <inheritdoc />
@@ -148,7 +148,7 @@ public class OVSTool: IOVSDBTool
         var sb = new StringBuilder();
         sb.Append($"destroy {tableName} {rowId}");
 
-        return RunCommand(sb.ToString(), false, cancellationToken)
+        return RunCommandWithResponse(sb.ToString(), cancellationToken)
             .Map(_ => Unit.Default);
     }
 
@@ -163,7 +163,7 @@ public class OVSTool: IOVSDBTool
         var sb = new StringBuilder();
         sb.Append($"remove {tableName} {rowId} {column} {value}");
 
-        return RunCommand(sb.ToString(),false, cancellationToken)
+        return RunCommandWithResponse(sb.ToString(), cancellationToken)
             .Map(_ => Unit.Default);
     }
 
