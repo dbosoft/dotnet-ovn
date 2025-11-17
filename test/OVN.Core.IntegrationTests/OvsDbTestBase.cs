@@ -68,7 +68,7 @@ public abstract class OvsDbTestBase : IAsyncLifetime
                         Schema version mismatch detected!
                         The tests were created for schema version '{schemaVersion}', but the database
                         reports schema version '{dbSchemaVersion}'. Is the correct version of OVS
-                        and OVS used to run the tests?
+                        and OVN used to run the tests?
                         """);
         var dump = (await ovsDbClientTool.PrintDatabase(databaseName)).ThrowIfLeft();
         var settings = new VerifySettings();

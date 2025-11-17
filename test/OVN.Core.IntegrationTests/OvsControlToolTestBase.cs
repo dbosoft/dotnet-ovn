@@ -19,7 +19,7 @@ public abstract class OvsControlToolTestBase : OvsDbTestBase
             SystemEnvironment,
             DbSettings.Connection,
             // The tests must run with --no-wait as we are running only the OVS DB.
-            // Without --no-wait, all commands would hang forever ovs-vsctl waits
+            // Without --no-wait, all commands would hang forever as ovs-vsctl waits
             // for confirmation by vswitchd (which is not running during these tests).
             noWait: true);
     }
