@@ -36,7 +36,10 @@ public class OVSTool: IOVSDBTool
             .ToEither()).ToAsync();
     }
     
-    protected EitherAsync<Error, int> RunCommand(string command, bool softWait = false, CancellationToken cancellationToken = default)
+    protected EitherAsync<Error, int> RunCommand(
+        string command,
+        bool softWait = false,
+        CancellationToken cancellationToken = default)
     {
          return use(new OVSProcess(_systemEnvironment, _toolFile, BuildArguments(command)), 
             ovsProcess => 
@@ -137,14 +140,11 @@ public class OVSTool: IOVSDBTool
     public EitherAsync<Error, Unit> RemoveRecord(
         string tableName,
         string rowId,
-        CancellationToken cancellationToken = default)
-    {
-        var sb = new StringBuilder();
-        sb.Append($"destroy {tableName} {rowId}");
-
-        return RunCommandWithResponse(sb.ToString(), cancellationToken)
-            .Map(_ => Unit.Default);
-    }
+        CancellationToken cancellationToken = default) =>
+        from _ in RunCommandWithResponse(
+            $"destroy {tableName} {rowId}",
+            cancellationToken)
+        select unit;
 
     /// <inheritdoc />
     public EitherAsync<Error, Unit> RemoveColumnValue(
@@ -152,14 +152,11 @@ public class OVSTool: IOVSDBTool
         string rowId,
         string column,
         string value,
-        CancellationToken cancellationToken = default)
-    {
-        var sb = new StringBuilder();
-        sb.Append($"remove {tableName} {rowId} {column} {value}");
-
-        return RunCommandWithResponse(sb.ToString(), cancellationToken)
-            .Map(_ => Unit.Default);
-    }
+        CancellationToken cancellationToken = default) =>
+        from _ in RunCommandWithResponse(
+            $"remove {tableName} {rowId} {column} {value}",
+            cancellationToken)
+        select unit;
 
     /// <inheritdoc />
     public EitherAsync<Error, Seq<T>> FindRecords<T>(
