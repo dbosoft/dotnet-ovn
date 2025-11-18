@@ -58,13 +58,14 @@ public abstract class PlanRealizer
         where TEntity : OVSTableRecord, IOVSEntityWithName
         where TPlanned : OVSEntity =>
         from _1 in RightAsync<Error, Unit>(unit)
-        //realized is still hashed with Id column catch duplicates here
-        //found will be rehashed to name
+        // By creating the hash map by name, we also detect duplicate names.
+        // Only the first entity with a given name will be kept. Hence, the
+        // duplicates will later be removed from the database as they are
+        // considered as not planned.
         let foundByName = realized.Values
             .Filter(x => x.Name != null && planned.ContainsKey(x.Name))
-            .Map(v => (v.Name ?? "", v))
+            .Map(v => (v.Name!, v))
             .ToHashMap()
-        //and now rehash it back to Id, to find also duplicates
         let foundById = foundByName.Values
             .Map(v => (v.Id, v))
             .ToHashMap()
@@ -156,74 +157,49 @@ public abstract class PlanRealizer
 
     protected EitherAsync<Error, Unit> UpdateEntities<TEntity, TPlanned>(
         string tableName,
-        HashMap<string, TEntity> realized,
-        HashMap<string, TPlanned> planned,
+        HashMap<string, TEntity> realizedEntities,
+        HashMap<string, TPlanned> plannedEntities,
         CancellationToken cancellationToken)
         where TEntity : OVSTableRecord
-        where TPlanned : OVSEntity
-    {
-        var updates = planned.Map(kv =>
-        {
-            var plannedEntity = kv.Value;
-            var plannedName = kv.Key;
+        where TPlanned : OVSEntity =>
+        from _ in plannedEntities.ToSeq()
+            .Map(p => UpdateEntity(tableName, realizedEntities, p.Key, p.Value, cancellationToken))
+            .SequenceSerial()
+        select unit;
 
-            var realizedEntity = realized[plannedName];
+    private EitherAsync<Error, Unit> UpdateEntity<TEntity, TPlanned>(
+        string tableName,
+        HashMap<string, TEntity> realizedEntities,
+        string plannedEntityName,
+        TPlanned plannedEntity,
+        CancellationToken cancellationToken)
+        where TEntity : OVSTableRecord
+        where TPlanned : OVSEntity =>
+        from realizedEntity in realizedEntities.Find(plannedEntityName)
+            .ToEitherAsync(Error.New($"The entity '{plannedEntityName}' cannot be updated as it does not exist."))
+        let columns = OVSEntityMetadata.Get(typeof(TEntity))
+        let plannedFields = plannedEntity.ToMap().Filter(IsUpdatable)
+        let realizedFields = realizedEntity.ToMap().Filter(IsUpdatable)
+        let addedFields = plannedFields - realizedFields
+        let removedFields = realizedFields - plannedFields
+        let updatedFields = plannedFields.Intersect(
+                realizedFields,
+                (name, plannedValue, realizedValue) =>
+                    (Name: name, PlannedValue: plannedValue, RealizedValue: realizedValue))
+            .Filter(t => t.PlannedValue != t.RealizedValue)
+            .Map(t => t.PlannedValue)
+        from _ in addedFields.IsEmpty && removedFields.IsEmpty && updatedFields.IsEmpty
+            ? RightAsync<Error, Unit>(unit)
+            : _ovnDBTool.UpdateRecord(
+                    tableName,
+                    realizedEntity.Id.ToString("D"),
+                    addedFields,
+                    updatedFields,
+                    removedFields.Keys.ToSeq(),
+                    cancellationToken)
+                .MapLeft(e => Error.New($"Could not update entity '{realizedEntity}' in table '{tableName}'.", e))
+        select unit;
 
-            var plannedFields = plannedEntity.ToMap();
-            var realizedFields = realizedEntity.ToMap();
-
-            var set = new Dictionary<string, IOVSField>();
-            var clear = new List<string>();
-            var columns = OVSEntityMetadata.Get(typeof(TEntity));
-
-            var processedFields = new List<string> { "_uuid", "__parentId" };
-            foreach (var realizedField in realizedFields
-                         .Where(realizedField => !realizedField.Key.StartsWith("_")))
-            {
-                if (realizedField.Value is OVSReference)
-                    continue;
-
-                if (!plannedFields.ContainsKey(realizedField.Key))
-                {
-                    // When field the field cannot be empty, we just skip it when
-                    // it should be cleared.
-                    // TODO Should we throw an error instead? Just keeping values around seems
-                    // to contradict the desired state of the plan.
-                    if (!columns[realizedField.Key].NotEmpty)
-                        clear.Add(realizedField.Key);
-
-                    processedFields.Add(realizedField.Key);
-                    continue;
-                }
-
-                processedFields.Add(realizedField.Key);
-
-                var plannedValue = plannedFields[realizedField.Key];
-
-
-                if (plannedValue.Equals(realizedField.Value)) continue;
-
-                set.Add(realizedField.Key, plannedValue);
-            }
-
-            var add = plannedFields
-                .Where(pf => !processedFields.Contains(pf.Key)).ToDictionary(plannedField =>
-                    plannedField.Key, plannedField => plannedField.Value);
-
-            return add.Count > 0 || set.Count > 0 || clear.Count > 0
-                ? Some((realizedEntity.Id, (AddValues: add.ToMap(), SetValues: set.ToMap(), ClearValues: clear.ToSeq())))
-                : None;
-        }).Somes().ToMap();
-
-        return updates.Map(update =>
-        {
-            var (key, value) = update;
-
-            return _ovnDBTool.UpdateRecord(tableName, key.ToString("D"),
-                    update.Value.AddValues, value.SetValues, value.ClearValues, cancellationToken)
-                .MapLeft(l => Error.New(
-                    $"Could not update entity {key} in table {tableName}.",
-                    l));
-        }).SequenceSerial<Error, Unit>().Map(_ => Unit.Default);
-    }
+    private static bool IsUpdatable(string name, IOVSField value) =>
+        name is not ("_uuid" or "__parentId") && value is not OVSReference;
 }
