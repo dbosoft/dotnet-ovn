@@ -180,8 +180,8 @@ public abstract class PlanRealizer
         let columns = OVSEntityMetadata.Get(typeof(TEntity))
         let plannedFields = plannedEntity.ToMap().Filter(IsUpdatable)
         let realizedFields = realizedEntity.ToMap().Filter(IsUpdatable)
-        let addedFields = plannedFields - realizedFields
-        let removedFields = realizedFields - plannedFields
+        let addedFields = plannedFields.Except(realizedFields)
+        let removedFields = realizedFields.Except(plannedFields)
         let updatedFields = plannedFields.Intersect(
                 realizedFields,
                 (name, plannedValue, realizedValue) =>
