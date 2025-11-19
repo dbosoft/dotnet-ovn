@@ -8,12 +8,12 @@ public record ChassisGroup : OVSTableRecord, IOVSEntityWithName, IHasOVSReferenc
         Columns = new Dictionary<string, OVSFieldMetadata>(OVSTableRecord.Columns)
         {
             { "name", OVSValue<string>.Metadata() },
-            { "ha_chassis", OVSSet<Guid>.Metadata() }
+            { "ha_chassis", OVSReference.Metadata() },
         };
     
     public string? Name => GetValue<string>("name");
 
-    public Seq<Guid> Chassis => GetSet<Guid>("ha_chassis");
+    public Seq<Guid> Chassis => GetReference("ha_chassis");
 
     Seq<Guid> IHasOVSReferences<Chassis>.GetOvsReferences() => Chassis;
 }
