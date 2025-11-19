@@ -1,10 +1,12 @@
 using JetBrains.Annotations;
 using LanguageExt;
 
+using static LanguageExt.Prelude;
+
 namespace Dbosoft.OVN.Model.OVN;
 
 [PublicAPI]
-public record LogicalRouterPort : OVSTableRecord, IOVSEntityWithName
+public record LogicalRouterPort : OVSTableRecord, IOVSEntityWithName, IHasParentReference
 {
     public new static readonly IDictionary<string, OVSFieldMetadata>
         Columns = new Dictionary<string, OVSFieldMetadata>(OVSTableRecord.Columns)
@@ -16,8 +18,15 @@ public record LogicalRouterPort : OVSTableRecord, IOVSEntityWithName
         };
 
     public string? MacAddress => GetValue<string>("mac");
+    
     public Seq<Guid> ChassisGroupRef => GetSet<Guid>("ha_chassis_group");
+    
     public Seq<string> Networks => GetSet<string>("networks");
 
     public string? Name => GetValue<string>("name");
+
+    public OVSParentReference GetParentReference() =>
+        new(OVNTableNames.LogicalRouter,
+            Optional(GetValue<Guid>("__parentId")).Map(i => i.ToString("D")),
+            "Ports");
 }

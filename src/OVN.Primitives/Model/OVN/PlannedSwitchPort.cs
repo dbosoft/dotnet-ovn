@@ -48,10 +48,8 @@ public record PlannedSwitchPort(string SwitchName) : OVSEntity, IHasParentRefere
         init => SetSet("dhcpv4_options", value);
     }
 
-    public OVSParentReference? GetParentReference()
-    {
-        return new OVSParentReference(OVNTableNames.LogicalSwitch, SwitchName, "Ports");
-    }
+    public OVSParentReference GetParentReference() =>
+        new(OVNTableNames.LogicalSwitch, SwitchName, "Ports");
 
     public string? Name
     {

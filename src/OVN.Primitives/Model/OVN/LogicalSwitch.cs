@@ -4,7 +4,7 @@ using LanguageExt;
 namespace Dbosoft.OVN.Model.OVN;
 
 [PublicAPI]
-public record LogicalSwitch : OVSTableRecord, IOVSEntityWithName
+public record LogicalSwitch : OVSTableRecord, IOVSEntityWithName, IHasOVSReferences<LogicalSwitchPort>
 {
     public new static readonly IDictionary<string, OVSFieldMetadata>
         Columns = new Dictionary<string, OVSFieldMetadata>(OVSTableRecord.Columns)
@@ -19,4 +19,6 @@ public record LogicalSwitch : OVSTableRecord, IOVSEntityWithName
     public string? Name => GetValue<string>("name");
     
     public Seq<Guid> DnsRecords => GetSet<Guid>("dns_records");
+
+    Seq<Guid> IHasOVSReferences<LogicalSwitchPort>.GetOvsReferences() => Ports;
 }

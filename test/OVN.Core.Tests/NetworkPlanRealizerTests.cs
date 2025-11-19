@@ -34,17 +34,18 @@ public class NetworkPlanRealizerTests
         
     }
 
-    private static void SetFindRecordsResult<T>(Mock<IOVSDBTool> mock, 
-        string tableName, IEnumerable<T> result, IEnumerable<string>? columns = default) 
+    private static void SetFindRecordsResult<T>(
+        Mock<IOVSDBTool> mock, 
+        string tableName,
+        IEnumerable<T> result, 
+        Seq<string> columns = default) 
         where T : OVSTableRecord, new()
     {
-        columns ??= OVSEntityMetadata.Get(typeof(T)).Keys;
-        
         mock.Setup(x =>
                 x.FindRecords<T>(tableName,
                     It.IsAny<Map<string, OVSQuery>>(),
-                    columns, Map<Guid, Map<string, IOVSField>>.Empty,
-                    default))
+                    columns.IsEmpty ? OVSEntityMetadata.Get(typeof(T)).Keys.ToSeq() : columns, 
+                    CancellationToken.None))
             .Returns(EitherAsync<Error, Seq<T>>.Right(
                 result.ToSeq()));
     }
