@@ -4,8 +4,6 @@ namespace Dbosoft.OVN.Model.OVS;
 
 public record SwitchSsl : OVSSslTableRecord
 {
-    //public new static readonly IDictionary<string, OVSFieldMetadata> Columns = OVSSsl.Columns;
-
     public override OVSParentReference GetParentReference()
     {
         return new OVSParentReference(

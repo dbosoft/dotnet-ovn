@@ -31,5 +31,4 @@ public abstract record PlannedOvsSsl : OVSEntity, IOVSEntityWithName, IHasParent
     public string? Name => "SSL";
 
     public abstract OVSParentReference GetParentReference();
-
 }

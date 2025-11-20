@@ -61,7 +61,6 @@ public class NetworkControllerNode : DemonNodeBase
 
         return WaitForDbSocket(cancellationToken)
             .Bind(_ => InitDB(cancellationToken));
-            //.Bind(_ => ConfigureController(cancellationToken));
     }
 
     private EitherAsync<Error, Unit> InitDB(CancellationToken cancellationToken)
