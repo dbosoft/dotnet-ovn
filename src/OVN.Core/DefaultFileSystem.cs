@@ -77,11 +77,22 @@ public class DefaultFileSystem : IFileSystem
         EnsurePathForFileExists(path);
     }
 
-    public string ReadFileAsString(string path)
+    public void DeleteFile(string path)
     {
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        using var sr = new StreamReader(stream);
-        return sr.ReadToEnd();
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // Ignore the exception when the path does not exist
+        }
+    }
+
+    public void DeleteFile(OvsFile file)
+    {
+        var path = ResolveOvsFilePath(file);
+        DeleteFile(path);
     }
 
     public async Task<string> ReadFileAsync(
