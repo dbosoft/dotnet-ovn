@@ -31,16 +31,26 @@ public interface IFileSystem
     /// Ensures that the path (parent directories) exists for the path.
     /// Will only work for file paths and not for directories.
     /// </summary>
-    /// <param name="path">path of file</param>
-    void EnsurePathForFileExists(string path);
-    
+    /// <param name="path">
+    /// The path of the file.
+    /// </param>
+    /// <param name="adminOnly">
+    /// Indicates that the access to the directory should be restricted to administrators.
+    /// </param>
+    void EnsurePathForFileExists(string path, bool adminOnly = false);
+
     /// <summary>
     /// Ensures that the path (parent directories) exists for the path.
     /// Will only work for file paths and not for directories.
     /// </summary>
-    /// <param name="file">OVS file</param>
-    void EnsurePathForFileExists(OvsFile file);
-
+    /// <param name="file">
+    /// The OVS file
+    /// </param>
+    /// <param name="adminOnly">
+    /// Indicates that the access to the directory should be restricted to administrators.
+    /// </param>
+    void EnsurePathForFileExists(OvsFile file, bool adminOnly = false);
+    
     Task<string> ReadFileAsync(string path, CancellationToken cancellationToken = default);
 
     Task<string> ReadFileAsync(OvsFile file, CancellationToken cancellationToken = default);

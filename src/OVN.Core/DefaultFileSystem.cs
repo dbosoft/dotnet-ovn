@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using JetBrains.Annotations;
 
@@ -52,58 +54,35 @@ public class DefaultFileSystem : IFileSystem
     }
 
     [ExcludeFromCodeCoverage]
-    public void EnsurePathForFileExists(string path)
+    public void EnsurePathForFileExists(string path, bool adminOnly = false)
     {
         var platformPath = ConvertPathToPlatform(path);
         platformPath = Path.GetDirectoryName(platformPath);
 
-        if (platformPath == null)
-            return;
+        if (platformPath is null)
+            throw new ArgumentException("The path does not contain a valid directory.", nameof(path));
 
         var directoryInfo = new DirectoryInfo(platformPath);
-        if (!directoryInfo.Exists)
-            directoryInfo.Create();
+        directoryInfo.Create();
+
+        if (!adminOnly)
+            return;
+        
+        SetAdminOnlyPermissions(directoryInfo);
     }
-    
-    public void EnsurePathForFileExists(OvsFile file)
+
+    public void EnsurePathForFileExists(OvsFile file, bool adminOnly = false)
     {
         var path = ResolveOvsFilePath(file);
         EnsurePathForFileExists(path);
     }
-    
+
     public string ReadFileAsString(string path)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var sr = new StreamReader(stream);
         return sr.ReadToEnd();
     }
-
-    private string ConvertPathToPlatform(string inputPath)
-    {
-        var platformSeparator = _platform != OSPlatform.Windows
-            ? '/'
-            : '\\';
-
-        if (platformSeparator != '/')
-            inputPath = inputPath.Replace('/', platformSeparator);
-
-        return inputPath;
-    }
-
-    private string ResolveBasePath(string pathRoot)
-    {
-        return pathRoot.StartsWith("usr")
-            ? $"{GetProgramRootPath()}{pathRoot}"
-            : $"{GetDataRootPath()}{pathRoot}";
-    }
-
-    protected virtual string GetDataRootPath() =>
-        _platform == OSPlatform.Windows
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "openvswitch").Replace(@"\", "/") + "/"
-            : "/";
-
-    protected virtual string GetProgramRootPath() =>
-        _platform == OSPlatform.Windows ? "C:/openvswitch/" : "/";
 
     public async Task<string> ReadFileAsync(
         string path,
@@ -139,5 +118,78 @@ public class DefaultFileSystem : IFileSystem
     {
         var path = ResolveOvsFilePath(file);
         return WriteFileAsync(path, content, cancellationToken);
+    }
+
+    protected virtual string GetDataRootPath() =>
+        _platform == OSPlatform.Windows
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "openvswitch").Replace(@"\", "/") + "/"
+            : "/";
+
+    protected virtual string GetProgramRootPath() =>
+        _platform == OSPlatform.Windows ? "C:/openvswitch/" : "/";
+
+    protected virtual void SetAdminOnlyPermissions(
+        DirectoryInfo directoryInfo)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(
+                directoryInfo.FullName,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            return;
+        }
+
+        var directorySecurity = new DirectorySecurity();
+        IdentityReference adminId = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+        var adminAccess = new FileSystemAccessRule(
+            adminId,
+            FileSystemRights.FullControl,
+            InheritanceFlags.ObjectInherit | InheritanceFlags.ContainerInherit,
+            PropagationFlags.None,
+            AccessControlType.Allow);
+
+        IdentityReference systemId = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+        var systemAccess = new FileSystemAccessRule(
+            systemId,
+            FileSystemRights.FullControl,
+            InheritanceFlags.ObjectInherit | InheritanceFlags.ContainerInherit,
+            PropagationFlags.None,
+            AccessControlType.Allow);
+
+        directorySecurity.AddAccessRule(adminAccess);
+        directorySecurity.AddAccessRule(systemAccess);
+        // Set the owner and the group to admins
+        directorySecurity.SetAccessRuleProtection(true, true);
+        
+        directoryInfo.SetAccessControl(directorySecurity);
+    }
+
+    private DirectoryInfo CreateDirectoryInfo(string path)
+    {
+        var platformPath = ConvertPathToPlatform(path);
+        platformPath = Path.GetDirectoryName(platformPath);
+
+        return platformPath is not null
+            ? new DirectoryInfo(platformPath)
+            : throw new ArgumentException("The path does not contain a valid directory.", nameof(path));
+    }
+
+    private string ConvertPathToPlatform(string inputPath)
+    {
+        var platformSeparator = _platform != OSPlatform.Windows
+            ? '/'
+            : '\\';
+
+        if (platformSeparator != '/')
+            inputPath = inputPath.Replace('/', platformSeparator);
+
+        return inputPath;
+    }
+
+    private string ResolveBasePath(string pathRoot)
+    {
+        return pathRoot.StartsWith("usr")
+            ? $"{GetProgramRootPath()}{pathRoot}"
+            : $"{GetDataRootPath()}{pathRoot}";
     }
 }

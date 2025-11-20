@@ -1,8 +1,9 @@
-﻿using Dbosoft.OVN.Model;
-using Dbosoft.OVN.Model.OVN;
+﻿using System.CodeDom;
+using System.Security.Cryptography;
+using System.Text;
+using Dbosoft.OVN.Model;
 using LanguageExt;
 using LanguageExt.Common;
-using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
@@ -10,6 +11,9 @@ namespace Dbosoft.OVN;
 
 public abstract class PlanRealizer
 {
+    private const string PemCertificateHeader = "-----BEGIN CERTIFICATE-----";
+    private const string PemPrivateKeyHeader = "-----BEGIN RSA PRIVATE KEY-----";
+
     private readonly ISystemEnvironment _systemEnvironment;
     private readonly IOVSDBTool _ovnDBTool;
 
@@ -205,9 +209,13 @@ public abstract class PlanRealizer
         name is not ("_uuid" or "__parentId") && value is not OVSReference;
 
 
-    // The SSL configuration is special there can be at most one SSL
-
-    // TODO Map certificates
+    /// <summary>
+    /// Applies the planned SSL configuration to the database.
+    /// </summary>
+    /// <remarks>
+    /// The SSL configuration is special as only one configuration
+    /// can exist at any given time.
+    /// </remarks>
     protected EitherAsync<Error, Unit> ApplySsl<TPlannedSsl, TSsl, TGlobal>(
         Option<TPlannedSsl> plannedSsl,
         string globalTableName,
@@ -247,6 +255,8 @@ public abstract class PlanRealizer
             cancellationToken: cancellationToken)
         select unit;
 
+    // TODO remove unused certificates
+
     private EitherAsync<Error, Option<TPlannedSsl>> EnsureCertificateFiles<TPlannedSsl>(
         Option<TPlannedSsl> plannedSouthboundSsl,
         CancellationToken cancellationToken)
@@ -260,13 +270,33 @@ public abstract class PlanRealizer
         TPlannedSsl plannedSouthboundSsl,
         CancellationToken cancellationToken)
         where TPlannedSsl : PlannedOvsSsl =>
-        from _ in RightAsync<Error, Unit>(unit)
-        let caCertificateFile = OvsCertificateFileHelper.ComputeCaCertificatePath(plannedSouthboundSsl.CaCertificate!)
-        from _2 in EnsureCertificateFile(caCertificateFile, plannedSouthboundSsl.CaCertificate!, cancellationToken)
-        let certificateFile = OvsCertificateFileHelper.ComputeCertificatePath(plannedSouthboundSsl.Certificate!)
-        from _3 in EnsureCertificateFile(certificateFile, plannedSouthboundSsl.Certificate!, cancellationToken)
-        let privateKeyFile = OvsCertificateFileHelper.ComputePrivateKeyPath(plannedSouthboundSsl.PrivateKey!)
-        from _4 in EnsureCertificateFile(privateKeyFile, plannedSouthboundSsl.PrivateKey!, cancellationToken)
+        from caCertificatePem in Optional(plannedSouthboundSsl.CaCertificate)
+            .ToEitherAsync(Error.New("The CA certificate is missing"))
+        from _1 in guard(caCertificatePem.StartsWith(PemCertificateHeader),
+            Error.New("The CA certificate must be a PEM encoded string."))
+        from certificatePem in Optional(plannedSouthboundSsl.Certificate)
+            .ToEitherAsync(Error.New("The certificate is missing"))
+        from _2 in guard(certificatePem.StartsWith(PemCertificateHeader),
+            Error.New("The certificate must be a PEM encoded string."))
+        from privateKeyPem in Optional(plannedSouthboundSsl.PrivateKey)
+            .ToEitherAsync(Error.New("The private key is missing"))
+        from _3 in guard(privateKeyPem.StartsWith(PemPrivateKeyHeader),
+            Error.New("The private key must be a PEM encoded string."))
+        // The generated file names contain a hash of the content. This
+        // way, the changes can be made transactionally as changes do
+        // not overwrite existing files.
+        let caCertificateFile = new OvsFile(
+            "/etc/openvswitch",
+            $"cacert_{ComputeHash(caCertificatePem)}.pem")
+        let certificateFile = new OvsFile(
+            "/etc/openvswitch",
+            $"cert_{ComputeHash(certificatePem)}.pem")
+        let privateKeyFile = new OvsFile(
+            "/etc/openvswitch/private",
+            $"key_{ComputeHash(privateKeyPem)}.pem")
+        from _4 in EnsureCertificateFile(caCertificateFile, caCertificatePem, adminOnly: false, cancellationToken)
+        from _5 in EnsureCertificateFile(certificateFile, certificatePem, adminOnly: false, cancellationToken)
+        from _6 in EnsureCertificateFile(privateKeyFile, privateKeyPem, adminOnly: true, cancellationToken)
         select plannedSouthboundSsl with
         {
             CaCertificate = _systemEnvironment.FileSystem.ResolveOvsFilePath(caCertificateFile),
@@ -277,15 +307,22 @@ public abstract class PlanRealizer
     private EitherAsync<Error, Unit> EnsureCertificateFile(
         OvsFile file,
         string content,
+        bool adminOnly,
         CancellationToken cancellationToken) =>
         from _1 in RightAsync<Error, Unit>(unit)
         let path = _systemEnvironment.FileSystem.ResolveOvsFilePath(file, false)
         from _2 in TryAsync(async () =>
         {
-            // TODO Handle case when file is specified directly
             _systemEnvironment.FileSystem.EnsurePathForFileExists(file);
             await _systemEnvironment.FileSystem.WriteFileAsync(file, content, cancellationToken);
             return unit;
         }).ToEither()
         select unit;
+
+    private static string ComputeHash(string content)
+    {
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
 }
