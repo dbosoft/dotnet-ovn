@@ -12,7 +12,7 @@ namespace Dbosoft.OVN;
 public abstract class PlanRealizer
 {
     private const string PemCertificateHeader = "-----BEGIN CERTIFICATE-----";
-    private const string PemPrivateKeyHeader = "-----BEGIN RSA PRIVATE KEY-----";
+    private const string PemPrivateKeyHeader = "-----BEGIN PRIVATE KEY-----";
 
     private readonly ISystemEnvironment _systemEnvironment;
     private readonly IOVSDBTool _ovnDBTool;

@@ -59,6 +59,8 @@ public abstract class OvsDbTestBase : IAsyncLifetime
 
     protected abstract EitherAsync<Error, Unit> InitializeDatabase();
 
+    protected DirectoryInfo GetDataDirectoryInfo() => new(_dataDirectoryPath);
+
     protected async Task VerifyDatabase(string databaseName, string schemaVersion)
     {
         var ovsDbClientTool = new OVSDbClientTool(SystemEnvironment, _dbSettings.Connection);
