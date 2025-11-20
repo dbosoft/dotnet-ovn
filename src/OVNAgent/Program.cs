@@ -20,6 +20,14 @@ using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
+if (!AdminGuard.IsElevated())
+{
+    await Console.Error.WriteLineAsync(
+        "This command requires elevated privileges. Please run the command as an administrator.");
+    // Return the proper HResult / errno for permission denied
+    return OperatingSystem.IsWindows() ? unchecked((int)0x80070005) : 0x0d;
+}
+
 var logLevelOptions = new System.CommandLine.Option<LogLevel>("--logLevel", () => LogLevel.Information);
 var nodeTypeOptions = new System.CommandLine.Option<NodeType>("--nodes", () => NodeType.AllInOne );
 var fileOption = new System.CommandLine.Option<FileInfo>("--file");

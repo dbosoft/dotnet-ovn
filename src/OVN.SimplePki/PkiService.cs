@@ -45,7 +45,7 @@ public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
             CaCertificate,
             NormalizePem(certificate.ExportCertificatePem()));
 
-        systemEnvironment.FileSystem.EnsurePathForFileExists(CaPrivateKey);
+        systemEnvironment.FileSystem.EnsurePathForFileExists(CaPrivateKey, adminOnly: true);
         await systemEnvironment.FileSystem.WriteFileAsync(
             CaPrivateKey,
             NormalizePem(keyPair.ExportRSAPrivateKeyPem()));
