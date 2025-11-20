@@ -208,7 +208,6 @@ public abstract class PlanRealizer
     private static bool IsUpdatable(string name, IOVSField value) =>
         name is not ("_uuid" or "__parentId") && value is not OVSReference;
 
-
     /// <summary>
     /// Applies the planned SSL configuration to the database.
     /// </summary>

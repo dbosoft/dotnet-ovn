@@ -21,7 +21,6 @@ public class ClusterPlanSouthboundRealizer(
             cancellationToken)
         select clusterPlan;
 
-
     private EitherAsync<Error, Unit> ApplySouthboundConnections(
         ClusterPlan clusterPlan,
         CancellationToken cancellationToken) =>

@@ -39,12 +39,11 @@ public class OVNChassisNode : DemonNodeBase
             _loggerFactory.CreateLogger<OVNControllerProcess>());
     }
 
-
-    protected override EitherAsync<Error, Unit> OnProcessStarted(DemonProcessBase process,
+    protected override EitherAsync<Error, Unit> OnProcessStarted(
+        DemonProcessBase process,
         CancellationToken cancellationToken)
     {
         return WaitForDbSocket(cancellationToken);
-            //.Bind(_ => ConfigureController(cancellationToken));
     }
     
     private EitherAsync<Error, Unit> WaitForDbSocket(CancellationToken cancellationToken)
