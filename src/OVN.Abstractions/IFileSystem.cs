@@ -50,6 +50,19 @@ public interface IFileSystem
     /// Indicates that the access to the directory should be restricted to administrators.
     /// </param>
     void EnsurePathForFileExists(OvsFile file, bool adminOnly = false);
+
+    /// <summary>
+    /// Deletes the file at the given <paramref name="path"/>.
+    /// No exception is thrown if the file does not exist.
+    /// </summary>
+    void DeleteFile(string path);
+
+    /// <summary>
+    /// Deletes the given <paramref name="file"/>.
+    /// No exception is thrown if the file does not exist.
+    /// </summary>
+    /// <param name="file"></param>
+    void DeleteFile(OvsFile file);
     
     Task<string> ReadFileAsync(string path, CancellationToken cancellationToken = default);
 

@@ -253,9 +253,8 @@ public abstract class PlanRealizer
             remainingSsl,
             existingPlannedSsl,
             cancellationToken: cancellationToken)
+        from _4 in RemovedUnusedCertificates(sslWithPaths, existingSsl)
         select unit;
-
-    // TODO remove unused certificates
 
     private EitherAsync<Error, Option<TPlannedSsl>> EnsureCertificateFiles<TPlannedSsl>(
         Option<TPlannedSsl> plannedSouthboundSsl,
@@ -313,11 +312,39 @@ public abstract class PlanRealizer
         let path = _systemEnvironment.FileSystem.ResolveOvsFilePath(file, false)
         from _2 in TryAsync(async () =>
         {
-            _systemEnvironment.FileSystem.EnsurePathForFileExists(file);
+            if (_systemEnvironment.FileSystem.FileExists(file))
+                return unit;
+
+            _systemEnvironment.FileSystem.EnsurePathForFileExists(file, adminOnly);
             await _systemEnvironment.FileSystem.WriteFileAsync(file, content, cancellationToken);
             return unit;
         }).ToEither()
         select unit;
+
+    private EitherAsync<Error, Unit> RemovedUnusedCertificates<TPlannedSsl, TSsl>(
+        Option<TPlannedSsl> plannedSsl,
+        HashMap<Guid, TSsl> existingSsl)
+        where TPlannedSsl : PlannedOvsSsl
+        where TSsl : OVSSslTableRecord, new() =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let plannedFiles = plannedSsl.Bind(s => Optional(s.CaCertificate)).ToSeq()
+                           + plannedSsl.Bind(s => Optional(s.Certificate)).ToSeq()
+                           + plannedSsl.Bind(s => Optional(s.PrivateKey)).ToSeq()
+        let existingFiles = existingSsl.Values.ToSeq()
+            .Bind(s => Optional(s.CaCertificate).ToSeq()
+                       + Optional(s.Certificate).ToSeq()
+                       + Optional(s.PrivateKey).ToSeq())
+        from _2 in existingFiles.Except(plannedFiles).ToSeq()
+            .Map(RemoveFile)
+            .SequenceSerial()
+        select unit;
+
+    private EitherAsync<Error, Unit> RemoveFile(string path) =>
+        Try(() =>
+        {
+            _systemEnvironment.FileSystem.DeleteFile(path);
+            return unit;
+        }).ToEitherAsync();
 
     private static string ComputeHash(string content)
     {

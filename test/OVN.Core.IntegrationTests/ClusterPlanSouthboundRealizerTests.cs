@@ -5,12 +5,14 @@ using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVN.SimplePki;
 using Xunit.Abstractions;
 
+using static Dbosoft.OVN.Core.IntegrationTests.HashHelper;
+
 namespace Dbosoft.OVN.Core.IntegrationTests;
 
 public class ClusterPlanSouthboundRealizerTests : OvnSouthboundControlToolTestBase
 {
     private readonly IPkiService _pkiService;
-    private readonly OvsFile _clientPrivateKey = new("/etc/dotnet-ovn/test-client", "privkey.pem");
+    private readonly OvsFile _clientPrivateKey = new("/etc/dotnet-ovn/test-client", "key.pem");
     private readonly OvsFile _clientCertificate = new("/etc/dotnet-ovn/test-client", "cert.pem");
     private readonly OvsFile _clientCaCertificate = new("/etc/dotnet-ovn/test-client", "ca-cert.pem");
 
@@ -43,6 +45,14 @@ public class ClusterPlanSouthboundRealizerTests : OvnSouthboundControlToolTestBa
 
         await VerifyDatabase();
 
+        var configDirectory = GetDataDirectoryInfo().Should().ContainDirectory("etc")
+            .Which.Should().ContainDirectory("openvswitch")
+            .Subject;
+        configDirectory.Should().ContainFile($"cacert_{ComputeSha256(initialChassisPki.CaCertificate)}.pem");
+        configDirectory.Should().ContainFile($"cert_{ComputeSha256(initialChassisPki.Certificate)}.pem");
+        configDirectory.Should().ContainDirectory("private")
+            .Which.Should().ContainFile($"key_{ComputeSha256(initialChassisPki.PrivateKey)}.pem");
+
         await TestConnection(42421, false);
         await TestConnection(42422, true);
     }
@@ -62,6 +72,17 @@ public class ClusterPlanSouthboundRealizerTests : OvnSouthboundControlToolTestBa
         await ApplyClusterPlan(updatedPlan);
 
         await VerifyDatabase();
+
+        var configDirectory = GetDataDirectoryInfo().Should().ContainDirectory("etc")
+            .Which.Should().ContainDirectory("openvswitch")
+            .Subject;
+        // The CA certificate does not change as we use the same PKI
+        configDirectory.Should().ContainFile($"cacert_{ComputeSha256(initialChassisPki.CaCertificate)}.pem");
+        configDirectory.Should().ContainFile($"cert_{ComputeSha256(updatedChassisPki.Certificate)}.pem");
+        configDirectory.Should().NotContainFile($"cert_{ComputeSha256(initialChassisPki.Certificate)}.pem");
+        var privateConfigDirectory = configDirectory.Should().ContainDirectory("private").Subject;
+        privateConfigDirectory.Should().ContainFile($"key_{ComputeSha256(updatedChassisPki.PrivateKey)}.pem");
+        privateConfigDirectory.Should().NotContainFile($"key_{ComputeSha256(initialChassisPki.PrivateKey)}.pem");
 
         await TestConnection(52421, false);
         await TestConnection(52422, true);

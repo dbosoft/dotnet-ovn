@@ -1,9 +1,10 @@
-﻿using AwesomeAssertions;
-using LanguageExt.Common;
-using Microsoft.Extensions.Logging.Abstractions;
-using System.Net;
+﻿using System.Net;
+using AwesomeAssertions;
 using Dbosoft.OVN.SimplePki;
+using LanguageExt.Common;
 using Xunit.Abstractions;
+
+using static Dbosoft.OVN.Core.IntegrationTests.HashHelper;
 
 namespace Dbosoft.OVN.Core.IntegrationTests;
 
@@ -30,6 +31,14 @@ public class ChassisPlanRealizerTests : OvsControlToolTestBase
         await ApplyChassisPlan(CreateChassisPlan(initialChassisPki));
 
         await VerifyDatabase();
+
+        var configDirectory = GetDataDirectoryInfo().Should().ContainDirectory("etc")
+            .Which.Should().ContainDirectory("openvswitch")
+            .Subject;
+        configDirectory.Should().ContainFile($"cacert_{ComputeSha256(initialChassisPki.CaCertificate)}.pem");
+        configDirectory.Should().ContainFile($"cert_{ComputeSha256(initialChassisPki.Certificate)}.pem");
+        configDirectory.Should().ContainDirectory("private")
+            .Which.Should().ContainFile($"key_{ComputeSha256(initialChassisPki.PrivateKey)}.pem");
     }
 
     [Fact]
@@ -49,6 +58,17 @@ public class ChassisPlanRealizerTests : OvsControlToolTestBase
         await ApplyChassisPlan(updatedPlan);
 
         await VerifyDatabase();
+
+        var configDirectory = GetDataDirectoryInfo().Should().ContainDirectory("etc")
+            .Which.Should().ContainDirectory("openvswitch")
+            .Subject;
+        // The CA certificate does not change as we use the same PKI
+        configDirectory.Should().ContainFile($"cacert_{ComputeSha256(initialChassisPki.CaCertificate)}.pem");
+        configDirectory.Should().ContainFile($"cert_{ComputeSha256(updatedChassisPki.Certificate)}.pem");
+        configDirectory.Should().NotContainFile($"cert_{ComputeSha256(initialChassisPki.Certificate)}.pem");
+        var privateConfigDirectory = configDirectory.Should().ContainDirectory("private").Subject;
+        privateConfigDirectory.Should().ContainFile($"key_{ComputeSha256(updatedChassisPki.PrivateKey)}.pem");
+        privateConfigDirectory.Should().NotContainFile($"key_{ComputeSha256(initialChassisPki.PrivateKey)}.pem");
     }
 
     [Fact]
