@@ -12,19 +12,22 @@ public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
     public static readonly string ServerAuthenticationOId = "1.3.6.1.5.5.7.3.1";
 
     private static readonly TimeSpan LifeSpan = TimeSpan.FromDays(10 * 365);
-    private const int KeySize = 2048;
 
-
+    // The ovs-pki tool generates RSA certificates but current versions
+    // of OVS/OVN support ECDSA certificates (via the included OpenSSL).
+    // We use the ECDSA certificates as they are significantly smaller.
+    private static readonly ECCurve Curve = ECCurve.NamedCurves.nistP256;
+    
     public async Task InitializeAsync()
     {
-        using var keyPair = RSA.Create(KeySize);
+        using var keyPair = ECDsa.Create(Curve);
 
         var subjectNameBuilder = new X500DistinguishedNameBuilder();
         subjectNameBuilder.AddOrganizationName("dotnet-ovn");
         subjectNameBuilder.AddCommonName("Certificate Authority");
         
         var subjectName = subjectNameBuilder.Build();
-        var request = new CertificateRequest(subjectName, keyPair, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest(subjectName, keyPair, HashAlgorithmName.SHA256);
         request.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
 
         var publicKey = new PublicKey(keyPair);
@@ -48,7 +51,7 @@ public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
         systemEnvironment.FileSystem.EnsurePathForFileExists(CaPrivateKey, adminOnly: true);
         await systemEnvironment.FileSystem.WriteFileAsync(
             CaPrivateKey,
-            NormalizePem(keyPair.ExportRSAPrivateKeyPem()));
+            NormalizePem(keyPair.ExportPkcs8PrivateKeyPem()));
     }
 
     public async Task<ChassisPkiResult> GenerateChassisPkiAsync(string chassisName)
@@ -59,13 +62,13 @@ public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
 
         var caCertificatePem = await systemEnvironment.FileSystem.ReadFileAsync(CaCertificate);
         var caPrivateKeyPem = await systemEnvironment.FileSystem.ReadFileAsync(CaPrivateKey);
-        using var caPrivateKey = RSA.Create();
+        using var caPrivateKey = ECDsa.Create();
         caPrivateKey.ImportFromPem(caPrivateKeyPem);
         var caPublicKey = new PublicKey(caPrivateKey);
         using var caCertificate = X509Certificate2.CreateFromPem(caCertificatePem);
         using var caCertificateWithKey = caCertificate.CopyWithPrivateKey(caPrivateKey);
 
-        using var keyPair = RSA.Create(KeySize);
+        using var keyPair = ECDsa.Create(Curve);
         var publicKey = new PublicKey(keyPair);
 
         var subjectNameBuilder = new X500DistinguishedNameBuilder();
@@ -77,7 +80,7 @@ public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
         subjectAlternativeNameBuilder.AddDnsName(chassisName);
         var subjectAlternativeName = subjectAlternativeNameBuilder.Build();
 
-        var request = new CertificateRequest(subjectName, keyPair, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
+        var request = new CertificateRequest(subjectName, keyPair, HashAlgorithmName.SHA256)
         {
             CertificateExtensions =
             {
@@ -108,7 +111,7 @@ public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
             serial);
 
         return new ChassisPkiResult(
-            NormalizePem(keyPair.ExportRSAPrivateKeyPem()),
+            NormalizePem(keyPair.ExportPkcs8PrivateKeyPem()),
             NormalizePem(certificate.ExportCertificatePem()),
             NormalizePem(caCertificatePem));
     }
