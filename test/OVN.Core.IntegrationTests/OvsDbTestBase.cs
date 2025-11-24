@@ -11,7 +11,11 @@ namespace Dbosoft.OVN.Core.IntegrationTests;
 
 public abstract class OvsDbTestBase : IAsyncLifetime
 {
-    private readonly string _dataDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName()).Replace(@"\", "/");
+    // This base path is visible in the dumped database. Hence, we pick
+    // a path on the C: drive which has a fixed length. Otherwise, the
+    // tests would randomly fail as the column widths in the database
+    // snapshot would be changing.
+    private readonly string _dataDirectoryPath = Path.Combine(@"C:\", "dotnet-ovn-e2e", Path.GetRandomFileName()).Replace(@"\", "/");
     private readonly ILoggerFactory _loggerFactory;
     protected readonly ISystemEnvironment SystemEnvironment;
 

@@ -95,6 +95,11 @@ public class ClusterPlanSouthboundRealizerTests : OvnSouthboundControlToolTestBa
         var either = await realizer.ApplyClusterPlan(clusterPlan);
         either.ThrowIfLeft();
 
+        // The ovsdb-server writes status information for the connections
+        // into the connection table. We just wait a bit here to ensure that
+        // the status information has been written. Otherwise, the tests can
+        // randomly fail depending on whether the status information is present
+        // or not in the database and hence included in the database snapshot.
         await Task.Delay(2000);
     }
 

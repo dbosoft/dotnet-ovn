@@ -94,8 +94,6 @@ public class ChassisPlanRealizerTests : OvsControlToolTestBase
         var realizer = new ChassisPlanRealizer(SystemEnvironment, ControlTool);
 
         (await realizer.ApplyChassisPlan(chassisPlan)).ThrowIfLeft();
-
-        await Task.Delay(2000);
     }
 
     private ChassisPlan CreateChassisPlan(ChassisPkiResult chassisPki) =>
