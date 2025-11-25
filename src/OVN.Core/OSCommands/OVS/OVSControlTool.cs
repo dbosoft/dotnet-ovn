@@ -2,6 +2,8 @@ using System.Text;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Dbosoft.OVN.OSCommands.OVS;
 
 public class OVSControlTool(
@@ -21,8 +23,8 @@ public class OVSControlTool(
         return sb.ToString();
     }
 
-    public EitherAsync<Error, Unit> InitDb(CancellationToken cancellationToken = default)
-    {
-        return RunCommand("--no-wait init", true, cancellationToken).Map(_ => Unit.Default);
-    }
+    public EitherAsync<Error, Unit> InitDb(
+        CancellationToken cancellationToken = default) =>
+        from _ in RunCommand($"{(noWait ? "" : "--no -wait ")}init", true, cancellationToken)
+        select unit;
 }

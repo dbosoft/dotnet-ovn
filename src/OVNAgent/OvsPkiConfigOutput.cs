@@ -1,6 +1,6 @@
 ﻿namespace Dbosoft.OVNAgent;
 
-public class ChassisPkiOutput
+public class OvsPkiConfigOutput
 {
     public required string PrivateKey { get; init; }
 

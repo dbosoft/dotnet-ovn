@@ -71,11 +71,11 @@ var pkiInitCommand = new Command("init", "Initialize a new PKI");
 pkiInitCommand.SetHandler(InitializePki, logLevelOptions);
 pkiCommand.AddCommand(pkiInitCommand);
 
-var pkiGenerateChassisCommand = new Command("generate-chassis", "Generates a SSL certificate for a chassis");
+var pkiGenerateConfigCommand = new Command("generate-config", "Generates an SSL config for a chassis");
 var chassisNameArgument = new Argument<string>("chassisName", "OVN chassis name");
-pkiGenerateChassisCommand.AddArgument(chassisNameArgument);
-pkiGenerateChassisCommand.SetHandler(CreateChassisPki, logLevelOptions, chassisNameArgument);
-pkiCommand.AddCommand(pkiGenerateChassisCommand);
+pkiGenerateConfigCommand.AddArgument(chassisNameArgument);
+pkiGenerateConfigCommand.SetHandler(CreateChassisPki, logLevelOptions, chassisNameArgument);
+pkiCommand.AddCommand(pkiGenerateConfigCommand);
 
 
 var serviceCommand = new Command("service", "service commands");
@@ -316,7 +316,7 @@ static async Task<int> CreateChassisPki(LogLevel logLevel, string chassisName)
     var pkiResult = await host.Services.GetRequiredService<IPkiService>()
         .GenerateChassisPkiAsync(chassisName);
 
-    var config = new ChassisPkiOutput()
+    var config = new OvsPkiConfigOutput()
     {
         PrivateKey = pkiResult.PrivateKey,
         Certificate = pkiResult.Certificate,

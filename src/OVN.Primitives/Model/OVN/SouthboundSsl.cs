@@ -12,6 +12,9 @@ public record SouthboundSsl : OVSSslTableRecord
             { "ssl_ciphersuites", OVSValue<string>.Metadata() },
         };
 
+    // The SSL settings (protocols, ciphers, etc.) are intentionally defined
+    // here as these settings are missing in the Open vSwitch database schema.
+
     public string? SslProtocols => GetValue<string>("ssl_protocols");
 
     public string? SslCiphers => GetValue<string>("ssl_ciphers");

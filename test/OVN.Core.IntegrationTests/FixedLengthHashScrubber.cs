@@ -9,6 +9,8 @@ public static class FixedLengthHashScrubber
 {
     public static void ReplaceHashes(StringBuilder builder)
     {
+        // Note that the counter is not tracked inside Verify's state.
+        // This works for our use case but is not a general solution.
         var cache = new Dictionary<string, string>();
         long counter = 1;
 

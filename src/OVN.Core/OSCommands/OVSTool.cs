@@ -125,7 +125,7 @@ public class OVSTool: IOVSDBTool
         where T : notnull
     {
         var command = $"-- set {tableName} {rowId} "
-                      + string.Join(" ", values.ToSeq().Map(kvp => kvp.Value.GetColumnKeyValue(columnName, kvp.Key, true)));
+                      + string.Join(" ", values.ToSeq().Map(kvp => kvp.Value.GetColumnKeyValue(columnName, kvp.Key)));
 
         return RunCommandWithResponse(command, cancellationToken).Map(_ => Unit.Default);
     }

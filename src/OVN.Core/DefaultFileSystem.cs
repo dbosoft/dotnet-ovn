@@ -169,7 +169,7 @@ public class DefaultFileSystem : IFileSystem
 
         directorySecurity.AddAccessRule(adminAccess);
         directorySecurity.AddAccessRule(systemAccess);
-        // Set the owner and the group to admins
+        
         directorySecurity.SetAccessRuleProtection(true, true);
         
         directoryInfo.SetAccessControl(directorySecurity);

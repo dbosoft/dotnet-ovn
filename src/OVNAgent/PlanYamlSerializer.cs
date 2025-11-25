@@ -24,13 +24,13 @@ public static class PlanYamlSerializer
             .WithEnumNamingConvention(UnderscoredNamingConvention.Instance)
             .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull
                                             | DefaultValuesHandling.OmitEmptyCollections)
-            .WithAttributeOverride<ChassisPkiOutput>(
+            .WithAttributeOverride<OvsPkiConfigOutput>(
                 c => c.PrivateKey,
                 new YamlMemberAttribute { ScalarStyle = ScalarStyle.Literal })
-            .WithAttributeOverride<ChassisPkiOutput>(
+            .WithAttributeOverride<OvsPkiConfigOutput>(
                 c => c.Certificate,
                 new YamlMemberAttribute { ScalarStyle = ScalarStyle.Literal })
-            .WithAttributeOverride<ChassisPkiOutput>(
+            .WithAttributeOverride<OvsPkiConfigOutput>(
                 c => c.CaCertificate,
                 new YamlMemberAttribute { ScalarStyle = ScalarStyle.Literal })
             .DisableAliases()

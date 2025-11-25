@@ -16,6 +16,12 @@ public abstract record OVSSslTableRecord : OVSTableRecord, IHasParentReference, 
 
     public string? CaCertificate => GetValue<string>("ca_cert");
 
+    /// <summary>
+    /// The name is fixed to <c>SSL</c> as only one SSL record is allowed.
+    /// </summary>
+    /// <remarks>
+    /// The fixed name allows us to reuse the existing CRUD logic.
+    /// </remarks>
     public string? Name => "SSL";
 
     public abstract OVSParentReference GetParentReference();

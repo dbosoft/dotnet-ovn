@@ -21,7 +21,7 @@ public class DirectoryInfoAssertions(
         chain
             .BecauseOf(because, becauseArgs)
             .ForCondition(!string.IsNullOrEmpty(directoryName))
-            .FailWith("You can't assert a file exist if you don't pass a proper name")
+            .FailWith("You can't assert a directory exist if you don't pass a proper name")
             .Then
             .Given(() => Subject.GetDirectories())
             .ForCondition(directories => directories.Any(directoryInfo => directoryInfo.Name.Equals(directoryName)))

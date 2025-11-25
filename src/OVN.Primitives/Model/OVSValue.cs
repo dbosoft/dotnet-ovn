@@ -13,7 +13,11 @@ public readonly record struct OVSValue<T>(T Value) : IOVSField where T : notnull
         };
     }
 
-    public string GetColumnKeyValue(string columnName, string keyName, bool setMode)
+    /// <summary>
+    /// Returns the column value encoded such that it can be used
+    /// in update operations for a map column.
+    /// </summary>
+    public string GetColumnKeyValue(string columnName, string keyName)
     {
         return Value switch
         {

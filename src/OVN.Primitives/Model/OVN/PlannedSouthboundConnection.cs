@@ -24,6 +24,6 @@ public record PlannedSouthboundConnection : OVSEntity, IHasParentReference, IOVS
 
     public OVSParentReference GetParentReference()
     {
-        return new OVSParentReference(OVNSouthboundTableNames.Global, ".", "Connections");
+        return new OVSParentReference(OVNSouthboundTableNames.Global, ".", "connections");
     }
 }

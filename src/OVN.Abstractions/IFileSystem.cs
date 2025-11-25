@@ -28,8 +28,9 @@ public interface IFileSystem
     string ResolveOvsFilePath(OvsFile file, bool platformNeutral = true);
 
     /// <summary>
-    /// Ensures that the path (parent directories) exists for the path.
-    /// Will only work for file paths and not for directories.
+    /// Ensures that the path (parent directories) exists for the file
+    /// with the given <paramref name="path"/>. Will only work for file
+    /// paths and not for directories.
     /// </summary>
     /// <param name="path">
     /// The path of the file.
@@ -40,8 +41,9 @@ public interface IFileSystem
     void EnsurePathForFileExists(string path, bool adminOnly = false);
 
     /// <summary>
-    /// Ensures that the path (parent directories) exists for the path.
-    /// Will only work for file paths and not for directories.
+    /// Ensures that the path (parent directories) exists for the
+    /// given <paramref name="file"/>. Will only work for file paths
+    /// and not for directories.
     /// </summary>
     /// <param name="file">
     /// The OVS file

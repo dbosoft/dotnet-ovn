@@ -4,5 +4,5 @@ public interface IPkiService
 {
     Task InitializeAsync();
 
-    Task<ChassisPkiResult> GenerateChassisPkiAsync(string chassisName);
+    Task<OvsPkiConfig> GenerateChassisPkiAsync(string chassisName);
 }

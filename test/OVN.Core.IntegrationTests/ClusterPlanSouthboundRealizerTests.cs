@@ -66,8 +66,8 @@ public class ClusterPlanSouthboundRealizerTests : OvnSouthboundControlToolTestBa
         var updatedChassisPki = await _pkiService.GenerateChassisPkiAsync("test-chassis");
         var updatedPlan = new ClusterPlan()
             .SetSouthboundSsl(updatedChassisPki.PrivateKey, updatedChassisPki.Certificate, updatedChassisPki.CaCertificate)
-            .AddSouthboundConnection(52421)
-            .AddSouthboundConnection(52422, true);
+            .AddSouthboundConnection(52421, false, IPAddress.Parse("127.0.0.1"))
+            .AddSouthboundConnection(52422, true, IPAddress.Parse("127.0.0.1"));
 
         await ApplyClusterPlan(updatedPlan);
 
@@ -103,12 +103,11 @@ public class ClusterPlanSouthboundRealizerTests : OvnSouthboundControlToolTestBa
         await Task.Delay(2000);
     }
 
-    private ClusterPlan CreateClusterPlan(ChassisPkiResult chassisPki) =>
+    private ClusterPlan CreateClusterPlan(OvsPkiConfig ovsPki) =>
         new ClusterPlan()
-            .SetSouthboundSsl(chassisPki.PrivateKey, chassisPki.Certificate, chassisPki.CaCertificate)
-            .AddSouthboundConnection(42421)
-            .AddSouthboundConnection(42422, true)
-            .AddSouthboundConnection(42423, true, IPAddress.Parse("203.0.113.2"));
+            .SetSouthboundSsl(ovsPki.PrivateKey, ovsPki.Certificate, ovsPki.CaCertificate)
+            .AddSouthboundConnection(42421, false, IPAddress.Parse("127.0.0.1"))
+            .AddSouthboundConnection(42422, true, IPAddress.Parse("127.0.0.1"));
 
     private OVNSouthboundControlTool CreateControlTool(int port, bool ssl)
     {

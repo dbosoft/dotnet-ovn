@@ -96,9 +96,9 @@ public class ChassisPlanRealizerTests : OvsControlToolTestBase
         (await realizer.ApplyChassisPlan(chassisPlan)).ThrowIfLeft();
     }
 
-    private ChassisPlan CreateChassisPlan(ChassisPkiResult chassisPki) =>
+    private ChassisPlan CreateChassisPlan(OvsPkiConfig ovsPki) =>
         new ChassisPlan("chassis-1")
-            .SetSwitchSsl(chassisPki.PrivateKey, chassisPki.Certificate, chassisPki.CaCertificate)
+            .SetSwitchSsl(ovsPki.PrivateKey, ovsPki.Certificate, ovsPki.CaCertificate)
             .SetSouthboundDatabase(IPAddress.Parse("203.0.113.1"))
             .AddGeneveTunnelEndpoint(IPAddress.Parse("203.0.113.2"))
             .AddBridgeMapping("extern", "br-extern");

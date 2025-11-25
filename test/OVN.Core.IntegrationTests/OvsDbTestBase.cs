@@ -15,7 +15,11 @@ public abstract class OvsDbTestBase : IAsyncLifetime
     // a path on the C: drive which has a fixed length. Otherwise, the
     // tests would randomly fail as the column widths in the database
     // snapshot would be changing.
-    private readonly string _dataDirectoryPath = Path.Combine(@"C:\", "dotnet-ovn-e2e", Path.GetRandomFileName()).Replace(@"\", "/");
+    private readonly string _dataDirectoryPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "dotnet-ovn-e2e",
+            Path.GetRandomFileName())
+        .Replace(@"\", "/");
     private readonly ILoggerFactory _loggerFactory;
     protected readonly ISystemEnvironment SystemEnvironment;
 

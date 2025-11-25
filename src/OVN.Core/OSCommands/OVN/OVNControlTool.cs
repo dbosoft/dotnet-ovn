@@ -1,6 +1,8 @@
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Dbosoft.OVN.OSCommands.OVN;
 
 public class OVNControlTool(
@@ -8,8 +10,8 @@ public class OVNControlTool(
     OvsDbConnection dbConnection)
     : OVSControlToolBase(systemEnvironment, dbConnection, OVNCommands.NorthboundControl)
 {
-    public EitherAsync<Error, Unit> InitDb(CancellationToken cancellationToken = default)
-    {
-        return RunCommand(" --no-wait init", true, cancellationToken).Map(_ => Unit.Default);
-    }
+    public EitherAsync<Error, Unit> InitDb(
+        CancellationToken cancellationToken = default) =>
+        from _ in RunCommand(" --no-wait init", true, cancellationToken)
+        select unit;
 }

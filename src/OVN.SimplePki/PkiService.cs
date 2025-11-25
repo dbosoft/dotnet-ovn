@@ -3,6 +3,14 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Dbosoft.OVN.SimplePki;
 
+/// <summary>
+/// A simple PKI service for generating OVS/OVN compatible certificates.
+/// The CA private key is stored in the file system.
+/// </summary>
+/// <remarks>
+/// This implementation is indented demonstration and testing purposes.
+/// Consumers are expected to use their PKI implementation.
+/// </remarks>
 public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
 {
     private static readonly OvsFile CaCertificate = new("/var/lib/openvswitch/pki/dotnetovnca", "cacert.pem");
@@ -54,7 +62,7 @@ public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
             NormalizePem(keyPair.ExportPkcs8PrivateKeyPem()));
     }
 
-    public async Task<ChassisPkiResult> GenerateChassisPkiAsync(string chassisName)
+    public async Task<OvsPkiConfig> GenerateChassisPkiAsync(string chassisName)
     {
         if(!systemEnvironment.FileSystem.FileExists(CaCertificate)
             || !systemEnvironment.FileSystem.FileExists(CaPrivateKey))
@@ -110,7 +118,7 @@ public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
             caCertificateWithKey.NotAfter,
             serial);
 
-        return new ChassisPkiResult(
+        return new OvsPkiConfig(
             NormalizePem(keyPair.ExportPkcs8PrivateKeyPem()),
             NormalizePem(certificate.ExportCertificatePem()),
             NormalizePem(caCertificatePem));

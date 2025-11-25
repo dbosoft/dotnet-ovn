@@ -21,15 +21,15 @@ public static class ChassisPlanConfigurationExtensions
         string privateKey,
         string certificate,
         string caCertificate) =>
-            plan with
+        plan with
+        {
+            PlannedSwitchSsl = new PlannedSwitchSsl
             {
-                PlannedSwitchSsl = new PlannedSwitchSsl
-                {
-                    PrivateKey = privateKey,
-                    Certificate = certificate,
-                    CaCertificate = caCertificate
-                },
-            };
+                PrivateKey = privateKey,
+                Certificate = certificate,
+                CaCertificate = caCertificate
+            },
+        };
 
     public static ChassisPlan AddGeneveTunnelEndpoint(
         this ChassisPlan plan,
