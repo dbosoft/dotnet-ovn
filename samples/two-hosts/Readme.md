@@ -1,4 +1,4 @@
-# Two host example
+# Setup with two hosts
 This examples demonstrates the configuration of a two-host cluster with dotnet-ovn.
 
 The setup consists of two Hyper-V hosts/chassis called `chassis-primary` and `chassis-secondary`:
@@ -26,7 +26,7 @@ The following is required for the example:
 7. Assign an IP address: `Enable-NetAdapter -Name br-extern; New-NetIPAddress -InterfaceAlias br-extern -IPAddress 192.168.240.101 -PrefixLength 24`
 8. Create a VM `vm-primary`
 9. Set the port name of the VM: `OVSAgent.exe hyperv portname set {adapterId} ovs_vm-primary`
-10. Add the VM port to the ingration bridge: `ovs-vsctl.exe -- add-port br-int ovs_vm-primary -- set interface ovs_vm-primary external_ids:iface-id=ovs_vm-primary`
+10. Add the VM port to the integration bridge: `ovs-vsctl.exe -- add-port br-int ovs_vm-primary -- set interface ovs_vm-primary external_ids:iface-id=ovs_vm-primary`
 
 ## Manual setup of `chassis-secondary`
 1. Install Hyper-V
@@ -38,7 +38,7 @@ The following is required for the example:
 7. Assign an IP address: `Enable-NetAdapter -Name br-extern; New-NetIPAddress -InterfaceAlias br-extern -IPAddress 192.168.240.102 -PrefixLength 24`
 8. Create a VM `vm-secondary`
 9. Set the port name of the VM: `OVSAgent.exe hyperv portname set {adapterId} ovs_vm-secondary`
-10. Add the VM port to the ingration bridge: `ovs-vsctl.exe -- add-port br-int ovs_vm-secondary -- set interface ovs_vm-secondary external_ids:iface-id=ovs_vm-secondary`
+10. Add the VM port to the integration bridge: `ovs-vsctl.exe -- add-port br-int ovs_vm-secondary -- set interface ovs_vm-secondary external_ids:iface-id=ovs_vm-secondary`
 
 ## Configuration of the cluster
 1. Apply the chassis plan on primary: `OVSAgent.exe chassisplan apply --file ".\chassisplan_primary.yaml"`

@@ -6,7 +6,7 @@ routers:
     chassis_group: dotnet-ovn
     switch: project-1-provider
     mac: 02:03:00:00:00:01
-    network: 192.168.242.110/24
+    network: 192.168.242.100/24
 
   ports: 
     - switch: project-1-switch
@@ -15,15 +15,15 @@ routers:
 
   nat:
   - snat:
-      external_address: 192.168.242.128
+      external_address: 192.168.242.101
       network: 10.0.100.0/24
   - dnat_and_snat:
-      external_address: 192.168.242.161
+      external_address: 192.168.242.111
       address: 10.0.100.111
       mac: 02:02:00:00:01:01
       port: ovs_vm-primary
   - dnat_and_snat:
-      external_address: 192.168.242.163
+      external_address: 192.168.242.121
       address: 10.0.100.121
       mac: 02:02:00:00:02:01
       port: ovs_vm-secondary
