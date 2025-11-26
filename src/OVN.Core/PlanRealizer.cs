@@ -1,7 +1,9 @@
-﻿using Dbosoft.OVN.Model;
+﻿using System.CodeDom;
+using System.Security.Cryptography;
+using System.Text;
+using Dbosoft.OVN.Model;
 using LanguageExt;
 using LanguageExt.Common;
-using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
@@ -9,13 +11,17 @@ namespace Dbosoft.OVN;
 
 public abstract class PlanRealizer
 {
-    private readonly ILogger _logger;
+    private const string PemCertificateHeader = "-----BEGIN CERTIFICATE-----";
+    private const string PemPrivateKeyHeader = "-----BEGIN PRIVATE KEY-----";
+    private const string RsaPemPrivateKeyHeader = "-----BEGIN RSA PRIVATE KEY-----";
+
+    private readonly ISystemEnvironment _systemEnvironment;
     private readonly IOVSDBTool _ovnDBTool;
 
-    protected PlanRealizer(IOVSDBTool ovnDBTool, ILogger logger)
+    protected PlanRealizer(ISystemEnvironment systemEnvironment, IOVSDBTool ovnDBTool)
     {
+        _systemEnvironment = systemEnvironment;
         _ovnDBTool = ovnDBTool;
-        _logger = logger;
     }
 
     protected EitherAsync<Error, HashMap<Guid, T>> FindRecords<T>(
@@ -202,4 +208,149 @@ public abstract class PlanRealizer
 
     private static bool IsUpdatable(string name, IOVSField value) =>
         name is not ("_uuid" or "__parentId") && value is not OVSReference;
+
+    /// <summary>
+    /// Applies the planned SSL configuration to the database.
+    /// </summary>
+    /// <remarks>
+    /// The SSL configuration is special as only one configuration
+    /// can exist at any given time.
+    /// </remarks>
+    protected EitherAsync<Error, Unit> ApplySsl<TPlannedSsl, TSsl, TGlobal>(
+        Option<TPlannedSsl> plannedSsl,
+        string globalTableName,
+        CancellationToken cancellationToken)
+        where TPlannedSsl : PlannedOvsSsl
+        where TSsl : OVSSslTableRecord, new()
+        where TGlobal : OVSGlobalTableRecord, IHasOVSReferences<TSsl>, new() =>
+        from global in FindRecords<TGlobal>(
+            globalTableName,
+            OVSGlobalTableRecord.Columns,
+            cancellationToken: cancellationToken)
+        from sslWithPaths in EnsureCertificateFiles(
+            plannedSsl,
+            cancellationToken)
+        let plannedSslMap = sslWithPaths
+            .Map(s => (s.Name, s))
+            .ToHashMap()
+        from existingSsl in FindRecordsWithParents<TSsl, TGlobal>(
+            "SSL",
+            global.Values.ToSeq(),
+            OVSSslTableRecord.Columns,
+            cancellationToken: cancellationToken)
+        from remainingSsl in RemoveEntitiesNotPlanned<TSsl, TPlannedSsl>(
+            "SSL",
+            existingSsl,
+            plannedSslMap,
+            cancellationToken: cancellationToken)
+        from existingPlannedSsl in CreatePlannedEntities<TSsl, TPlannedSsl>(
+            "SSL",
+            remainingSsl,
+            plannedSslMap,
+            cancellationToken: cancellationToken)
+        from _3 in UpdateEntities(
+            "SSL",
+            remainingSsl,
+            existingPlannedSsl,
+            cancellationToken: cancellationToken)
+        from _4 in RemovedUnusedCertificates(sslWithPaths, existingSsl)
+        select unit;
+
+    private EitherAsync<Error, Option<TPlannedSsl>> EnsureCertificateFiles<TPlannedSsl>(
+        Option<TPlannedSsl> plannedSouthboundSsl,
+        CancellationToken cancellationToken)
+        where TPlannedSsl : PlannedOvsSsl =>
+        from updated in plannedSouthboundSsl
+            .Map(s => EnsureCertificateFiles(s, cancellationToken))
+            .Sequence()
+        select updated;
+
+    private EitherAsync<Error, TPlannedSsl> EnsureCertificateFiles<TPlannedSsl>(
+        TPlannedSsl plannedSouthboundSsl,
+        CancellationToken cancellationToken)
+        where TPlannedSsl : PlannedOvsSsl =>
+        from caCertificatePem in Optional(plannedSouthboundSsl.CaCertificate)
+            .ToEitherAsync(Error.New("The CA certificate is missing"))
+        from _1 in guard(caCertificatePem.StartsWith(PemCertificateHeader),
+            Error.New("The CA certificate must be a PEM encoded string."))
+        from certificatePem in Optional(plannedSouthboundSsl.Certificate)
+            .ToEitherAsync(Error.New("The certificate is missing"))
+        from _2 in guard(certificatePem.StartsWith(PemCertificateHeader),
+            Error.New("The certificate must be a PEM encoded string."))
+        from privateKeyPem in Optional(plannedSouthboundSsl.PrivateKey)
+            .ToEitherAsync(Error.New("The private key is missing"))
+        from _3 in guard(privateKeyPem.StartsWith(PemPrivateKeyHeader)
+                         || privateKeyPem.StartsWith(RsaPemPrivateKeyHeader),
+            Error.New("The private key must be a PEM encoded string."))
+        // The generated file names contain a hash of the content. This
+        // way, the changes can be made transactionally as changes do
+        // not overwrite existing files.
+        let caCertificateFile = new OvsFile(
+            "/etc/openvswitch",
+            $"cacert_{ComputeHash(caCertificatePem)}.pem")
+        let certificateFile = new OvsFile(
+            "/etc/openvswitch",
+            $"cert_{ComputeHash(certificatePem)}.pem")
+        let privateKeyFile = new OvsFile(
+            "/etc/openvswitch/private",
+            $"key_{ComputeHash(privateKeyPem)}.pem")
+        from _4 in EnsureCertificateFile(caCertificateFile, caCertificatePem, adminOnly: false, cancellationToken)
+        from _5 in EnsureCertificateFile(certificateFile, certificatePem, adminOnly: false, cancellationToken)
+        from _6 in EnsureCertificateFile(privateKeyFile, privateKeyPem, adminOnly: true, cancellationToken)
+        select plannedSouthboundSsl with
+        {
+            CaCertificate = _systemEnvironment.FileSystem.ResolveOvsFilePath(caCertificateFile),
+            Certificate = _systemEnvironment.FileSystem.ResolveOvsFilePath(certificateFile),
+            PrivateKey = _systemEnvironment.FileSystem.ResolveOvsFilePath(privateKeyFile)
+        };
+
+    private EitherAsync<Error, Unit> EnsureCertificateFile(
+        OvsFile file,
+        string content,
+        bool adminOnly,
+        CancellationToken cancellationToken) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let path = _systemEnvironment.FileSystem.ResolveOvsFilePath(file, false)
+        from _2 in TryAsync(async () =>
+        {
+            if (_systemEnvironment.FileSystem.FileExists(file))
+                return unit;
+
+            _systemEnvironment.FileSystem.EnsurePathForFileExists(file, adminOnly);
+            await _systemEnvironment.FileSystem.WriteFileAsync(file, content, cancellationToken);
+            return unit;
+        }).ToEither()
+        select unit;
+
+    private EitherAsync<Error, Unit> RemovedUnusedCertificates<TPlannedSsl, TSsl>(
+        Option<TPlannedSsl> plannedSsl,
+        HashMap<Guid, TSsl> existingSsl)
+        where TPlannedSsl : PlannedOvsSsl
+        where TSsl : OVSSslTableRecord, new() =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let plannedFiles = plannedSsl.Bind(s => Optional(s.CaCertificate)).ToSeq()
+                           + plannedSsl.Bind(s => Optional(s.Certificate)).ToSeq()
+                           + plannedSsl.Bind(s => Optional(s.PrivateKey)).ToSeq()
+        let existingFiles = existingSsl.Values.ToSeq()
+            .Bind(s => Optional(s.CaCertificate).ToSeq()
+                       + Optional(s.Certificate).ToSeq()
+                       + Optional(s.PrivateKey).ToSeq())
+        from _2 in existingFiles.Except(plannedFiles).ToSeq()
+            .Map(RemoveFile)
+            .SequenceSerial()
+        select unit;
+
+    private EitherAsync<Error, Unit> RemoveFile(string path) =>
+        Try(() =>
+        {
+            _systemEnvironment.FileSystem.DeleteFile(path);
+            return unit;
+        }).ToEitherAsync();
+
+    private static string ComputeHash(string content)
+    {
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
 }

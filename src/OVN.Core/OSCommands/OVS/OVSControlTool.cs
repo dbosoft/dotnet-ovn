@@ -1,57 +1,30 @@
-using System.Net;
 using System.Text;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Dbosoft.OVN.OSCommands.OVS;
 
-public class OVSControlTool : OVSTool
+public class OVSControlTool(
+    ISystemEnvironment systemEnvironment,
+    OvsDbConnection dbConnection,
+    bool noWait = false)
+    : OVSControlToolBase(systemEnvironment, dbConnection, OVSCommands.VSwitchControl)
 {
-    private readonly OvsDbConnection _dbConnection;
-    private readonly bool _noWait;
-    private readonly ISystemEnvironment _systemEnvironment;
-
-    public OVSControlTool(
-        ISystemEnvironment systemEnvironment,
-        OvsDbConnection dbConnection,
-        bool noWait = false)
-        : base(systemEnvironment, OVSCommands.VSwitchControl)
-    {
-        _systemEnvironment = systemEnvironment;
-        _dbConnection = dbConnection;
-        _noWait = noWait;
-    }
 
     protected override string BuildArguments(string command)
     {
         var sb = new StringBuilder();
-        if (_noWait)
+        if (noWait)
             sb.Append("--no-wait ");
         
-        sb.Append($"--db=\"{_dbConnection.GetCommandString(_systemEnvironment.FileSystem, false)}\" ");
         sb.Append(base.BuildArguments(command));
         return sb.ToString();
     }
 
-    public EitherAsync<Error, Unit> InitDb(CancellationToken cancellationToken = default)
-    {
-        return RunCommand("--no-wait init", true, cancellationToken).Map(_ => Unit.Default);
-    }
-
-    public EitherAsync<Error, Unit> ConfigureOVN(
-        OvsDbConnection sbDBConnection,
-        string chassisName,
-        IPAddress? encapIp = null,
-        string encapType = "geneve",
-        CancellationToken cancellationToken = default)
-    {
-        var sb = new StringBuilder();
-        sb.Append(
-            $"-- set open . external-ids:ovn-remote=\"{sbDBConnection.GetCommandString(_systemEnvironment.FileSystem, false)}\" ");
-        sb.Append($"-- set open . external-ids:ovn-encap-type={encapType} ");
-        sb.Append($"-- set open . external-ids:ovn-encap-ip={encapIp ?? IPAddress.Loopback} ");
-        sb.Append($"-- set open . external-ids:system-id={chassisName} ");
-
-        return RunCommand(sb.ToString(), true, cancellationToken).Map(_ => Unit.Default);
-    }
+    public EitherAsync<Error, Unit> InitDb(
+        CancellationToken cancellationToken = default) =>
+        from _ in RunCommand($"{(noWait ? "" : "--no -wait ")}init", true, cancellationToken)
+        select unit;
 }

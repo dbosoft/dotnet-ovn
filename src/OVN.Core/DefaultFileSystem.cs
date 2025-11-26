@@ -1,5 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Security.Principal;
+using System.Text;
 using JetBrains.Annotations;
 
 namespace Dbosoft.OVN;
@@ -51,30 +54,135 @@ public class DefaultFileSystem : IFileSystem
     }
 
     [ExcludeFromCodeCoverage]
-    public void EnsurePathForFileExists(string path)
+    public void EnsurePathForFileExists(string path, bool adminOnly = false)
     {
         var platformPath = ConvertPathToPlatform(path);
         platformPath = Path.GetDirectoryName(platformPath);
 
-        if (platformPath == null)
-            return;
+        if (platformPath is null)
+            throw new ArgumentException("The path does not contain a valid directory.", nameof(path));
 
         var directoryInfo = new DirectoryInfo(platformPath);
-        if (!directoryInfo.Exists)
-            directoryInfo.Create();
+        directoryInfo.Create();
+
+        if (!adminOnly)
+            return;
+        
+        SetAdminOnlyPermissions(directoryInfo);
     }
-    
-    public void EnsurePathForFileExists(OvsFile file)
+
+    public void EnsurePathForFileExists(OvsFile file, bool adminOnly = false)
     {
         var path = ResolveOvsFilePath(file);
         EnsurePathForFileExists(path);
     }
-    
-    public string ReadFileAsString(string path)
+
+    public void DeleteFile(string path)
     {
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        using var sr = new StreamReader(stream);
-        return sr.ReadToEnd();
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // Ignore the exception when the path does not exist
+        }
+    }
+
+    public void DeleteFile(OvsFile file)
+    {
+        var path = ResolveOvsFilePath(file);
+        DeleteFile(path);
+    }
+
+    public async Task<string> ReadFileAsync(
+        string path,
+        CancellationToken cancellationToken = default)
+    {
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var sr = new StreamReader(stream, Encoding.UTF8);
+        return await sr.ReadToEndAsync(cancellationToken);
+    }
+
+    public async Task<string> ReadFileAsync(
+        OvsFile file,
+        CancellationToken cancellationToken = default)
+    {
+        var path = ResolveOvsFilePath(file);
+        return await ReadFileAsync(path, cancellationToken);
+    }
+
+    public async Task WriteFileAsync(
+        string path,
+        string content,
+        CancellationToken cancellationToken = default)
+    {
+        await using var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+        await using var sw = new StreamWriter(stream, Encoding.UTF8);
+        await sw.WriteAsync(new StringBuilder(content), cancellationToken);
+    }
+
+    public Task WriteFileAsync(
+        OvsFile file,
+        string content,
+        CancellationToken cancellationToken = default)
+    {
+        var path = ResolveOvsFilePath(file);
+        return WriteFileAsync(path, content, cancellationToken);
+    }
+
+    protected virtual string GetDataRootPath() =>
+        _platform == OSPlatform.Windows
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "openvswitch").Replace(@"\", "/") + "/"
+            : "/";
+
+    protected virtual string GetProgramRootPath() =>
+        _platform == OSPlatform.Windows ? "C:/openvswitch/" : "/";
+
+    protected virtual void SetAdminOnlyPermissions(
+        DirectoryInfo directoryInfo)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(
+                directoryInfo.FullName,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            return;
+        }
+
+        var directorySecurity = new DirectorySecurity();
+        IdentityReference adminId = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+        var adminAccess = new FileSystemAccessRule(
+            adminId,
+            FileSystemRights.FullControl,
+            InheritanceFlags.ObjectInherit | InheritanceFlags.ContainerInherit,
+            PropagationFlags.None,
+            AccessControlType.Allow);
+
+        IdentityReference systemId = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+        var systemAccess = new FileSystemAccessRule(
+            systemId,
+            FileSystemRights.FullControl,
+            InheritanceFlags.ObjectInherit | InheritanceFlags.ContainerInherit,
+            PropagationFlags.None,
+            AccessControlType.Allow);
+
+        directorySecurity.AddAccessRule(adminAccess);
+        directorySecurity.AddAccessRule(systemAccess);
+        
+        directorySecurity.SetAccessRuleProtection(true, true);
+        
+        directoryInfo.SetAccessControl(directorySecurity);
+    }
+
+    private DirectoryInfo CreateDirectoryInfo(string path)
+    {
+        var platformPath = ConvertPathToPlatform(path);
+        platformPath = Path.GetDirectoryName(platformPath);
+
+        return platformPath is not null
+            ? new DirectoryInfo(platformPath)
+            : throw new ArgumentException("The path does not contain a valid directory.", nameof(path));
     }
 
     private string ConvertPathToPlatform(string inputPath)
@@ -95,12 +203,4 @@ public class DefaultFileSystem : IFileSystem
             ? $"{GetProgramRootPath()}{pathRoot}"
             : $"{GetDataRootPath()}{pathRoot}";
     }
-
-    protected virtual string GetDataRootPath() =>
-        _platform == OSPlatform.Windows
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "openvswitch").Replace(@"\", "/") + "/"
-            : "/";
-
-    protected virtual string GetProgramRootPath() =>
-        _platform == OSPlatform.Windows ? "C:/openvswitch/" : "/";
 }

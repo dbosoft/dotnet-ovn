@@ -39,24 +39,11 @@ public class OVNChassisNode : DemonNodeBase
             _loggerFactory.CreateLogger<OVNControllerProcess>());
     }
 
-
-    protected override EitherAsync<Error, Unit> OnProcessStarted(DemonProcessBase process,
+    protected override EitherAsync<Error, Unit> OnProcessStarted(
+        DemonProcessBase process,
         CancellationToken cancellationToken)
     {
-        return WaitForDbSocket(cancellationToken)
-            .Bind(_ => ConfigureController(cancellationToken));
-
-    }
-
-    private EitherAsync<Error, Unit> ConfigureController(CancellationToken cancellationToken)
-    {
-        // when init is still running this could take a while...
-        var timeout = new CancellationTokenSource(new TimeSpan(0,5,0));
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-
-        var ovsControl = new OVSControlTool(_systemEnvironment, LocalOVSConnection);
-        return ovsControl.ConfigureOVN(_ovnSettings.SouthDBConnection, "local",
-            cancellationToken: cts.Token);
+        return WaitForDbSocket(cancellationToken);
     }
     
     private EitherAsync<Error, Unit> WaitForDbSocket(CancellationToken cancellationToken)
@@ -81,5 +68,4 @@ public class OVNChassisNode : DemonNodeBase
 
         return WaitForDbSocketAsync().ToAsync();
     }
-    
 }

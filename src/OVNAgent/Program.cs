@@ -1,10 +1,13 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
+using System.Net;
 using System.Reflection;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.OSCommands.OVN;
+using Dbosoft.OVN.OSCommands.OVS;
+using Dbosoft.OVN.SimplePki;
 #if WINDOWS
 using Dbosoft.OVN.Windows;
 #endif
@@ -17,8 +20,17 @@ using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
+if (!AdminGuard.IsElevated())
+{
+    await Console.Error.WriteLineAsync(
+        "This command requires elevated privileges. Please run the command as an administrator.");
+    // Return the proper HResult / errno for permission denied
+    return OperatingSystem.IsWindows() ? unchecked((int)0x80070005) : 0x0d;
+}
+
 var logLevelOptions = new System.CommandLine.Option<LogLevel>("--logLevel", () => LogLevel.Information);
 var nodeTypeOptions = new System.CommandLine.Option<NodeType>("--nodes", () => NodeType.AllInOne );
+var fileOption = new System.CommandLine.Option<FileInfo>("--file");
 
 var rootCommand = new RootCommand();
 rootCommand.AddGlobalOption(logLevelOptions);
@@ -31,11 +43,40 @@ rootCommand.Add(runCommand);
 var netplanCommand = new Command("netplan", "netplan commands");
 rootCommand.Add(netplanCommand);
 
-var applyCommand = new Command("apply", "apply network plan");
-var fileOption = new System.CommandLine.Option<FileInfo>("--file");
-applyCommand.AddOption(fileOption);
-applyCommand.SetHandler(ApplyNetplan, logLevelOptions, fileOption);
-netplanCommand.AddCommand(applyCommand);
+var netplanApplyCommand = new Command("apply", "apply network plan");
+netplanApplyCommand.AddOption(fileOption);
+netplanApplyCommand.SetHandler(ApplyNetplan, logLevelOptions, fileOption);
+netplanCommand.AddCommand(netplanApplyCommand);
+
+var clusterPlanCommand = new Command("clusterplan", "cluster plan commands");
+rootCommand.Add(clusterPlanCommand);
+
+var clusterPlanApplyCommand = new Command("apply", "apply cluster plan");
+clusterPlanApplyCommand.AddOption(fileOption);
+clusterPlanApplyCommand.SetHandler(ApplyClusterPlan, logLevelOptions, fileOption);
+clusterPlanCommand.AddCommand(clusterPlanApplyCommand);
+
+var chassisPlanCommand = new Command("chassisplan", "chassis plan commands");
+rootCommand.Add(chassisPlanCommand);
+
+var chassisPlanApplyCommand = new Command("apply", "apply chassis plan");
+chassisPlanApplyCommand.AddOption(fileOption);
+chassisPlanApplyCommand.SetHandler(ApplyChassisPlan, logLevelOptions, fileOption);
+chassisPlanCommand.AddCommand(chassisPlanApplyCommand);
+
+var pkiCommand = new Command("pki", "PKI commands");
+rootCommand.Add(pkiCommand);
+
+var pkiInitCommand = new Command("init", "Initialize a new PKI");
+pkiInitCommand.SetHandler(InitializePki, logLevelOptions);
+pkiCommand.AddCommand(pkiInitCommand);
+
+var pkiGenerateConfigCommand = new Command("generate-config", "Generates an SSL config for a chassis");
+var chassisNameArgument = new Argument<string>("chassisName", "OVN chassis name");
+pkiGenerateConfigCommand.AddArgument(chassisNameArgument);
+pkiGenerateConfigCommand.SetHandler(CreateChassisPki, logLevelOptions, chassisNameArgument);
+pkiCommand.AddCommand(pkiGenerateConfigCommand);
+
 
 var serviceCommand = new Command("service", "service commands");
 rootCommand.Add(serviceCommand);
@@ -120,22 +161,18 @@ static Task RunCommand(LogLevel logLevel, NodeType nodeType)
         {
             AddOVNCore(services);
             
-            if (nodeType is NodeType.AllInOne or NodeType.OVNCentral or NodeType.OVNDB)
+            if (nodeType is NodeType.AllInOne or NodeType.OVNCentral)
             {
                 services.AddHostedNode<OVNDatabaseNode>();
+                services.AddHostedNode<NetworkControllerNode>();
             }
 
-            if (nodeType is not (NodeType.AllInOne or NodeType.OVNCentral or NodeType.OVNController))
-                return;
-            
-            services.AddHostedNode<NetworkControllerNode>();
-
-            if (nodeType is not (NodeType.AllInOne or NodeType.Chassis))
-                return;
-             
-            services.AddHostedNode<OVSDbNode>();
-            services.AddHostedNode<OVSSwitchNode>();
-            services.AddHostedNode<OVNChassisNode>();
+            if (nodeType is NodeType.AllInOne or NodeType.Chassis)
+            {
+                services.AddHostedNode<OVSDbNode>();
+                services.AddHostedNode<OVSSwitchNode>();
+                services.AddHostedNode<OVNChassisNode>();
+            }
         })
         .Build();
 
@@ -160,6 +197,7 @@ static async Task<int> ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
             AddOVNCore(services);
             services.AddSingleton(
                 sp => new NetworkPlanRealizer(
+                    sp.GetRequiredService<ISystemEnvironment>(),
                     new OVNControlTool(
                         sp.GetRequiredService<ISystemEnvironment>(),
                         sp.GetRequiredService<IOVNSettings>().NorthDBConnection),
@@ -178,6 +216,117 @@ static async Task<int> ApplyNetplan(LogLevel logLevel, FileInfo netplanFile)
                 Error.New("Failed to apply network plan.", error)));
             return -1;
         });
+}
+
+static async Task<int> ApplyClusterPlan(LogLevel logLevel, FileInfo clusterPlanFile)
+{
+    string yaml = await ReadTextAsync(clusterPlanFile);
+    var netplan = ClusterPlanParser.ParseYaml(yaml);
+
+    var host = Host.CreateDefaultBuilder()
+        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
+        .ConfigureServices(services =>
+        {
+
+            AddOVNCore(services);
+            services.AddSingleton(
+                sp => new ClusterPlanRealizer(
+                    sp.GetRequiredService<ISystemEnvironment>(),
+                    new OVNControlTool(
+                        sp.GetRequiredService<ISystemEnvironment>(),
+                        sp.GetRequiredService<IOVNSettings>().NorthDBConnection),
+                    new OVNSouthboundControlTool(
+                        sp.GetRequiredService<ISystemEnvironment>(),
+                        sp.GetRequiredService<IOVNSettings>().SouthDBConnection)));
+        })
+        .Build();
+
+    var result = await host.Services.GetRequiredService<ClusterPlanRealizer>()
+        .ApplyClusterPlan(netplan);
+
+    return result.Match(
+        Right: _ => 0,
+        Left: error =>
+        {
+            Console.WriteLine(ErrorUtils.PrintError(
+                Error.New("Failed to apply cluster plan.", error)));
+            return -1;
+        });
+}
+
+static async Task<int> ApplyChassisPlan(LogLevel logLevel, FileInfo chassisPlanFile)
+{
+    string yaml = await ReadTextAsync(chassisPlanFile);
+    var netplan = ChassisPlanParser.ParseYaml(yaml);
+
+    var host = Host.CreateDefaultBuilder()
+        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
+        .ConfigureServices(services =>
+        {
+
+            AddOVNCore(services);
+            services.AddSingleton(
+                sp => new ChassisPlanRealizer(
+                    sp.GetRequiredService<ISystemEnvironment>(),
+                    new OVSControlTool(
+                        sp.GetRequiredService<ISystemEnvironment>(),
+                        LocalConnections.Switch)));
+        })
+        .Build();
+
+    var result = await host.Services.GetRequiredService<ChassisPlanRealizer>()
+        .ApplyChassisPlan(netplan);
+
+    return result.Match(
+        Right: _ => 0,
+        Left: error =>
+        {
+            Console.WriteLine(ErrorUtils.PrintError(
+                Error.New("Failed to apply chassis plan.", error)));
+            return -1;
+        });
+}
+
+static async Task<int> InitializePki(LogLevel logLevel)
+{
+    var host = Host.CreateDefaultBuilder()
+        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
+        .ConfigureServices(services =>
+        {
+            AddOVNCore(services);
+            services.AddSingleton<IPkiService, PkiService>();
+        })
+        .Build();
+
+    await host.Services.GetRequiredService<IPkiService>().InitializeAsync();
+    return 0;
+}
+
+static async Task<int> CreateChassisPki(LogLevel logLevel, string chassisName)
+{
+    var host = Host.CreateDefaultBuilder()
+        .ConfigureLogging(cfg => cfg.SetMinimumLevel(logLevel))
+        .ConfigureServices(services =>
+        {
+            AddOVNCore(services);
+            services.AddSingleton<IPkiService, PkiService>();
+        })
+        .Build();
+
+    var pkiResult = await host.Services.GetRequiredService<IPkiService>()
+        .GenerateChassisPkiAsync(chassisName);
+
+    var config = new OvsPkiConfigOutput()
+    {
+        PrivateKey = pkiResult.PrivateKey,
+        Certificate = pkiResult.Certificate,
+        CaCertificate = pkiResult.CaCertificate
+    };
+
+    var yaml = OvsPkiConfigOutputYamlSerializer.Serialize(config);
+    Console.WriteLine(yaml);
+
+    return 0;
 }
 
 #if WINDOWS
@@ -296,33 +445,31 @@ static void AddOVNCore(IServiceCollection services)
     services.AddSingleton<IOVNSettings, LocalOVSWithOVNSettings>();
 }
 
+static async Task<string> ReadTextAsync(FileInfo fileInfo)
+{
+    using var reader = fileInfo.OpenText();
+    return await reader.ReadToEndAsync();
+}
+
 /// <summary>
-/// Type of started node(s)
+/// The type of node which is started.
 /// </summary>
 public enum NodeType
 {
     /// <summary>
-    /// Run all OVN nodes
+    /// Runs all OVN and OVS processes.
     /// </summary>
     AllInOne,
     
     /// <summary>
-    /// Run only chassis node
+    /// Runs only the processes which are necessary for
+    /// an OVN chassis (ovs processes and ovn-controller).
     /// </summary>
     Chassis,
     
     /// <summary>
-    /// Run all nodes except the chassis node
+    /// Run only the central management processes for OVN
+    /// (databases and northd).
     /// </summary>
     OVNCentral,
-    
-    /// <summary>
-    /// Run OVN database node
-    /// </summary>
-    OVNDB,
-    
-    /// <summary>
-    /// RUn OVN controller
-    /// </summary>
-    OVNController
 }

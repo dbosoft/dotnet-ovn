@@ -9,4 +9,7 @@ public record OVSDbSettings(
     OvsFile ControlFile,
     OvsFile LogFile,
     OvsLoggingSettings LoggingSettings,
-    bool AllowAttach);
+    string DatabaseName,
+    string GlobalTableName,
+    bool AllowAttach,
+    bool UseRemotesFromDatabase);

@@ -1,0 +1,139 @@
+﻿ACL table
+_uuid action direction external_ids label log match meter name options priority sample_est sample_new severity tier
+----- ------ --------- ------------ ----- --- ----- ----- ---- ------- -------- ---------- ---------- -------- ----
+
+Address_Set table
+_uuid addresses external_ids name
+----- --------- ------------ ----
+
+BFD table
+_uuid detect_mult dst_ip external_ids logical_port min_rx min_tx options status
+----- ----------- ------ ------------ ------------ ------ ------ ------- ------
+
+Chassis_Template_Var table
+_uuid chassis external_ids variables
+----- ------- ------------ ---------
+
+Connection table
+_uuid external_ids inactivity_probe is_connected max_backoff other_config status target
+----- ------------ ---------------- ------------ ----------- ------------ ------ ------
+
+Copp table
+_uuid external_ids meters name
+----- ------------ ------ ----
+
+DHCP_Options table
+_uuid cidr external_ids options
+----- ---- ------------ -------
+
+DHCP_Relay table
+_uuid external_ids name options servers
+----- ------------ ---- ------- -------
+
+DNS table
+_uuid external_ids options records
+----- ------------ ------- -------
+
+Forwarding_Group table
+_uuid child_port external_ids liveness name vip vmac
+----- ---------- ------------ -------- ---- --- ----
+
+Gateway_Chassis table
+_uuid chassis_name external_ids name options priority
+----- ------------ ------------ ---- ------- --------
+
+HA_Chassis table
+_uuid                                chassis_name external_ids priority
+------------------------------------ ------------ ------------ --------
+Guid_0000000000000000000000000000001 chassis-3    {}           25
+Guid_0000000000000000000000000000002 chassis-4    {}           50
+
+HA_Chassis_Group table
+_uuid                                external_ids ha_chassis                                                                   name
+------------------------------------ ------------ ---------------------------------------------------------------------------- ---------------
+Guid_0000000000000000000000000000003 {}           [Guid_0000000000000000000000000000001, Guid_0000000000000000000000000000002] chassis-group-2
+
+Load_Balancer table
+_uuid external_ids health_check ip_port_mappings name options protocol selection_fields vips
+----- ------------ ------------ ---------------- ---- ------- -------- ---------------- ----
+
+Load_Balancer_Group table
+_uuid load_balancer name
+----- ------------- ----
+
+Load_Balancer_Health_Check table
+_uuid external_ids options vip
+----- ------------ ------- ---
+
+Logical_Router table
+_uuid copp enabled external_ids load_balancer load_balancer_group name nat options policies ports static_routes
+----- ---- ------- ------------ ------------- ------------------- ---- --- ------- -------- ----- -------------
+
+Logical_Router_Policy table
+_uuid action bfd_sessions chain external_ids jump_chain match nexthop nexthops options priority
+----- ------ ------------ ----- ------------ ---------- ----- ------- -------- ------- --------
+
+Logical_Router_Port table
+_uuid dhcp_relay enabled external_ids gateway_chassis ha_chassis_group ipv6_prefix ipv6_ra_configs mac name networks options peer status
+----- ---------- ------- ------------ --------------- ---------------- ----------- --------------- --- ---- -------- ------- ---- ------
+
+Logical_Router_Static_Route table
+_uuid bfd external_ids ip_prefix nexthop options output_port policy route_table selection_fields
+----- --- ------------ --------- ------- ------- ----------- ------ ----------- ----------------
+
+Logical_Switch table
+_uuid acls copp dns_records external_ids forwarding_groups load_balancer load_balancer_group name other_config ports qos_rules
+----- ---- ---- ----------- ------------ ----------------- ------------- ------------------- ---- ------------ ----- ---------
+
+Logical_Switch_Port table
+_uuid addresses dhcpv4_options dhcpv6_options dynamic_addresses enabled external_ids ha_chassis_group mirror_rules name options parent_name peer port_security tag tag_request type up
+----- --------- -------------- -------------- ----------------- ------- ------------ ---------------- ------------ ---- ------- ----------- ---- ------------- --- ----------- ---- --
+
+Meter table
+_uuid bands external_ids fair name unit
+----- ----- ------------ ---- ---- ----
+
+Meter_Band table
+_uuid action burst_size external_ids rate
+----- ------ ---------- ------------ ----
+
+Mirror table
+_uuid external_ids filter index name sink type
+----- ------------ ------ ----- ---- ---- ----
+
+NAT table
+_uuid allowed_ext_ips exempted_ext_ips external_ids external_ip external_mac external_port_range gateway_port logical_ip logical_port match options priority type
+----- --------------- ---------------- ------------ ----------- ------------ ------------------- ------------ ---------- ------------ ----- ------- -------- ----
+
+NB_Global table
+_uuid                                connections external_ids hv_cfg hv_cfg_timestamp ipsec name nb_cfg nb_cfg_timestamp options sb_cfg sb_cfg_timestamp ssl
+------------------------------------ ----------- ------------ ------ ---------------- ----- ---- ------ ---------------- ------- ------ ---------------- ---
+Guid_0000000000000000000000000000004 []          {}           0      0                false ""   0      0                {}      0      0                []
+
+Port_Group table
+_uuid acls external_ids name ports
+----- ---- ------------ ---- -----
+
+QoS table
+_uuid action bandwidth direction external_ids match priority
+----- ------ --------- --------- ------------ ----- --------
+
+SSL table
+_uuid bootstrap_ca_cert ca_cert certificate external_ids private_key ssl_ciphers ssl_ciphersuites ssl_protocols
+----- ----------------- ------- ----------- ------------ ----------- ----------- ---------------- -------------
+
+Sample table
+_uuid collectors metadata
+----- ---------- --------
+
+Sample_Collector table
+_uuid external_ids id name probability set_id
+----- ------------ -- ---- ----------- ------
+
+Sampling_App table
+_uuid external_ids id type
+----- ------------ -- ----
+
+Static_MAC_Binding table
+_uuid ip logical_port mac override_dynamic_mac
+----- -- ------------ --- --------------------

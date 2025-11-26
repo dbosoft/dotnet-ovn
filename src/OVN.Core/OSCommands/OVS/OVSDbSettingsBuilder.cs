@@ -1,9 +1,12 @@
-﻿using System;
+﻿using Dbosoft.OVN.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Dbosoft.OVN.Logging;
+using Dbosoft.OVN.Model.OVN;
+using Dbosoft.OVN.Model.OVS;
+using static LanguageExt.Prelude;
 
 namespace Dbosoft.OVN.OSCommands.OVS;
 
@@ -12,6 +15,7 @@ public abstract class OVSDbSettingsBuilder
     protected OvsDbConnection? _dbConnection;
     protected OvsLoggingSettings _loggingSettings = new();
     protected bool _allowAttach;
+    protected bool _useRemoteConfigsFromDatabase;
 
     public static OVSDbSettingsBuilder ForNorthbound() => new NorthboundDbSettingsBuilder();
 
@@ -22,6 +26,13 @@ public abstract class OVSDbSettingsBuilder
     public OVSDbSettingsBuilder WithDbConnection(OvsDbConnection dbConnection)
     {
         _dbConnection = dbConnection;
+        return this;
+    }
+
+    public OVSDbSettingsBuilder UseRemoteConfigsFromDatabase(
+        bool useConnectionsFromDb)
+    {
+        _useRemoteConfigsFromDatabase = useConnectionsFromDb;
         return this;
     }
 
@@ -50,7 +61,10 @@ public abstract class OVSDbSettingsBuilder
                 new OvsFile("var/run/ovn", "ovn_nb.ctl"),
                 new OvsFile("var/log/ovn", "ovn-nb.log"),
                 _loggingSettings,
-                _allowAttach);
+                "OVN_Northbound",
+                OVNTableNames.Global,
+                _allowAttach,
+                _useRemoteConfigsFromDatabase);
         }
     }
 
@@ -65,7 +79,10 @@ public abstract class OVSDbSettingsBuilder
                 new OvsFile("var/run/ovn", "ovn_sb.ctl"),
                 new OvsFile("var/log/ovn", "ovn-sb.log"),
                 _loggingSettings,
-                _allowAttach);
+                "OVN_Southbound",
+                OVNSouthboundTableNames.Global,
+                _allowAttach,
+                _useRemoteConfigsFromDatabase);
         }
     }
 
@@ -80,7 +97,10 @@ public abstract class OVSDbSettingsBuilder
                 new OvsFile("var/run/openvswitch", "ovs-db.ctl"),
                 new OvsFile("var/log/openvswitch", "ovs-db.log"),
                 _loggingSettings,
-                _allowAttach);
+                "Open_vSwitch",
+                OVSTableNames.Global,
+                _allowAttach,
+                _useRemoteConfigsFromDatabase);
         }
     }
 }

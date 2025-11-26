@@ -28,23 +28,49 @@ public interface IFileSystem
     string ResolveOvsFilePath(OvsFile file, bool platformNeutral = true);
 
     /// <summary>
-    /// Ensures that the path (parent directories) exists for the path.
-    /// Will only work for file paths and not for directories.
+    /// Ensures that the path (parent directories) exists for the file
+    /// with the given <paramref name="path"/>. Will only work for file
+    /// paths and not for directories.
     /// </summary>
-    /// <param name="path">path of file</param>
-    void EnsurePathForFileExists(string path);
-    
-    /// <summary>
-    /// Ensures that the path (parent directories) exists for the path.
-    /// Will only work for file paths and not for directories.
-    /// </summary>
-    /// <param name="file">OVS file</param>
-    void EnsurePathForFileExists(OvsFile file);
+    /// <param name="path">
+    /// The path of the file.
+    /// </param>
+    /// <param name="adminOnly">
+    /// Indicates that the access to the directory should be restricted to administrators.
+    /// </param>
+    void EnsurePathForFileExists(string path, bool adminOnly = false);
 
     /// <summary>
-    /// read the content of file as string
+    /// Ensures that the path (parent directories) exists for the
+    /// given <paramref name="file"/>. Will only work for file paths
+    /// and not for directories.
     /// </summary>
-    /// <param name="path"></param>
-    /// <returns></returns>
-    string ReadFileAsString(string path);
+    /// <param name="file">
+    /// The OVS file
+    /// </param>
+    /// <param name="adminOnly">
+    /// Indicates that the access to the directory should be restricted to administrators.
+    /// </param>
+    void EnsurePathForFileExists(OvsFile file, bool adminOnly = false);
+
+    /// <summary>
+    /// Deletes the file at the given <paramref name="path"/>.
+    /// No exception is thrown if the file does not exist.
+    /// </summary>
+    void DeleteFile(string path);
+
+    /// <summary>
+    /// Deletes the given <paramref name="file"/>.
+    /// No exception is thrown if the file does not exist.
+    /// </summary>
+    /// <param name="file"></param>
+    void DeleteFile(OvsFile file);
+    
+    Task<string> ReadFileAsync(string path, CancellationToken cancellationToken = default);
+
+    Task<string> ReadFileAsync(OvsFile file, CancellationToken cancellationToken = default);
+
+    Task WriteFileAsync(string path, string content, CancellationToken cancellationToken = default);
+
+    Task WriteFileAsync(OvsFile file, string content, CancellationToken cancellationToken =default);
 }

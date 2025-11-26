@@ -11,7 +11,11 @@ public class NetworkPlanRealizer : PlanRealizer
 {
     private readonly ILogger _logger;
 
-    public NetworkPlanRealizer(IOVSDBTool ovnDBTool, ILogger logger) : base(ovnDBTool, logger)
+    public NetworkPlanRealizer(
+        ISystemEnvironment systemEnvironment,
+        IOVSDBTool ovnDBTool,
+        ILogger logger)
+        : base(systemEnvironment, ovnDBTool)
     {
         _logger = logger;
     }
@@ -359,7 +363,6 @@ public class NetworkPlanRealizer : PlanRealizer
             columns,
             CommonQueries.ExternalId("network_plan", networkPlanId),
             cancellationToken);
-
 
     EitherAsync<Error, HashMap<Guid, TRecord>> FindRecordsWithParents<TRecord, TParent>(
         string networkPlanId,
