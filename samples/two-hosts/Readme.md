@@ -24,8 +24,8 @@ The following is required for the example:
 5. Start the dotnet-ovn agent: `OVNAgent.exe run --nodes AllInOne`
 6. Create a bridge for the tunnel: `ovs-vsctl.exe -- add-br br-extern -- add-port br-extern eth0`
 7. Assign an IP address: `Enable-NetAdapter -Name br-extern; New-NetIPAddress -InterfaceAlias br-extern -IPAddress 192.168.240.101 -PrefixLength 24`
-8. Create a VM `vm-primary`
-9. Set the port name of the VM: `OVSAgent.exe hyperv portname set {adapterId} ovs_vm-primary`
+8. Create a VM `vm-primary` (assign the static MAC `02:01:00:00:01:01` to the network adapter and attach it to the `ovs_overlay` switch)
+9. Set the port name of the VM: `OVNAgent.exe hyperv portname set {adapterId} ovs_vm-primary`
 10. Add the VM port to the integration bridge: `ovs-vsctl.exe -- add-port br-int ovs_vm-primary -- set interface ovs_vm-primary external_ids:iface-id=ovs_vm-primary`
 
 ## Manual setup of `chassis-secondary`
@@ -36,12 +36,21 @@ The following is required for the example:
 5. Start the dotnet-ovn agent: `OVNAgent.exe run --nodes Chassis`
 6. Create a bridge for the tunnel: `ovs-vsctl.exe -- add-br br-extern -- add-port br-extern eth0`
 7. Assign an IP address: `Enable-NetAdapter -Name br-extern; New-NetIPAddress -InterfaceAlias br-extern -IPAddress 192.168.240.102 -PrefixLength 24`
-8. Create a VM `vm-secondary`
-9. Set the port name of the VM: `OVSAgent.exe hyperv portname set {adapterId} ovs_vm-secondary`
+8. Create a VM `vm-secondary` (assign the static MAC `02:01:00:00:02:01` to the network adapter and attach it to the `ovs_overlay` switch)
+9. Set the port name of the VM: `OVNAgent.exe hyperv portname set {adapterId} ovs_vm-secondary`
 10. Add the VM port to the integration bridge: `ovs-vsctl.exe -- add-port br-int ovs_vm-secondary -- set interface ovs_vm-secondary external_ids:iface-id=ovs_vm-secondary`
 
 ## Configuration of the cluster
-1. Apply the chassis plan on primary: `OVSAgent.exe chassisplan apply --file ".\chassisplan_primary.yaml"`
-2. Apply the chassis plan on secondary: `OVSAgent.exe chassisplan apply --file ".\chassisplan_secondary.yaml"`
-3. Apply the cluster plan on primary: `OVSAgent.exe clusterplan apply --file ".\clusterplan.yaml"`
-4. Apply the network plan on primary: `OVSAgent.exe netplan apply --file "D:\git\dotnet-ovn\samples\two-hosts\netplan.yaml"`
+1. Apply the chassis plan on `chassis-primary`: `OVNAgent.exe chassisplan apply --file ".\chassisplan_primary.yaml"`
+2. Apply the chassis plan on `chassis-secondary`: `OVNAgent.exe chassisplan apply --file ".\chassisplan_secondary.yaml"`
+3. Apply the cluster plan on `chassis-primary`: `OVNAgent.exe clusterplan apply --file ".\clusterplan.yaml"`
+4. Apply the network plan on `chassis-primary`: `OVNAgent.exe netplan apply --file ".\netplan.yaml"`
+
+## Configuration of SSL
+1. On `chassis-primary`, initialize a PKI: `OVNAgent.exe pki init`
+2. On `chassis-primary`, generate an SSL config for `chassis-primary`: `OVNAgent.exe pki generate-config chassis-primary`
+3. Copy the config to `southbound_ssl` in `clusterplan.yaml` and set `ssl` to `true` in `southbound_endpoints`
+4. Reapply the cluster plan on `chassis-primary`: `OVNAgent.exe chassisplan apply --file ".\chassisplan_primary.yaml"`
+5. On `chassis-primary`, generate an SSL config for `chassis-secondary`: `OVNAgent.exe pki generate-config chassis-secondary`
+6. Copy the config to `ssl` in `chassisplan_secondary.yaml` and set `ssl` to `true` in `southbound_connection`
+7. Reapply the chassis plan on `chassis-secondary`: `OVNAgent.exe chassisplan apply --file ".\chassisplan_secondary.yaml"`

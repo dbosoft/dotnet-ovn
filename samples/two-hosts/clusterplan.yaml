@@ -7,3 +7,17 @@ chassis_groups:
     priority: 10
 southbound_endpoints:
 - port: 6642
+  ssl: false
+# southbound_ssl:
+#   private_key: |
+#     -----BEGIN PRIVATE KEY-----
+#     ...
+#     -----END PRIVATE KEY-----
+#   certificate: |
+#     -----BEGIN CERTIFICATE-----
+#     ...
+#     -----END CERTIFICATE-----
+#   ca_certificate: |
+#     -----BEGIN CERTIFICATE-----
+#     ...
+#     -----END CERTIFICATE-----

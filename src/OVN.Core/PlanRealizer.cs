@@ -13,6 +13,7 @@ public abstract class PlanRealizer
 {
     private const string PemCertificateHeader = "-----BEGIN CERTIFICATE-----";
     private const string PemPrivateKeyHeader = "-----BEGIN PRIVATE KEY-----";
+    private const string RsaPemPrivateKeyHeader = "-----BEGIN RSA PRIVATE KEY-----";
 
     private readonly ISystemEnvironment _systemEnvironment;
     private readonly IOVSDBTool _ovnDBTool;
@@ -278,7 +279,8 @@ public abstract class PlanRealizer
             Error.New("The certificate must be a PEM encoded string."))
         from privateKeyPem in Optional(plannedSouthboundSsl.PrivateKey)
             .ToEitherAsync(Error.New("The private key is missing"))
-        from _3 in guard(privateKeyPem.StartsWith(PemPrivateKeyHeader),
+        from _3 in guard(privateKeyPem.StartsWith(PemPrivateKeyHeader)
+                         || privateKeyPem.StartsWith(RsaPemPrivateKeyHeader),
             Error.New("The private key must be a PEM encoded string."))
         // The generated file names contain a hash of the content. This
         // way, the changes can be made transactionally as changes do
