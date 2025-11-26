@@ -38,10 +38,11 @@ public record OvsDbConnection
     }
 
     /// <summary>
-    /// Specifies an SSL-encrypted database connection.
+    /// Specifies an SSL-protected database connection.
     /// </summary>
     /// <remarks>
-    /// This kind of connection is only intended for clients or tools.
+    /// This kind of connection is only intended for clients or tools. The
+    /// private key is used for client authentication.
     /// </remarks>
     public OvsDbConnection(
         string address,
