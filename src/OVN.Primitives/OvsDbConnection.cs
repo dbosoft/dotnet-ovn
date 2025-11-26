@@ -27,7 +27,7 @@ public record OvsDbConnection
     /// <remarks>
     /// Settings <paramref name="ssl"/> to <see langword="true"/> is only supported
     /// for outgoing connections. The SSL configuration must be added to the database.
-    /// Use a different constructor for when configuring the connection for clients
+    /// Use a different constructor when configuring the connection for clients
     /// or tools.
     /// </remarks>
     public OvsDbConnection(string address, int port, bool ssl = false)

@@ -8,7 +8,7 @@ This repository contains a .NET management library for [OVN](https://github.com/
 
 **Features**:  
 - OVS and OVN database management with ovn-nbctl and ovs-vsctl
-- single node and multiple node OVN hosting
+- Single node and multiple node OVN hosting
 - Chassis node initialization for OVN
 - OVN configuration by network plan (API and command line tool)
 - OVN cluster desired state configuration using plans (API and command line tool)
@@ -42,6 +42,6 @@ the different database schemas.
 The tests currently only work on Windows and require that the aforementioned Windows
 build of OVS and OVN is installed (the binaries must be present in the file system).
 It is not necessary to install the Hyper-V switch extension and the tests do not make
-to the networking settings. The integration tests only start a database process.
+changes to the networking settings. The integration tests only start a database process.
 
 The integration tests create a working directory under C:\ProgramData.

@@ -9,7 +9,7 @@ namespace Dbosoft.OVN.SimplePki;
 /// </summary>
 /// <remarks>
 /// This implementation is indented demonstration and testing purposes.
-/// Consumers are expected to use their PKI implementation.
+/// Consumers are expected to use their own PKI implementation.
 /// </remarks>
 public class PkiService(ISystemEnvironment systemEnvironment) : IPkiService
 {

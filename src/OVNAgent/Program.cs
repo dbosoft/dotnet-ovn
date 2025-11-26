@@ -323,7 +323,7 @@ static async Task<int> CreateChassisPki(LogLevel logLevel, string chassisName)
         CaCertificate = pkiResult.CaCertificate
     };
 
-    var yaml = PlanYamlSerializer.Serialize(config);
+    var yaml = OvsPkiConfigOutputYamlSerializer.Serialize(config);
     Console.WriteLine(yaml);
 
     return 0;
