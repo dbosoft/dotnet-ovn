@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AwesomeAssertions" Version="9.3.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -26,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\OVN.Core\OVN.Core.csproj" />
+    <ProjectReference Include="..\..\src\OVN.SimplePki\OVN.SimplePki.csproj" />
     <ProjectReference Include="..\..\src\OVN.Windows\OVN.Windows.csproj" />
   </ItemGroup>
 

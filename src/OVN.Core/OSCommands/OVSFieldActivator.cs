@@ -151,7 +151,7 @@ internal static class OVSFieldActivator
                     case JsonValueKind.Number:
                         var jsonDoubleValue = element.Deserialize<double>();
 
-                        if(typeof(T) == typeof(int) || typeof(T) == typeof(long) || typeof(T) == typeof(byte))
+                        if(typeof(T) == typeof(int) || typeof(T) == typeof(long) || typeof(T) == typeof(short) || typeof(T) == typeof(byte))
                             objectValue = TypeDescriptor.GetConverter(typeof(T))
                                 .ConvertFrom(jsonDoubleValue.ToString("F0"));
                         else

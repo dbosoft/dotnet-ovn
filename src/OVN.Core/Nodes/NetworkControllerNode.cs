@@ -37,6 +37,7 @@ public class NetworkControllerNode : DemonNodeBase
                 .WithDbConnection(_ovnSettings.NorthDBConnection)
                 .WithLogging(_ovnSettings.Logging)
                 .AllowAttach(false)
+                .UseRemoteConfigsFromDatabase(false)
                 .Build(),
             _loggerFactory.CreateLogger<OVSDBProcess>());
 
@@ -59,18 +60,7 @@ public class NetworkControllerNode : DemonNodeBase
         }
 
         return WaitForDbSocket(cancellationToken)
-            .Bind(_ => InitDB(cancellationToken))
-            .Bind(_ => ConfigureController(cancellationToken));
-}
-    
-    private EitherAsync<Error, Unit> ConfigureController(CancellationToken cancellationToken)
-    {
-        var timeout = new CancellationTokenSource(10000);
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-
-        var ovnControl = new OVNControlTool(_systemEnvironment, _ovnSettings.NorthDBConnection);
-        return ovnControl.EnsureChassisInGroup("local", "local", 10,
-            cancellationToken: cts.Token);
+            .Bind(_ => InitDB(cancellationToken));
     }
 
     private EitherAsync<Error, Unit> InitDB(CancellationToken cancellationToken)

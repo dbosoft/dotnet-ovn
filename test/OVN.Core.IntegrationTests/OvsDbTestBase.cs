@@ -11,7 +11,15 @@ namespace Dbosoft.OVN.Core.IntegrationTests;
 
 public abstract class OvsDbTestBase : IAsyncLifetime
 {
-    private readonly string _dataDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+    // This base path is visible in the dumped database. Hence, we pick
+    // a path on the C: drive which has a fixed length. Otherwise, the
+    // tests would randomly fail as the column widths in the database
+    // snapshot would be changing.
+    private readonly string _dataDirectoryPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "dotnet-ovn-e2e",
+            Path.GetRandomFileName())
+        .Replace(@"\", "/");
     private readonly ILoggerFactory _loggerFactory;
     protected readonly ISystemEnvironment SystemEnvironment;
 
@@ -59,6 +67,8 @@ public abstract class OvsDbTestBase : IAsyncLifetime
 
     protected abstract EitherAsync<Error, Unit> InitializeDatabase();
 
+    protected DirectoryInfo GetDataDirectoryInfo() => new(_dataDirectoryPath);
+
     protected async Task VerifyDatabase(string databaseName, string schemaVersion)
     {
         var ovsDbClientTool = new OVSDbClientTool(SystemEnvironment, _dbSettings.Connection);
@@ -73,6 +83,13 @@ public abstract class OvsDbTestBase : IAsyncLifetime
         var dump = (await ovsDbClientTool.PrintDatabase(databaseName)).ThrowIfLeft();
         var settings = new VerifySettings();
         settings.AddScrubber(FixedLengthGuidScrubber.ReplaceGuids);
+        settings.AddScrubber(FixedLengthHashScrubber.ReplaceHashes);
+        settings.AddScrubber(builder =>
+        {
+            builder.Replace(
+                _dataDirectoryPath,
+                $"{{OvsTestDirectory{new string('_', _dataDirectoryPath.Length - "OvsTestDirectory".Length - 2)}}}");
+        });
         await Verify(dump, settings);
     }
 

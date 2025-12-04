@@ -16,6 +16,7 @@ public record NetworkPlan(string Id)
     public HashMap<string, PlannedRouter> PlannedRouters { get;  init; }
 
     public HashMap<string, PlannedSwitch> PlannedSwitches { get; init; }
+
     public HashMap<string, PlannedRouterStaticRoute> PlannedRouterStaticRoutes { get;  init; }
 
     public HashMap<string, PlannedNATRule> PlannedNATRules { get;  init; }

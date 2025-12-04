@@ -1,20 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.InteropServices;
 
 namespace Dbosoft.OVN.Core.IntegrationTests;
 
-public class TestFileSystem : DefaultFileSystem
+public class TestFileSystem(OSPlatform platform, string dataPath)
+    : DefaultFileSystem(platform)
 {
-    private readonly string _dataPath;
+    protected override string GetDataRootPath() => $"{dataPath}/";
 
-    public TestFileSystem(OSPlatform platform, string dataPath) : base(platform)
+    protected override void SetAdminOnlyPermissions(DirectoryInfo directoryInfo)
     {
-        _dataPath = dataPath;
+        // We intentionally do not set directory permissions in the
+        // integration tests as the tests are expected to run in
+        // the context of a normal user.
     }
-
-    protected override string GetDataRootPath() => $"{_dataPath}/";
 }

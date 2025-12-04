@@ -1,0 +1,155 @@
+﻿ACL_ID table
+_uuid id
+----- --
+
+Address_Set table
+_uuid addresses name
+----- --------- ----
+
+Advertised_Route table
+_uuid datapath external_ids ip_prefix logical_port tracked_port
+----- -------- ------------ --------- ------------ ------------
+
+BFD table
+_uuid chassis_name detect_mult disc dst_ip external_ids logical_port min_rx min_tx options src_port status
+----- ------------ ----------- ---- ------ ------------ ------------ ------ ------ ------- -------- ------
+
+Chassis table
+_uuid encaps external_ids hostname name nb_cfg other_config transport_zones vtep_logical_switches
+----- ------ ------------ -------- ---- ------ ------------ --------------- ---------------------
+
+Chassis_Private table
+_uuid chassis external_ids name nb_cfg nb_cfg_timestamp
+----- ------- ------------ ---- ------ ----------------
+
+Chassis_Template_Var table
+_uuid chassis variables
+----- ------- ---------
+
+Connection table
+_uuid                                external_ids inactivity_probe is_connected max_backoff other_config read_only role status                                                                target
+------------------------------------ ------------ ---------------- ------------ ----------- ------------ --------- ---- --------------------------------------------------------------------- ----------------------
+Guid_0000000000000000000000000000001 {}           []               false        []          {}           false     ""   {bound_port="52421", sec_since_connect="0", sec_since_disconnect="0"} "ptcp:52421:127.0.0.1"
+Guid_0000000000000000000000000000002 {}           []               false        []          {}           false     ""   {bound_port="52422", sec_since_connect="0", sec_since_disconnect="0"} "pssl:52422:127.0.0.1"
+
+Controller_Event table
+_uuid chassis event_info event_type seq_num
+----- ------- ---------- ---------- -------
+
+DHCP_Options table
+_uuid code name type
+----- ---- ---- ----
+
+DHCPv6_Options table
+_uuid code name type
+----- ---- ---- ----
+
+DNS table
+_uuid datapaths external_ids options records
+----- --------- ------------ ------- -------
+
+Datapath_Binding table
+_uuid external_ids load_balancers tunnel_key
+----- ------------ -------------- ----------
+
+ECMP_Nexthop table
+_uuid datapath external_ids mac nexthop port
+----- -------- ------------ --- ------- ----
+
+Encap table
+_uuid chassis_name ip options type
+----- ------------ -- ------- ----
+
+FDB table
+_uuid dp_key mac port_key timestamp
+----- ------ --- -------- ---------
+
+Gateway_Chassis table
+_uuid chassis external_ids name options priority
+----- ------- ------------ ---- ------- --------
+
+HA_Chassis table
+_uuid chassis external_ids priority
+----- ------- ------------ --------
+
+HA_Chassis_Group table
+_uuid external_ids ha_chassis name ref_chassis
+----- ------------ ---------- ---- -----------
+
+IGMP_Group table
+_uuid address chassis chassis_name datapath ports protocol
+----- ------- ------- ------------ -------- ----- --------
+
+IP_Multicast table
+_uuid datapath enabled eth_src idle_timeout ip4_src ip6_src querier query_interval query_max_resp seq_no table_size
+----- -------- ------- ------- ------------ ------- ------- ------- -------------- -------------- ------ ----------
+
+Learned_Route table
+_uuid datapath external_ids ip_prefix logical_port nexthop
+----- -------- ------------ --------- ------------ -------
+
+Load_Balancer table
+_uuid datapath_group datapaths external_ids lr_datapath_group ls_datapath_group name options protocol vips
+----- -------------- --------- ------------ ----------------- ----------------- ---- ------- -------- ----
+
+Logical_DP_Group table
+_uuid datapaths
+----- ---------
+
+Logical_Flow table
+_uuid actions controller_meter external_ids flow_desc logical_datapath logical_dp_group match pipeline priority table_id tags
+----- ------- ---------------- ------------ --------- ---------------- ---------------- ----- -------- -------- -------- ----
+
+MAC_Binding table
+_uuid datapath ip logical_port mac timestamp
+----- -------- -- ------------ --- ---------
+
+Meter table
+_uuid bands name unit
+----- ----- ---- ----
+
+Meter_Band table
+_uuid action burst_size rate
+----- ------ ---------- ----
+
+Mirror table
+_uuid external_ids filter index name sink type
+----- ------------ ------ ----- ---- ---- ----
+
+Multicast_Group table
+_uuid datapath name ports tunnel_key
+----- -------- ---- ----- ----------
+
+Port_Binding table
+_uuid additional_chassis additional_encap chassis datapath encap external_ids gateway_chassis ha_chassis_group logical_port mac mirror_rules nat_addresses options parent_port port_security requested_additional_chassis requested_chassis tag tunnel_key type up virtual_parent
+----- ------------------ ---------------- ------- -------- ----- ------------ --------------- ---------------- ------------ --- ------------ ------------- ------- ----------- ------------- ---------------------------- ----------------- --- ---------- ---- -- --------------
+
+Port_Group table
+_uuid name ports
+----- ---- -----
+
+RBAC_Permission table
+_uuid authorization insert_delete table update
+----- ------------- ------------- ----- ------
+
+RBAC_Role table
+_uuid name permissions
+----- ---- -----------
+
+SB_Global table
+_uuid                                connections                                                                  external_ids ipsec nb_cfg options ssl
+------------------------------------ ---------------------------------------------------------------------------- ------------ ----- ------ ------- ------------------------------------
+Guid_0000000000000000000000000000003 [Guid_0000000000000000000000000000002, Guid_0000000000000000000000000000001] {}           false 0      {}      Guid_0000000000000000000000000000004
+
+SSL table
+_uuid                                bootstrap_ca_cert ca_cert                                                                                                                                  certificate                                                                                                                            external_ids private_key                                                                                                                                   ssl_ciphers ssl_ciphersuites ssl_protocols
+------------------------------------ ----------------- ---------------------------------------------------------------------------------------------------------------------------------------- -------------------------------------------------------------------------------------------------------------------------------------- ------------ --------------------------------------------------------------------------------------------------------------------------------------------- ----------- ---------------- -----------------
+Guid_0000000000000000000000000000004 false             "{OvsTestDirectory________________________}/etc/openvswitch/cacert_SHA256_000000000000000000000000000000000000000000000000000000001.pem" "{OvsTestDirectory________________________}/etc/openvswitch/cert_SHA256_000000000000000000000000000000000000000000000000000000002.pem" {}           "{OvsTestDirectory________________________}/etc/openvswitch/private/key_SHA256_000000000000000000000000000000000000000000000000000000003.pem" ""          ""               "TLSv1.3,TLSv1.2"
+
+Service_Monitor table
+_uuid chassis_name external_ids ip logical_port options port protocol src_ip src_mac status
+----- ------------ ------------ -- ------------ ------- ---- -------- ------ ------- ------
+
+Static_MAC_Binding table
+_uuid datapath ip logical_port mac override_dynamic_mac
+----- -------- -- ------------ --- --------------------

@@ -51,9 +51,9 @@ _uuid active_timeout add_id_to_interface engine_id engine_type external_ids targ
 ----- -------------- ------------------- --------- ----------- ------------ -------
 
 Open_vSwitch table
-_uuid                                bridges cur_cfg datapath_types datapaths db_version dpdk_initialized dpdk_version external_ids                                                                                          iface_types manager_options next_cfg other_config ovs_version ssl statistics system_type system_version
------------------------------------- ------- ------- -------------- --------- ---------- ---------------- ------------ ----------------------------------------------------------------------------------------------------- ----------- --------------- -------- ------------ ----------- --- ---------- ----------- --------------
-Guid_0000000000000000000000000000001 []      0       []             {}        []         false            []           {ovn-encap-ip="127.0.0.1", ovn-encap-type=geneve, ovn-remote="tcp:203.0.113.1:6641", system-id=local} []          []              0        {}           []          []  {}         []          []
+_uuid                                bridges cur_cfg datapath_types datapaths db_version dpdk_initialized dpdk_version external_ids                                                                                                                                                                    iface_types manager_options next_cfg other_config ovs_version ssl                                  statistics system_type system_version
+------------------------------------ ------- ------- -------------- --------- ---------- ---------------- ------------ ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ----------- --------------- -------- ------------ ----------- ------------------------------------ ---------- ----------- --------------
+Guid_0000000000000000000000000000001 []      0       []             {}        []         false            []           {ovn-bridge-mappings="extern:br-outside,other-net:br-other-net", ovn-encap-ip="203.0.113.101", ovn-encap-type=geneve, ovn-remote="tcp:203.0.113.100:6642", system-id=chassis-1} []          []              0        {}           []          Guid_0000000000000000000000000000002 {}         []          []
 
 Port table
 _uuid bond_active_slave bond_downdelay bond_fake_iface bond_mode bond_updelay cvlans external_ids fake_bridge interfaces lacp mac name other_config protected qos rstp_statistics rstp_status statistics status tag trunks vlan_mode
@@ -68,8 +68,9 @@ _uuid dscp external_ids other_config
 ----- ---- ------------ ------------
 
 SSL table
-_uuid bootstrap_ca_cert ca_cert certificate external_ids private_key
------ ----------------- ------- ----------- ------------ -----------
+_uuid                                bootstrap_ca_cert ca_cert                                                                                                                                  certificate                                                                                                                            external_ids private_key
+------------------------------------ ----------------- ---------------------------------------------------------------------------------------------------------------------------------------- -------------------------------------------------------------------------------------------------------------------------------------- ------------ ---------------------------------------------------------------------------------------------------------------------------------------------
+Guid_0000000000000000000000000000002 false             "{OvsTestDirectory________________________}/etc/openvswitch/cacert_SHA256_000000000000000000000000000000000000000000000000000000001.pem" "{OvsTestDirectory________________________}/etc/openvswitch/cert_SHA256_000000000000000000000000000000000000000000000000000000002.pem" {}           "{OvsTestDirectory________________________}/etc/openvswitch/private/key_SHA256_000000000000000000000000000000000000000000000000000000003.pem"
 
 sFlow table
 _uuid agent external_ids header polling sampling targets
