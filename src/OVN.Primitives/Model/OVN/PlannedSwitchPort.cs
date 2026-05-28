@@ -4,8 +4,19 @@ using LanguageExt;
 namespace Dbosoft.OVN.Model.OVN;
 
 [PublicAPI]
-public record PlannedSwitchPort(string SwitchName) : OVSEntity, IHasParentReference, IOVSEntityWithName
+public record PlannedSwitchPort : OVSEntity, IHasParentReference, IOVSEntityWithName
 {
+    public string SwitchName { get; init; }
+
+    public PlannedSwitchPort(string switchName)
+    {
+        SwitchName = switchName;
+        // Logical_Switch_Port.type is a required column (schema min:1). OVN 26.03
+        // rejects clearing it. Seed it with "" so the realizer never diffs it as
+        // removed when the caller does not set Type explicitly (e.g. VM ports).
+        SetValue("type", "");
+    }
+
     public new static readonly IDictionary<string, OVSFieldMetadata>
         Columns = new Dictionary<string, OVSFieldMetadata>(OVSEntity.Columns)
         {
@@ -39,7 +50,7 @@ public record PlannedSwitchPort(string SwitchName) : OVSEntity, IHasParentRefere
     public string? Type
     {
         get => GetValue<string>("type");
-        init => SetValue("type", value);
+        init => SetValue("type", value ?? "");
     }
 
     public Seq<Guid> DHCPOptionsRefV4
