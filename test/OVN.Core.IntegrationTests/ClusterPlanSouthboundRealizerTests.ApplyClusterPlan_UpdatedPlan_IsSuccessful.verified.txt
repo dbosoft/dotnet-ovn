@@ -6,6 +6,10 @@ Address_Set table
 _uuid addresses name
 ----- --------- ----
 
+Advertised_MAC_Binding table
+_uuid datapath external_ids ip logical_port mac
+----- -------- ------------ -- ------------ ---
+
 Advertised_Route table
 _uuid datapath external_ids ip_prefix logical_port tracked_port
 ----- -------- ------------ --------- ------------ ------------
@@ -49,8 +53,8 @@ _uuid datapaths external_ids options records
 ----- --------- ------------ ------- -------
 
 Datapath_Binding table
-_uuid external_ids load_balancers tunnel_key
------ ------------ -------------- ----------
+_uuid external_ids load_balancers nb_uuid tunnel_key type
+----- ------------ -------------- ------- ---------- ----
 
 ECMP_Nexthop table
 _uuid datapath external_ids mac nexthop port
@@ -121,8 +125,8 @@ _uuid datapath name ports tunnel_key
 ----- -------- ---- ----- ----------
 
 Port_Binding table
-_uuid additional_chassis additional_encap chassis datapath encap external_ids gateway_chassis ha_chassis_group logical_port mac mirror_rules nat_addresses options parent_port port_security requested_additional_chassis requested_chassis tag tunnel_key type up virtual_parent
------ ------------------ ---------------- ------- -------- ----- ------------ --------------- ---------------- ------------ --- ------------ ------------- ------- ----------- ------------- ---------------------------- ----------------- --- ---------- ---- -- --------------
+_uuid additional_chassis additional_encap chassis datapath encap external_ids gateway_chassis ha_chassis_group logical_port mac mirror_port mirror_rules nat_addresses options parent_port port_security requested_additional_chassis requested_chassis tag tunnel_key type up virtual_parent
+----- ------------------ ---------------- ------- -------- ----- ------------ --------------- ---------------- ------------ --- ----------- ------------ ------------- ------- ----------- ------------- ---------------------------- ----------------- --- ---------- ---- -- --------------
 
 Port_Group table
 _uuid name ports
@@ -147,8 +151,8 @@ _uuid                                bootstrap_ca_cert ca_cert                  
 Guid_0000000000000000000000000000004 false             "{OvsTestDirectory________________________}/etc/openvswitch/cacert_SHA256_000000000000000000000000000000000000000000000000000000001.pem" "{OvsTestDirectory________________________}/etc/openvswitch/cert_SHA256_000000000000000000000000000000000000000000000000000000002.pem" {}           "{OvsTestDirectory________________________}/etc/openvswitch/private/key_SHA256_000000000000000000000000000000000000000000000000000000003.pem" ""          ""               "TLSv1.3,TLSv1.2"
 
 Service_Monitor table
-_uuid chassis_name external_ids ip logical_port options port protocol src_ip src_mac status
------ ------------ ------------ -- ------------ ------- ---- -------- ------ ------- ------
+_uuid chassis_name external_ids ic_learned ip logical_input_port logical_port mac options port protocol remote src_ip src_mac status type
+----- ------------ ------------ ---------- -- ------------------ ------------ --- ------- ---- -------- ------ ------ ------- ------ ----
 
 Static_MAC_Binding table
 _uuid datapath ip logical_port mac override_dynamic_mac
