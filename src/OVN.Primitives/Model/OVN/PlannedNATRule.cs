@@ -29,7 +29,7 @@ public record PlannedNATRule(string RouterName) : OVSTableRecord, IHasParentRefe
     public string? ExternalMAC
     {
         get => GetValue<string>("external_mac");
-        init => SetValue("external_mac", value);
+        init => SetValue("external_mac", string.IsNullOrWhiteSpace(value) ? null : value);
     }
 
     public string? LogicalIP
@@ -37,11 +37,11 @@ public record PlannedNATRule(string RouterName) : OVSTableRecord, IHasParentRefe
         get => GetValue<string>("logical_ip");
         init => SetValue("logical_ip", value);
     }
-    
+
     public string? LogicalPort
     {
         get => GetValue<string>("logical_port");
-        init => SetValue("logical_port", value);
+        init => SetValue("logical_port", string.IsNullOrWhiteSpace(value) ? null : value);
     }
 
     public OVSParentReference GetParentReference() =>

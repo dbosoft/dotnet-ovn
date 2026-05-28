@@ -215,8 +215,8 @@ public static class NetworkPlanParser
             var natType = "";
             var externalIPString = "";
             var logicalIP = "";
-            var externalMac = "";
-            var logicalPort = "";
+            string? externalMac = null;
+            string? logicalPort = null;
             if (natValues.ContainsKey("snat"))
             {
                 natType = "snat";
@@ -263,7 +263,7 @@ public static class NetworkPlanParser
                 throw new InvalidDataException(
                     $"ip address {externalIPString} is invalid for router nat (router: {routerName}).");
             
-            return networkPlan.AddNATRule(routerName, natType, ipAddress, externalMac, logicalIP, logicalPort);
+            return networkPlan.AddNATRule(routerName, natType, ipAddress, externalMac ?? "", logicalIP, logicalPort ?? "");
         }
         
         NetworkPlan ParseRouterRoutes(NetworkPlan networkPlan, 

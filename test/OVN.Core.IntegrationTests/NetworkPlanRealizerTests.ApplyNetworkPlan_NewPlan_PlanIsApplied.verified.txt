@@ -114,7 +114,7 @@ NAT table
 _uuid                                allowed_ext_ips exempted_ext_ips external_ids                                      external_ip   external_mac        external_port_range gateway_port logical_ip        logical_port match options priority type
 ------------------------------------ --------------- ---------------- ------------------------------------------------- ------------- ------------------- ------------------- ------------ ----------------- ------------ ----- ------- -------- -------------
 Guid_0000000000000000000000000000005 []              []               {network_plan=test-project, router_name=router-1} "192.0.2.100" []                  ""                  []           "198.51.100.0/24" []           ""    {}      0        snat
-Guid_0000000000000000000000000000004 []              []               {network_plan=test-project, router_name=router-1} "192.0.2.110" "02:00:00:00:00:03" ""                  []           "198.51.100.100"  ""           ""    {}      0        dnat_and_snat
+Guid_0000000000000000000000000000004 []              []               {network_plan=test-project, router_name=router-1} "192.0.2.110" "02:00:00:00:00:03" ""                  []           "198.51.100.100"  []           ""    {}      0        dnat_and_snat
 
 NB_Global table
 _uuid                                connections external_ids hv_cfg hv_cfg_timestamp ipsec name nb_cfg nb_cfg_timestamp options sb_cfg sb_cfg_timestamp ssl
