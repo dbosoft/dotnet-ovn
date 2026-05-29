@@ -78,6 +78,16 @@ public class NetworkPlanRealizerTests(
     }
 
     [Fact]
+    public async Task ApplyNetworkPlan_SamePlanTwice_NoClearOnRequiredColumns()
+    {
+        var plan = CreateNetworkPlan();
+        await ApplyNetworkPlan(plan);
+        await ApplyNetworkPlan(plan);
+
+        await VerifyDatabase();
+    }
+
+    [Fact]
     public async Task ApplyNetworkPlan_RemoveChildResources_PlanIsApplied()
     {
         await ApplyNetworkPlan(CreateNetworkPlan());

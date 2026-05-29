@@ -9,7 +9,7 @@ public record DHCPOptions : OVSTableRecord, IOVSEntityWithName
     public new static readonly IDictionary<string, OVSFieldMetadata>
         Columns = new Dictionary<string, OVSFieldMetadata>(OVSTableRecord.Columns)
         {
-            { "cidr", OVSValue<string>.Metadata() },
+            { "cidr", OVSValue<string>.Metadata(true) },
             { "options", OVSMap<string>.Metadata() }
         };
 

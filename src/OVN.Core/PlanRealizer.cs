@@ -187,7 +187,12 @@ public abstract class PlanRealizer
         let plannedFields = plannedEntity.ToMap().Filter(IsUpdatable)
         let realizedFields = realizedEntity.ToMap().Filter(IsUpdatable)
         let addedFields = plannedFields.Except(realizedFields)
+        // Columns marked NotEmpty are schema-required and cannot be cleared
+        // (OVN 26.03 rejects `clear` on min:1 columns with "not allowed to be
+        // empty"). Drop them from removedFields; if the planned intent is to
+        // reset such a column, set it to the type's empty value explicitly.
         let removedFields = realizedFields.Except(plannedFields)
+            .Filter((name, _) => !columns.TryGetValue(name, out var meta) || !meta.NotEmpty)
         let updatedFields = plannedFields.Intersect(
                 realizedFields,
                 (name, plannedValue, realizedValue) =>
