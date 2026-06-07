@@ -5,9 +5,9 @@ public record PlannedSouthboundSsl : PlannedOvsSsl
     public new static readonly IDictionary<string, OVSFieldMetadata>
         Columns = new Dictionary<string, OVSFieldMetadata>(PlannedOvsSsl.Columns)
         {
-            { "private_key", OVSValue<string>.Metadata() },
-            { "certificate", OVSValue<string>.Metadata() },
-            { "ca_cert", OVSValue<string>.Metadata() },
+            { "ssl_protocols", OVSValue<string>.Metadata() },
+            { "ssl_ciphers", OVSValue<string>.Metadata() },
+            { "ssl_ciphersuites", OVSValue<string>.Metadata() },
         };
 
     public string? SslProtocols
