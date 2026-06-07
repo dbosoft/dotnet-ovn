@@ -37,7 +37,12 @@ public class NetworkControllerNode : DemonNodeBase
                 .WithDbConnection(_ovnSettings.NorthDBConnection)
                 .WithLogging(_ovnSettings.Logging)
                 .AllowAttach(false)
-                .UseRemoteConfigsFromDatabase(false)
+                // Read remote listeners and SSL from the NB_Global connections/ssl
+                // tables (like the southbound DB) so a cluster plan can expose the
+                // northbound DB to remote clients over SSL. With no planned
+                // connections this only adds the local pipe remote, so in-process
+                // deployments are unaffected.
+                .UseRemoteConfigsFromDatabase(true)
                 .Build(),
             _loggerFactory.CreateLogger<OVSDBProcess>());
 

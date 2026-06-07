@@ -13,6 +13,15 @@ public class ClusterPlanParserTests
                               chassis:
                               - name: test-chassis-1
                                 priority: 10
+                            northbound_endpoints:
+                            - port: 6641
+                            - port: 16641
+                              ssl: true
+                              ip_address: 203.0.113.1
+                            northbound_ssl:
+                              private_key: test-nb-private-key
+                              certificate: test-nb-certificate
+                              ca_certificate: test-nb-ca-certificate
                             southbound_endpoints:
                             - port: 42421
                             - port: 42422
@@ -38,6 +47,19 @@ public class ClusterPlanParserTests
         plannedChassis.Name.Should().Be("test-chassis-1");
         plannedChassis.ChassisGroupName.Should().Be("test-cluster");
         plannedChassis.Priority.Should().Be(10);
+
+        plan.PlannedNorthboundConnections.Should().HaveCount(2);
+        plan.PlannedNorthboundConnections.ToDictionary()
+            .Should().ContainKey("ptcp:6641")
+            .WhoseValue.Target.Should().Be("ptcp:6641");
+        plan.PlannedNorthboundConnections.ToDictionary()
+            .Should().ContainKey("pssl:16641:203.0.113.1")
+            .WhoseValue.Target.Should().Be("pssl:16641:203.0.113.1");
+
+        plan.PlannedNorthboundSsl.Should().NotBeNull();
+        plan.PlannedNorthboundSsl.PrivateKey.Should().Be("test-nb-private-key");
+        plan.PlannedNorthboundSsl.Certificate.Should().Be("test-nb-certificate");
+        plan.PlannedNorthboundSsl.CaCertificate.Should().Be("test-nb-ca-certificate");
 
         plan.PlannedSouthboundConnections.Should().HaveCount(2);
         plan.PlannedSouthboundConnections.ToDictionary()

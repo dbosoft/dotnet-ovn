@@ -2,6 +2,8 @@
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Dbosoft.OVN;
 
 public class ClusterPlanNorthboundRealizer(
@@ -51,5 +53,39 @@ public class ClusterPlanNorthboundRealizer(
             remainingChassis,
             existingPlannedChassis,
             cancellationToken: cancellationToken)
+        from _3 in ApplyNorthboundConnections(clusterPlan, cancellationToken)
+        from _4 in ApplySsl<PlannedNorthboundSsl, NorthboundSsl, NorthboundGlobal>(
+            clusterPlan.PlannedNorthboundSsl,
+            OVNTableNames.Global,
+            cancellationToken)
         select clusterPlan;
+
+    private EitherAsync<Error, Unit> ApplyNorthboundConnections(
+        ClusterPlan clusterPlan,
+        CancellationToken cancellationToken) =>
+        from global in FindRecords<NorthboundGlobal>(
+            OVNTableNames.Global,
+            NorthboundGlobal.Columns,
+            cancellationToken: cancellationToken)
+        from existingConnection in FindRecordsWithParents<NorthboundConnection, NorthboundGlobal>(
+            OVNTableNames.Connection,
+            global.Values.ToSeq(),
+            NorthboundConnection.Columns,
+            cancellationToken: cancellationToken)
+        from remainingConnections in RemoveEntitiesNotPlanned(
+            OVNTableNames.Connection,
+            existingConnection,
+            clusterPlan.PlannedNorthboundConnections,
+            cancellationToken: cancellationToken)
+        from existingPlannedConnections in CreatePlannedEntities(
+            OVNTableNames.Connection,
+            remainingConnections,
+            clusterPlan.PlannedNorthboundConnections,
+            cancellationToken: cancellationToken)
+        from _1 in UpdateEntities(
+            OVNTableNames.Connection,
+            remainingConnections,
+            existingPlannedConnections,
+            cancellationToken: cancellationToken)
+        select unit;
 }
