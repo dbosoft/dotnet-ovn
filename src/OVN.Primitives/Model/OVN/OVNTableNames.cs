@@ -13,4 +13,6 @@ public static class OVNTableNames
     public const string DnsRecords = "dns";
     public const string ChassisGroups = "ha_chassis_group";
     public const string Chassis = "ha_chassis";
+    public const string Connection = "Connection";
+    public const string Ssl = "SSL";
 }

@@ -1,6 +1,6 @@
-﻿namespace Dbosoft.OVN.Model.OVN;
+namespace Dbosoft.OVN.Model.OVN;
 
-public record PlannedSouthboundSsl : PlannedOvsSsl
+public record PlannedNorthboundSsl : PlannedOvsSsl
 {
     public new static readonly IDictionary<string, OVSFieldMetadata>
         Columns = new Dictionary<string, OVSFieldMetadata>(PlannedOvsSsl.Columns)
@@ -30,6 +30,6 @@ public record PlannedSouthboundSsl : PlannedOvsSsl
 
     public override OVSParentReference GetParentReference()
     {
-        return new OVSParentReference(OVNSouthboundTableNames.Global, ".", "ssl");
+        return new OVSParentReference(OVNTableNames.Global, ".", "ssl");
     }
 }

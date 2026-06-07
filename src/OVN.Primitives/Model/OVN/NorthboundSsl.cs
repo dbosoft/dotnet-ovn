@@ -1,8 +1,8 @@
-﻿using static LanguageExt.Prelude;
+using static LanguageExt.Prelude;
 
 namespace Dbosoft.OVN.Model.OVN;
 
-public record SouthboundSsl : OVSSslTableRecord
+public record NorthboundSsl : OVSSslTableRecord
 {
     public new static readonly IDictionary<string, OVSFieldMetadata>
         Columns = new Dictionary<string, OVSFieldMetadata>(OVSSslTableRecord.Columns)
@@ -25,7 +25,7 @@ public record SouthboundSsl : OVSSslTableRecord
     public override OVSParentReference GetParentReference()
     {
         return new OVSParentReference(
-            OVNSouthboundTableNames.Global,
+            OVNTableNames.Global,
             Optional(GetValue<Guid>("__parentId")).Map(i => i.ToString("D")),
             "ssl");
     }

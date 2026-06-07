@@ -5,11 +5,15 @@ namespace Dbosoft.OVN;
 
 public record ClusterPlan
 {
+    public PlannedNorthboundSsl? PlannedNorthboundSsl { get; init; }
+
     public PlannedSouthboundSsl? PlannedSouthboundSsl { get; init; }
 
     public HashMap<string, PlannedChassisGroup> PlannedChassisGroups { get; init; }
 
     public HashMap<string, PlannedChassis> PlannedChassis { get; init; }
+
+    public HashMap<string, PlannedNorthboundConnection> PlannedNorthboundConnections { get; init; }
 
     public HashMap<string, PlannedSouthboundConnection> PlannedSouthboundConnections { get; init; }
 }

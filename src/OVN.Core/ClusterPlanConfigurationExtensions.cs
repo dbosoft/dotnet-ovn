@@ -34,6 +34,40 @@ public static class ClusterPlanConfigurationExtensions
         };
     }
 
+    public static ClusterPlan AddNorthboundConnection(
+        this ClusterPlan plan,
+        int port = 6641,
+        bool ssl = false,
+        IPAddress? ipAddress = null)
+    {
+        var protocol = ssl ? "pssl" : "ptcp";
+        var target = ipAddress is null ? $"{protocol}:{port}" : $"{protocol}:{port}:{ipAddress}";
+        return plan with
+        {
+            PlannedNorthboundConnections = plan.PlannedNorthboundConnections.Add(
+                target,
+                new PlannedNorthboundConnection { Target = target }),
+        };
+    }
+
+    public static ClusterPlan SetNorthboundSsl(
+        this ClusterPlan plan,
+        string privateKey,
+        string certificate,
+        string caCertificate)
+    {
+        return plan with
+        {
+            PlannedNorthboundSsl = new PlannedNorthboundSsl
+            {
+                PrivateKey = privateKey,
+                Certificate = certificate,
+                CaCertificate = caCertificate,
+                SslProtocols = "TLSv1.3,TLSv1.2",
+            }
+        };
+    }
+
     public static ClusterPlan AddSouthboundConnection(
         this ClusterPlan plan,
         int port = 6642,

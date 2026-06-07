@@ -15,6 +15,13 @@ public static class ClusterPlanParser
             clusterPlan = ParseChassisGroup(clusterPlan, chassisGroupConfig);
         }
 
+        foreach (var northboundConnectionConfig in planConfig.NorthboundEndpoints)
+        {
+            clusterPlan = ParseNorthboundConnections(clusterPlan, northboundConnectionConfig);
+        }
+
+        clusterPlan = ParseNorthboundSsl(clusterPlan, planConfig.NorthboundSsl);
+
         foreach (var southboundConnectionConfig in planConfig.SouthboundEndpoints)
         {
             clusterPlan = ParseSouthboundConnections(clusterPlan, southboundConnectionConfig);
@@ -55,6 +62,30 @@ public static class ClusterPlanParser
             chassisConfig.Name,
             // The priority can be between 0 and 32,767. We use 16,383 as the default priority.
             chassisConfig.Priority.GetValueOrDefault(16383));
+    }
+
+    private static ClusterPlan ParseNorthboundConnections(
+        ClusterPlan clusterPlan,
+        NorthboundEndpointConfig endpointConfig)
+    {
+        return clusterPlan.AddNorthboundConnection(
+            endpointConfig.Port,
+            endpointConfig.Ssl.GetValueOrDefault(),
+            string.IsNullOrWhiteSpace(endpointConfig.IpAddress)
+                ? null
+                : IPAddress.Parse(endpointConfig.IpAddress));
+    }
+
+    private static ClusterPlan ParseNorthboundSsl(
+        ClusterPlan clusterPlan,
+        NorthboundSslConfig? sslConfig)
+    {
+        return sslConfig is null
+            ? clusterPlan
+            : clusterPlan.SetNorthboundSsl(
+                sslConfig.PrivateKey,
+                sslConfig.Certificate,
+                sslConfig.CaCertificate);
     }
 
     private static ClusterPlan ParseSouthboundConnections(
