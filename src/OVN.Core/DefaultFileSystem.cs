@@ -74,7 +74,7 @@ public class DefaultFileSystem : IFileSystem
     public void EnsurePathForFileExists(OvsFile file, bool adminOnly = false)
     {
         var path = ResolveOvsFilePath(file);
-        EnsurePathForFileExists(path);
+        EnsurePathForFileExists(path, adminOnly);
     }
 
     public void DeleteFile(string path)
