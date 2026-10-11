@@ -23,8 +23,10 @@ public class OVSControlTool(
         return sb.ToString();
     }
 
+    // Initializing must never wait for ovs-vswitchd, which might not be running yet. When noWait
+    // is set, BuildArguments already adds --no-wait.
     public EitherAsync<Error, Unit> InitDb(
         CancellationToken cancellationToken = default) =>
-        from _ in RunCommand($"{(noWait ? "" : "--no -wait ")}init", true, cancellationToken)
+        from _ in RunCommand(noWait ? "init" : "--no-wait init", true, cancellationToken)
         select unit;
 }

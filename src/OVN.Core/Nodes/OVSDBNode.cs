@@ -83,6 +83,11 @@ public class OVSDbNode : DemonNodeBase
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
         var ovsControl = new OVSControlTool(_systemEnvironment, LocalOVSConnection);
-        return ovsControl.InitDb(cts.Token);
+        return ovsControl.InitDb(cts.Token)
+            .MapLeft(e =>
+            {
+                _logger.LogError(e, "OVS db node - failed to initialize the ovs database.");
+                return e;
+            });
     }
 }
